@@ -1,0 +1,1154 @@
+@using ERP.Web.Models
+@model ProductViewModel
+
+@{
+    ViewData["Title"] = "Edit Varian";
+    
+    var parentProduct = ViewBag.ParentProduct as ProductViewModel; 
+    var categories = ViewBag.Categories as IEnumerable<DropdownItemViewModel> ?? Enumerable.Empty<DropdownItemViewModel>(); 
+    var subCategories = ViewBag.SubCategories as IEnumerable<DropdownItemViewModel> ?? Enumerable.Empty<DropdownItemViewModel>(); 
+    var brands = ViewBag.Brands as IEnumerable<DropdownItemViewModel> ?? Enumerable.Empty<DropdownItemViewModel>(); 
+    var units = ViewBag.Units as IEnumerable<DropdownItemViewModel> ?? Enumerable.Empty<DropdownItemViewModel>();
+}
+
+<div class="product-page-title">
+   Edit Produk
+</div>
+
+
+<div class="product-info-card">
+    <div class="product-info-header"
+         data-bs-toggle="collapse"
+         data-bs-target="#productInfo">
+        <div>
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <strong>Panduan Pengisian - Produk </strong>
+        </div>
+        <i class="bi bi-chevron-down"></i>
+    </div>
+
+    <div id="productInfo"
+         class="collapse show">
+
+        <div class="product-info-body">
+            <ol class ="ps-3 mb-0">
+                <li>
+                   <strong> Identitas : </strong>isi <strong>SKU</strong> (kode unik, wajib) dan <strong>Nama Produk</strong> 
+                    (wajib). <i>No. Produk</i> terisi otomatis (PRD-xxxxx); <i>Barcode</i> opsional.
+                </li>
+
+                <li>
+                   <strong> Klasifikasi : </strong> pilih <strong>Category & Brand </strong> (opsional), <strong>Jenis Produk</strong>
+                    (wajib), dan <i>Unit </i> - satuan dasar produk (wajib). Satuan lain & konversinya diatur nanti lewat menu <i>Satuan Produk</i>.
+                </li>
+
+                <li>
+                    <strong> Mode Dimensi </strong> menentukan cara Qty dihitung di transaksi: pilih  <strong>"Tidak"</strong>bila qty = jumlah satuan (mis. Pcs/Lembar); pilih 
+                    <strong>Panjang/Luas/Volume</strong>bila qty dihitung dari dimensi (mis. busa/kain). Bila dimensional, isi <i>Dimensi per satuan (cm) </i> 
+                    sebagai nilai default.
+                </li>
+
+                <li>
+                    <strong> Mode Harga: "Harga tetap" </strong> → isi <strong>Harga Beli & Harga Jual </strong>langsung. 
+                    <strong>"Per kubikasi" </strong>→ isi <strong>Tarif Beli/Jual per m³ </strong>+ dimensi (P×L×T); harga per satuan dihitung otomatis (Beli/Jual jadi read-only).
+                    <strong>Min Stock</strong> opsional (peringatan stok menipis).
+                </li>
+
+                <li>
+                    <strong>Lain-lain: </strong><i>Deskripsi & Gambar </i> opsional. Sakelar: <strong>Track Stock </strong>(pantau stok),
+                    <strong>Lacak Serial </strong>(tiap unit discan nomor serial saat penerimaan), <strong>Aktif. Garansi (bulan) </strong> 
+                    berlaku untuk produk ber-serial (dihitung sejak terjual).
+                </li>
+
+                <li>
+                    Klik <strong>Simpan </strong>Untuk produk ber-<strong>varian </strong>(mis. beda ukuran/warna): 
+                    simpan dulu induknya, lalu kelola varian dari daftar produk (tombol <i class="bi bi-diagram-3"></i>  Varian).
+                </li>
+
+            </ol>
+
+            <div class="product-info-tip">
+                <i class="bi bi-lightbulb"></i>
+                kolom bertanda <span class="required-mark"> * </span> wajib diisi. Panel ini bisa ditutup dengan mengklik judulnya.
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<div class="card product-create-card">
+    <div class="card-header">
+        <strong>Edit Produk</strong>
+    </div>
+
+    <div class="card-body">
+        <form method="post"
+              asp-controller="ProductVariants"
+              asp-action="Edit"
+              asp-route-id="@Model.Id"
+              enctype="multipart/form-data">
+
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="ParentId" />
+            <input type="hidden" asp-for="HasVariants" />
+            <input type="hidden" asp-for="Image" />
+
+            @Html.AntiForgeryToken()
+ 
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger mb-3">
+
+                    <strong>
+                        Data belum dapat disimpan.
+                    </strong>
+
+                    <ul class="mb-0 mt-2">
+
+                        @foreach (var error in ViewData.ModelState.Values
+                            .SelectMany(v => v.Errors))
+                        {
+                            <li>
+                                @(string.IsNullOrWhiteSpace(error.ErrorMessage)
+                                    ? "Nilai yang dimasukkan tidak valid."
+                                    : error.ErrorMessage)
+                            </li>
+                        }
+
+                    </ul>
+
+                </div>
+            }
+
+
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger mb-3">
+
+                    <strong>Gagal menyimpan:</strong>
+                    @TempData["Error"]
+
+                </div>
+            }
+
+
+            @if (parentProduct != null)
+            {
+                <div class="variant-parent-info mb-3">
+
+                    <i class="bi bi-diagram-3"></i>
+
+                    <span>
+                        Varian dari produk induk
+                        <strong>
+                            @parentProduct.Name
+                        </strong>
+
+                        @if (!string.IsNullOrWhiteSpace(parentProduct.ProductNumber))
+                        {
+                            <span class="variant-parent-badge">
+                                @parentProduct.ProductNumber
+                            </span>
+                        }
+                    </span>
+
+                </div>
+            }
+
+            <div class="section-title">
+
+                <i class="bi bi-card-text"></i>
+                IDENTITAS
+
+            </div>
+
+
+            <div class="row g-2">
+
+                <!-- NO PRODUK -->
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        No. Produk
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="ProductNumber"
+                           value="@Model.ProductNumber"
+                           placeholder="Otomatis (PRD-xxxx)"
+                           readonly />
+
+                </div>
+
+
+                <!-- SKU -->
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        SKU <span class="text-danger">*</span>
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="Sku"
+                           name="Sku"
+                           value="@Model.Sku"
+                           required />
+
+                    <span asp-validation-for="Sku"
+                          class="text-danger">
+                    </span>
+
+                </div>
+
+
+                <!-- BARCODE -->
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        Barcode
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="Barcode"
+                           name="Barcode"
+                           value="@Model.Barcode" />
+
+                </div>
+
+
+                <!-- INTERNAL CODE -->
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Kode Internal
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="InternalCode"
+                           name="InternalCode"
+                           value="@Model.InternalCode" />
+
+                </div>
+
+
+                <!-- EXTERNAL CODE 1 -->
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Kode Eksternal 1
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="ExternalCode1"
+                           name="ExternalCode1"
+                           value="@Model.ExternalCode1" />
+
+                </div>
+
+
+                <!-- EXTERNAL CODE 2 -->
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Kode Eksternal 2
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="ExternalCode2"
+                           name="ExternalCode2"
+                           value="@Model.ExternalCode2" />
+
+                </div>
+
+
+                <!-- EXTERNAL CODE 3 -->
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Kode Eksternal 3
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="ExternalCode3"
+                           name="ExternalCode3"
+                           value="@Model.ExternalCode3" />
+
+                </div>
+
+
+                <!-- NAME -->
+                <div class="col-12">
+
+                    <label class="form-label">
+                        Nama Produk
+                        <span class="text-danger">*</span>
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="Name"
+                           name="Name"
+                           value="@Model.Name"
+                           required />
+
+                    <span asp-validation-for="Name"
+                          class="text-danger">
+                    </span>
+
+                </div>
+
+            </div>
+             
+            <div class="section-title mt-3">
+
+                <i class="bi bi-tags"></i>
+                KLASIFIKASI
+
+            </div>
+
+
+            <div class="row g-2">
+
+                <!-- BRAND -->
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Brand
+                    </label>
+
+                    <select asp-for="BrandId"
+                            class="form-select"
+                            id="BrandId">
+
+                        <option value="">
+                            -- Pilih --
+                        </option>
+
+                        @foreach (var brand in brands)
+                        {
+                            <option value="@brand.Id">
+                                @brand.Name
+                            </option>
+                        }
+
+                    </select>
+
+                </div>
+
+
+                <!-- CATEGORY -->
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Kategori
+                    </label>
+
+                    <select asp-for="CategoryId"
+                            class="form-select"
+                            id="CategoryId">
+
+                        <option value="">
+                            -- Pilih --
+                        </option>
+
+                        @foreach (var category in categories)
+                        {
+                            <option value="@category.Id">
+                                @category.Name
+                            </option>
+                        }
+
+                    </select>
+
+                </div>
+
+
+                <!-- SUB CATEGORY -->
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Sub-Kategori
+                    </label>
+
+                    <select class="form-select"
+                            id="SubCategoryId"
+                            name="SubCategoryId">
+
+                        <option value="">
+                            -- (tanpa sub) --
+                        </option>
+
+                        @foreach (var subCategory in subCategories)
+                        {
+                            if (subCategory.ParentId == Model.CategoryId)
+                            {
+                                <option value="@subCategory.Id"
+                                        selected="@(subCategory.Id == Model.SubCategoryId ? "selected" : null)">
+                                    @subCategory.Name
+                                </option>
+                            }
+                        }
+
+                    </select>
+
+                    <div class="form-text">
+                        Pilih Kategori dulu; sub menyesuaikan.
+                    </div>
+
+                </div>
+
+
+                <!-- PRODUCT TYPE -->
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Jenis Produk
+                        <span class="text-danger">*</span>
+                    </label>
+
+                    <select asp-for="ProductType"
+                            class="form-select"
+                            id="ProductType"
+                            required>
+
+                        <option value="RAW_MATERIAL">
+                            Bahan Baku (RAW_MATERIAL)
+                        </option>
+
+                        <option value="FINISHED_GOOD">
+                            Barang Jadi (FINISHED_GOOD)
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- UNIT -->
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Unit
+                        <span class="text-danger">*</span>
+                    </label>
+
+                    <select asp-for="UnitId"
+                            class="form-select"
+                            id="UnitId"
+                            required>
+
+                        <option value="">
+                            -- Pilih --
+                        </option>
+
+                        @foreach (var unit in units)
+                        {
+                            <option value="@unit.Id">
+                                @unit.Name
+                            </option>
+                        }
+
+                    </select>
+
+                </div>
+
+            </div> 
+
+            <div class="section-title mt-3">
+
+                <i class="bi bi-rulers"></i>
+                DIMENSI & HARGA
+
+            </div>
+
+
+            <div class="row g-2">
+
+                <!-- DIM MODE -->
+                <div class="col-md-4">
+
+                    <label class="form-label">
+
+                        Mode Dimensi
+
+                        <small class="text-muted">
+                            (Qty transaksi)
+                        </small>
+
+                    </label>
+
+                    <select asp-for="DimMode"
+                            class="form-select"
+                            id="DimMode">
+
+                        <option value="none">
+                            Tidak — qty per satuan (mis. per Lembar/Pcs)
+                        </option>
+
+                        <option value="length">
+                            Panjang (P x jml)
+                        </option>
+
+                        <option value="area">
+                            Luas (P x L x jml)
+                        </option>
+
+                        <option value="volume">
+                            Volume (P x L x T x jml)
+                        </option>
+
+                    </select>
+
+                    <small class="form-text">
+                        "Tidak" = qty diisi jumlah satuan.
+                        Lainnya = qty dari dimensi.
+                    </small>
+
+                </div>
+
+
+                <!-- PRICE MODE -->
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        Mode Harga
+                    </label>
+
+                    <select asp-for="PriceMode"
+                            class="form-select"
+                            id="PriceMode">
+
+                        <option value="fixed">
+                            Harga tetap (isi langsung)
+                        </option>
+
+                        <option value="volume">
+                            Per kubikasi — volume × tarif m³
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+             
+            <div id="cubicPriceSection"
+                 class="cubic-price-section mt-3"
+                 style="display: none;">
+
+                <div class="alert alert-warning cubic-warning mb-3">
+
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+
+                    <strong>
+                        Mode harga kubikasi aktif
+                    </strong>
+
+                    — Harga Beli/Jual dihitung otomatis dari
+                    <strong>
+                        Panjang × Lebar × Tebal
+                    </strong>.
+
+                    Pastikan ketiga dimensi
+                    (terutama Tebal) benar.
+
+                </div>
+
+
+                <div class="row g-2">
+
+                    <div class="col-12">
+
+                        <label class="form-label">
+                            Dimensi per satuan
+                            <small>(cm)</small>
+                        </label>
+
+                    </div>
+
+
+                    <div class="col-md-4">
+
+                        <input type="number"
+                               class="form-control cubic-input"
+                               id="DefLength"
+                               name="DefLength"
+                               asp-for="DefLength"
+                               min="0"
+                               step="0.01"
+                               placeholder="Panjang" />
+
+                    </div>
+
+
+                    <div class="col-md-4">
+
+                        <input type="number"
+                               class="form-control cubic-input"
+                               id="DefWidth"
+                               name="DefWidth"
+                               asp-for="DefWidth"
+                               min="0"
+                               step="0.01"
+                               placeholder="Lebar" />
+
+                    </div>
+
+
+                    <div class="col-md-4">
+
+                        <input type="number"
+                               class="form-control cubic-input"
+                               id="DefHeight"
+                               name="DefHeight"
+                               asp-for="DefHeight"
+                               min="0"
+                               step="0.01"
+                               placeholder="Tebal" />
+
+                    </div>
+
+                </div>
+
+
+                <div class="row g-2 mt-1">
+
+                    <div class="col-md-6">
+
+                        <label class="form-label">
+                            Tarif Beli / m³
+                        </label>
+
+                        <input type="number"
+                               class="form-control"
+                               id="CostPerM3"
+                               name="CostPerM3"
+                               asp-for="CostPerM3"
+                               min="0"
+                               step="0.01" />
+
+                        <small class="form-text"
+                               id="cubicCalculationResult">
+
+                            Volume/satuan = 0 m³
+                            → Beli 0 / Jual 0
+
+                        </small>
+
+                    </div>
+
+
+                    <div class="col-md-6">
+
+                        <label class="form-label">
+                            Tarif Jual / m³
+                        </label>
+
+                        <input type="number"
+                               class="form-control"
+                               id="SellPerM3"
+                               name="SellPerM3"
+                               asp-for="SellPerM3"
+                               min="0"
+                               step="0.01" />
+
+                    </div>
+
+                </div>
+
+            </div>
+             
+            <div id="normalPriceSection"
+                 class="mt-2">
+
+                <div class="row g-2">
+
+                    <!-- COST -->
+                    <div class="col-md-4">
+
+                        <label class="form-label">
+
+                            Harga Beli
+
+                            <small>
+                                (per satuan)
+                            </small>
+
+                        </label>
+
+                        <input type="number"
+                               class="form-control"
+                               id="CostPrice"
+                               name="CostPrice"
+                               asp-for="CostPrice"
+                               min="0"
+                               step="0.01" />
+
+                    </div>
+
+
+                    <!-- SELL -->
+                    <div class="col-md-4">
+
+                        <label class="form-label">
+
+                            Harga Jual
+
+                            <small>
+                                (per satuan)
+                            </small>
+
+                        </label>
+
+                        <input type="number"
+                               class="form-control"
+                               id="SellPrice"
+                               name="SellPrice"
+                               asp-for="SellPrice"
+                               min="0"
+                               step="0.01" />
+
+                    </div>
+
+
+                    <!-- MIN STOCK -->
+                    <div class="col-md-4">
+
+                        <label class="form-label">
+                            Min Stock
+                        </label>
+
+                        <input type="number"
+                               class="form-control"
+                               id="MinStock"
+                               name="MinStock"
+                               asp-for="MinStock"
+                               min="0"
+                               step="1" />
+
+                    </div>
+
+                </div>
+
+            </div>
+             
+            <div class="section-title mt-3">
+
+                <i class="bi bi-card-list"></i>
+                LAIN-LAIN
+
+            </div>
+
+
+            <div class="row g-2">
+
+                <!-- DESCRIPTION -->
+                <div class="col-md-8">
+
+                    <label class="form-label">
+                        Deskripsi
+                    </label>
+
+                    <textarea class="form-control"
+                              id="Description"
+                              asp-for="Description"
+                              rows="3"></textarea>
+
+                </div>
+
+
+                <!-- IMAGE -->
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        Gambar
+                    </label>
+
+                    <input asp-for="ImageFile"
+                           type="file"
+                           class="form-control"
+                           accept=".jpg,.jpeg,.png,.webp" />
+
+
+                    @if (!string.IsNullOrEmpty(Model.Image))
+                    {
+                        <div class="mt-2">
+
+                            <label class="form-label">
+                                Gambar Terkini
+                            </label>
+
+                            <br />
+
+                            <img src="@Model.Image"
+                                 alt="Gambar Produk"
+                                 style="max-width:150px; max-height:150px;"
+                                 class="img-fluid rounded-2" />
+
+                        </div>
+                    }
+
+
+                    <div class="form-text">
+
+                        Format gambar yang didukung:
+                        JPG, JPEG, PNG, WEBP.
+
+                    </div>
+
+                </div>
+
+            </div>
+
+             
+            <div class="d-flex gap-3 align-items-center mt-3">
+
+                <!-- TRACK STOCK -->
+                <div class="form-check form-switch">
+
+                    <input asp-for="TrackStock"
+                           class="form-check-input"
+                           type="checkbox"
+                           id="TrackStock" />
+
+                    <label class="form-check-label"
+                           for="TrackStock">
+
+                        Track Stock
+
+                    </label>
+
+                </div>
+
+
+                <!-- TRACK SERIAL -->
+                <div class="form-check form-switch">
+
+                    <input asp-for="TrackSerial"
+                           class="form-check-input"
+                           type="checkbox"
+                           id="TrackSerial" />
+
+                    <label class="form-check-label"
+                           for="TrackSerial">
+
+                        Lacak Serial
+
+                        <small>
+                            (per unit)
+                        </small>
+
+                    </label>
+
+                </div>
+
+
+                <!-- ACTIVE -->
+                <div class="form-check form-switch">
+
+                    <input asp-for="IsActive"
+                           class="form-check-input"
+                           type="checkbox"
+                           id="IsActive" />
+
+                    <label class="form-check-label"
+                           for="IsActive">
+
+                        Aktif
+
+                    </label>
+
+                </div>
+
+            </div>
+             
+            <div class="row g-2 mt-2">
+
+                <div class="col-md-3">
+
+                    <label class="form-label">
+                        Garansi (bulan)
+                    </label>
+
+                    <input type="number"
+                           class="form-control"
+                           id="WarrantyMonths"
+                           asp-for="WarrantyMonths"
+                           min="0" />
+
+                    <div class="form-text">
+
+                        Untuk produk ber-serial:
+                        masa garansi dihitung sejak tanggal terjual
+                        (kirim SO).
+
+                        0 = tanpa garansi.
+
+                    </div>
+
+                </div>
+
+            </div>
+ 
+            <div class="d-flex gap-2 mt-3">
+
+                <button type="submit"
+                        class="btn btn-primary"> 
+                    <i class="bi bi-save"></i>
+                    Simpan
+
+                </button>
+                <a asp-controller="ProductVariants"
+                   asp-action="Index"
+                   asp-route-id="@Model.ParentId"
+                   class="btn btn-secondary">
+
+                    Batal
+
+                </a>
+
+            </div>
+
+        </form>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const categorySelect = document.getElementById("CategoryId");
+        const subCategorySelect = document.getElementById("SubCategoryId");
+
+        const priceMode = document.getElementById("PriceMode");
+
+        const normalPriceSection = document.getElementById("normalPriceSection");
+        const cubicPriceSection = document.getElementById("cubicPriceSection");
+
+        const costPrice = document.getElementById("CostPrice");
+        const sellPrice = document.getElementById("SellPrice");
+
+        const costPerM3 = document.getElementById("CostPerM3");
+        const sellPerM3 = document.getElementById("SellPerM3");
+
+        const defLength = document.getElementById("DefLength");
+        const defWidth = document.getElementById("DefWidth");
+        const defHeight = document.getElementById("DefHeight"); 
+        const calculationResult = document.getElementById("cubicCalculationResult");
+         
+        // SUB KATEGORI  
+        async function loadSubCategories(
+            categoryId,
+            selectedSubCategoryId = ""
+        ) {
+
+            subCategorySelect.innerHTML =
+                '<option value="">-- (tanpa sub) --</option>';
+
+            if (!categoryId) {
+                subCategorySelect.disabled = true;
+                return;
+            }
+
+            subCategorySelect.disabled = true;
+
+            try {
+
+                const response = await fetch(
+                    `/Products/GetSubCategories?categoryId=${encodeURIComponent(categoryId)}`
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        `Gagal mengambil Sub-Kategori. Status: ${response.status}`
+                    );
+                }
+
+                const data = await response.json();
+
+                data.forEach(item => {
+
+                    const option = document.createElement("option"); 
+                    option.value = item.id ?? item.Id;
+                    option.textContent = item.name ?? item.Name;
+
+                    if (
+                        String(option.value) ===
+                        String(selectedSubCategoryId)
+                    ) {
+                        option.selected = true;
+                    }
+
+                    subCategorySelect.appendChild(option);
+
+                });
+
+                subCategorySelect.disabled = false;
+
+            } catch (error) {
+
+                console.error("Error memuat Sub-Kategori:", error); 
+                subCategorySelect.disabled = true; 
+                alert(
+                    "Gagal memuat Sub-Kategori. Silakan periksa koneksi API."
+                );
+
+            }
+        }
+
+
+        categorySelect.addEventListener("change", function () {
+
+            loadSubCategories(this.value);
+
+        });
+
+
+        // Memuat subkategori yang sudah tersimpan
+        if (categorySelect.value) {
+
+            loadSubCategories(
+                categorySelect.value,
+                "@Model.SubCategoryId"
+            );
+
+        }
+         
+        // HELPER INPUT 
+        function getInputValue(element) {
+
+            const value = parseFloat(element.value);
+
+            return Number.isFinite(value) && value >= 0
+                ? value
+                : 0;
+
+        }
+
+
+        // FORMAT ANGKA
+        function formatNumber(value) {
+
+            return value.toLocaleString("id-ID", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }); 
+        }
+
+
+        // PERHITUNGAN KUBIKASI 
+        function calculateCubicPrice() { 
+            if (priceMode.value !== "volume") {
+                return;
+            }
+
+            const length = getInputValue(defLength);
+            const width = getInputValue(defWidth);
+            const height = getInputValue(defHeight); 
+            const buyRate = getInputValue(costPerM3);
+            const sellRate = getInputValue(sellPerM3);
+
+            // Konversi cm3 menjadi m3
+            const volume = (length * width * height) / 1000000;
+
+            // Hitung harga berdasarkan volume
+            const calculatedCost = volume * buyRate;
+            const calculatedSell = volume * sellRate;
+
+            // Hanya perbarui harga, bukan dimensi
+            costPrice.value = calculatedCost.toFixed(2);
+            sellPrice.value = calculatedSell.toFixed(2);
+             
+            if (calculationResult) { 
+                calculationResult.textContent =
+                    `Volume/satuan = ${formatNumber(volume)} m³ ` +
+                    `→ Beli ${formatNumber(calculatedCost)} ` +
+                    `/ Jual ${formatNumber(calculatedSell)}`;
+            }
+        }
+
+
+        // UPDATE MODE HARGA
+        function updatePriceMode() {
+
+            if (!priceMode) {
+                return;
+            }
+
+            const isVolume = priceMode.value === "volume";
+
+
+            if (isVolume) {
+                 
+                cubicPriceSection.style.display = "block"; 
+                normalPriceSection.style.display = "block"; 
+                 
+                costPrice.readOnly = true;
+                sellPrice.readOnly = true;
+                 
+                defLength.required = true;
+                defWidth.required = true;
+                defHeight.required = true;
+
+                costPerM3.required = true;
+                sellPerM3.required = true;
+                 
+                calculateCubicPrice();
+
+            } else {
+                 
+                cubicPriceSection.style.display = "none"; 
+                normalPriceSection.style.display = "block";
+
+                 
+                costPrice.readOnly = false;
+                sellPrice.readOnly = false;
+
+                 
+                defLength.required = false;
+                defWidth.required = false;
+                defHeight.required = false;
+
+                costPerM3.required = false;
+                sellPerM3.required = false;
+
+            }
+
+        }
+         
+        [
+            defLength,
+            defWidth,
+            defHeight,
+            costPerM3,
+            sellPerM3
+        ].forEach(element => {
+
+            element.addEventListener("input", calculateCubicPrice); 
+            element.addEventListener("change", calculateCubicPrice);
+
+        });
+
+        const editForm = document.querySelector( 'form[asp-action="Edit"]') || document.querySelector("form");
+        if (editForm) {
+            editForm.addEventListener("submit", function () {
+            // Pastikan nilai dimensi tidak diubah oleh perhitungan harga
+               console.log("Dimensi yang dikirim:", {
+                  panjang: defLength.value,
+                  lebar: defWidth.value,
+                  tinggi: defHeight.value
+               });
+            });
+         }          
+                    
+        priceMode.addEventListener("change", updatePriceMode);
+        updatePriceMode();
+
+    });
+</script>

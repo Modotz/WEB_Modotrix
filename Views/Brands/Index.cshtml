@@ -1,0 +1,950 @@
+@using ERP.Web.Models
+@model PagedResult<BrandViewModel>
+
+@{
+    ViewData["Title"] =
+        ViewBag.FormMode == "Create"
+            ? "Tambah Brands"
+            : ViewBag.FormMode == "Edit"
+                ? "Edit Brands"
+                : "Brands";
+
+    var formMode = ViewBag.FormMode as string;
+    var formModel = ViewBag.FormModel as BrandViewModel;
+
+    var no = (Model.Page - 1) * Model.PageSize;
+
+    var selectedIsActive = ViewBag.IsActive as bool?;
+    var search = ViewBag.Search as string ?? "";
+    var pageSize = ViewBag.PageSize ?? Model.PageSize;
+}
+
+
+@if (formMode == "Create" || formMode == "Edit")
+{
+    var isActiveValue =
+        formMode == "Create"
+            ? true
+            : formModel?.IsActive == true;
+             
+
+    <div class="page-heading supplier-page">
+
+        <!-- TITLE -->
+        <h3 class="fw-bold mb-3">
+            @(formMode == "Create"
+                ? "Tambah Brands"
+                : "Edit Brands")
+        </h3>
+
+
+        <!-- FORM CARD -->
+        <div class="card supplier-card supplier-form-card">
+
+            <!-- CARD HEADER -->
+            <div class="card-header bg-transparent">
+
+                <span class="fw-semibold">
+                    @(formMode == "Create"
+                        ? "Tambah Brands"
+                        : "Edit Brands")
+                </span>
+
+            </div>
+
+
+            <!-- FORM -->
+            <form method="post"
+                  asp-action="@(formMode == "Create" ? "Create" : "Edit")"
+                  asp-controller="Brands"
+                  enctype="multipart/form-data"
+                  id="brandForm">
+
+                @if (formMode == "Edit")
+                {
+                    <!-- ID -->
+                    <input type="hidden"
+                           name="Id"
+                           value="@formModel?.Id" />
+                }
+
+
+                <!-- =================================================
+                     CARD BODY
+                     ================================================= -->
+
+                <div class="card-body">
+
+                    <!-- NAME -->
+                    <div class="mb-3">
+
+                        <label for="Name"
+                               class="form-label">
+                            Name
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="Name"
+                               name="Name"
+                               value="@formModel?.Name"
+                               autocomplete="off" />
+
+                    </div>
+
+
+                    <!-- IMAGE -->
+                    <div class="mb-3">
+
+                        <label for="image"
+                               class="form-label">
+                            Image
+                        </label>
+
+                        @if (!string.IsNullOrWhiteSpace(formModel?.Image))
+                        {
+                            var imagePath =
+                                formModel.Image
+                                    .Trim()
+                                    .Replace("\\", "/");
+
+                            var imageUrl =
+                                imagePath.StartsWith(
+                                    "http",
+                                    StringComparison.OrdinalIgnoreCase)
+                                    ? imagePath
+                                    : $"https://localhost:7101/{imagePath.TrimStart('/')}";
+
+                            <!-- PREVIEW -->
+                            <div class="mb-2">
+
+                                <img src="@imageUrl"
+                                     alt="@formModel?.Name"
+                                     class="brand-form-image"
+                                     onerror="this.onerror=null; this.style.display='none';" />
+
+                            </div>
+                        }
+
+                        <!-- IMAGE LAMA -->
+                        <input type="hidden"
+                               name="Image"
+                               value="@formModel?.Image" />
+
+                        <!-- FILE BARU -->
+                        <input type="file"
+                               class="form-control"
+                               id="image"
+                               name="image"
+                               accept="image/*" />
+
+                    </div>
+
+
+                    <!-- IS ACTIVE -->
+                    <div class="mb-3">
+
+                        <div class="form-check form-switch">
+
+                            <!--
+                                Checkbox tidak mempunyai name.
+                                Nilai sebenarnya dikirim melalui
+                                hidden input di bawah.
+                            -->
+
+                            <input type="checkbox"
+                                   id="IsActiveSwitch"
+                                   class="form-check-input"
+                                   @(isActiveValue ? "checked" : "") />
+
+                            <label class="form-check-label"
+                                   for="IsActiveSwitch">
+                                Is Active
+                            </label>
+
+                        </div>
+
+
+                        <!--
+                            Hanya satu input IsActive
+                            yang dikirim ke server.
+                        -->
+
+                        <input type="hidden"
+                               id="IsActive"
+                               name="IsActive"
+                               value="@(isActiveValue ? "true" : "false")" />
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     CARD FOOTER
+                     ================================================= -->
+
+                <div class="card-footer">
+
+                    <div class="d-flex gap-2">
+
+                        <!-- SIMPAN -->
+                        <button type="submit"
+                                class="btn btn-primary">
+
+                            <i class="bi bi-save"></i>
+                            Simpan
+
+                        </button>
+
+
+                        <!-- BATAL -->
+                        <a asp-action="Index"
+                           asp-controller="Brands"
+                           class="btn btn-secondary">
+
+                            Batal
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         IS ACTIVE SYNC
+         ===================================================== -->
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const switchElement =
+                document.getElementById("IsActiveSwitch");
+
+            const hiddenInput =
+                document.getElementById("IsActive");
+
+            const form =
+                document.getElementById("brandForm");
+
+            if (!switchElement ||
+                !hiddenInput ||
+                !form) {
+                return;
+            }
+
+            function syncIsActive() {
+                hiddenInput.value =
+                    switchElement.checked
+                        ? "true"
+                        : "false";
+            }
+
+            // Saat switch diubah
+            switchElement.addEventListener(
+                "change",
+                syncIsActive
+            );
+
+            // Pastikan nilai terakhir tersimpan
+            // tepat sebelum form dikirim
+            form.addEventListener(
+                "submit",
+                syncIsActive
+            );
+
+            // Sinkronisasi nilai awal
+            syncIsActive();
+        });
+    </script>
+}
+else
+{
+    <!-- =====================================================
+         INDEX / LIST BRAND
+         ===================================================== -->
+
+    <div class="page-heading supplier-page">
+
+        <!-- =====================================================
+             TITLE
+             ===================================================== -->
+
+        <h3 class="fw-bold mb-3">
+            Brands
+        </h3>
+
+
+        <!-- =====================================================
+             FILTER CARD
+             ===================================================== -->
+
+        <div class="card supplier-card supplier-filter">
+
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+
+                <div class="d-flex align-items-center gap-2">
+
+                    <i class="bi bi-funnel"></i>
+
+                    <span class="fw-semibold">
+                        Filter
+                    </span>
+
+                </div>
+
+                <button class="btn btn-sm text-muted p-0"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#filterCollapse"
+                        aria-expanded="true"
+                        aria-controls="filterCollapse">
+
+                    <i class="bi bi-chevron-down"></i>
+
+                </button>
+
+            </div>
+
+
+            <div class="collapse show"
+                 id="filterCollapse">
+
+                <div class="card-body">
+
+                    <form method="get"
+                          asp-action="Index"
+                          asp-controller="Brands"
+                          class="row g-2 align-items-end">
+
+                        <!-- CARI -->
+                        <div class="col-md-4">
+
+                            <label for="search"
+                                   class="form-label">
+                                Cari
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   id="search"
+                                   name="search"
+                                   value="@search"
+                                   placeholder="Cari brand..." />
+
+                        </div>
+
+
+                        <!-- IS ACTIVE -->
+                        <div class="col-md-3">
+
+                            <label for="isActive"
+                                   class="form-label">
+                                Is Active
+                            </label>
+
+                            <select class="form-select"
+                                    id="isActive"
+                                    name="isActive">
+
+                                <option value=""
+                                        selected="@(selectedIsActive == null)">
+                                    -- Semua --
+                                </option>
+
+                                <option value="true"
+                                        selected="@(selectedIsActive == true)">
+                                    Aktif
+                                </option>
+
+                                <option value="false"
+                                        selected="@(selectedIsActive == false)">
+                                    Tidak Aktif
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- PER HALAMAN -->
+                        <div class="col-md-2">
+
+                            <label for="pageSize"
+                                   class="form-label">
+                                Per Halaman
+                            </label>
+
+                            <select class="form-select"
+                                    id="pageSize"
+                                    name="pageSize">
+
+                                <option value="10"
+                                        selected="@(pageSize == 10)">
+                                    10
+                                </option>
+
+                                <option value="25"
+                                        selected="@(pageSize == 25)">
+                                    25
+                                </option>
+
+                                <option value="50"
+                                        selected="@(pageSize == 50)">
+                                    50
+                                </option>
+
+                                <option value="100"
+                                        selected="@(pageSize == 100)">
+                                    100
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- TOMBOL -->
+                        <div class="col-md-3">
+
+                            <div class="d-flex gap-2">
+
+                                <button type="submit"
+                                        class="btn btn-primary">
+
+                                    <i class="bi bi-search"></i>
+                                    Terapkan
+
+                                </button>
+
+                                <a asp-action="Index"
+                                   asp-controller="Brands"
+                                   class="btn btn-outline-secondary">
+
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    Reset
+
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             TABLE CARD
+             ===================================================== -->
+
+        <div class="card supplier-card supplier-table-card">
+
+            <!-- HEADER -->
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+                <!-- LEFT -->
+                <div class="d-flex align-items-center gap-2">
+
+                    <span class="fw-bold">
+                        Brands
+                    </span>
+
+                    <span class="badge bg-secondary">
+                        @Model.TotalCount
+                    </span>
+
+                    <span class="menu-description small ms-1">
+                        Kelola data brands
+                    </span>
+
+                </div>
+
+
+                <!-- RIGHT -->
+                <div class="d-flex align-items-center gap-2">
+
+                    <!-- EXPORT PDF -->
+                    <a asp-action="ExportPdf"
+                       asp-controller="Brands"
+                       asp-route-search="@search"
+                       asp-route-isActive="@selectedIsActive"
+                       class="btn btn-light btn-custom-square text-danger"
+                       title="Export PDF">
+
+                        <i class="bi bi-file-earmark-pdf-fill"></i>
+
+                    </a>
+
+
+                    <!-- EXPORT EXCEL -->
+                    <a asp-action="ExportExcel"
+                       asp-controller="Brands"
+                       asp-route-search="@search"
+                       asp-route-isActive="@selectedIsActive"
+                       class="btn btn-light btn-custom-square text-success"
+                       title="Export Excel">
+
+                        <i class="bi bi-file-earmark-excel-fill"></i>
+
+                    </a>
+
+
+                    <!-- PRINT -->
+                    <a asp-action="Print"
+                       asp-controller="Brands"
+                       asp-route-search="@search"
+                       asp-route-isActive="@selectedIsActive"
+                       class="btn btn-light btn-custom-square text-secondary"
+                       title="Print">
+
+                        <i class="bi bi-printer-fill"></i>
+
+                    </a>
+
+
+                    <!-- REFRESH -->
+                    <a asp-action="Index"
+                       asp-controller="Brands"
+                       asp-route-search="@search"
+                       asp-route-isActive="@selectedIsActive"
+                       asp-route-page="@Model.Page"
+                       asp-route-pageSize="@Model.PageSize"
+                       class="btn btn-light btn-custom-square text-secondary"
+                       title="Refresh">
+
+                        <i class="bi bi-arrow-clockwise"></i>
+
+                    </a>
+
+
+                    <!-- COLLAPSE -->
+                    <button type="button"
+                            class="btn btn-light btn-custom-square text-secondary"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#brandTableCollapse"
+                            title="Collapse">
+
+                        <i class="bi bi-chevron-up"></i>
+
+                    </button>
+
+
+                    <!-- TAMBAH -->
+                    <a asp-action="Create"
+                       asp-controller="Brands"
+                       class="btn btn-success">
+
+                        <i class="bi bi-plus-circle"></i>
+
+                        <span>
+                            Tambah Brands
+                        </span>
+
+                    </a>
+
+                </div>
+
+            </div>
+
+
+            <!-- TABLE CONTENT -->
+            <div class="collapse show"
+                 id="brandTableCollapse">
+
+                <div class="card-body p-0">
+
+                    <div class="table-responsive">
+
+                        <table class="table table-hover align-middle mb-0 supplier-table">
+
+                            <!-- HEADER -->
+                            <thead>
+
+                                <tr>
+
+                                    <th class="ps-4">
+                                        #
+                                    </th>
+
+                                    <th>
+                                        NAME
+                                    </th>
+
+                                    <th>
+                                        IMAGE
+                                    </th>
+
+                                    <th>
+                                        IS ACTIVE
+                                    </th>
+
+                                    <th>
+                                        AKSI
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <!-- BODY -->
+                            <tbody>
+
+                                @if (Model.Data != null &&
+                                     Model.Data.Count > 0)
+                                {
+                                    foreach (var item in Model.Data)
+                                    {
+                                        no++;
+
+                                        <tr>
+
+                                            <!-- NOMOR -->
+                                            <td class="ps-4">
+                                                @no
+                                            </td>
+
+
+                                            <!-- NAME -->
+                                            <td>
+
+                                                <span class="fw-semibold">
+                                                    @(string.IsNullOrWhiteSpace(item.Name)
+                                                        ? "-"
+                                                        : item.Name)
+                                                </span>
+
+                                            </td>
+
+
+                                            <!-- IMAGE -->
+                                            <td>
+
+                                                @if (!string.IsNullOrWhiteSpace(item.Image))
+                                                {
+                                                    var imagePath =
+                                                        item.Image
+                                                            .Trim()
+                                                            .Replace("\\", "/");
+
+                                                    var imageUrl =
+                                                        imagePath.StartsWith(
+                                                            "http",
+                                                            StringComparison.OrdinalIgnoreCase)
+                                                            ? imagePath
+                                                            : $"https://localhost:7101/{imagePath.TrimStart('/')}";
+
+                                                    <img src="@imageUrl"
+                                                         alt="@item.Name"
+                                                         class="brand-image"
+                                                         onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='grid';" />
+
+                                                    <div class="brand-avatar"
+                                                         style="display:none;">
+
+                                                        <i class="bi bi-image"></i>
+
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="brand-avatar">
+
+                                                        <i class="bi bi-image"></i>
+
+                                                    </div>
+                                                }
+
+                                            </td>
+
+
+                                            <!-- STATUS -->
+                                            <td>
+
+                                                @if (item.IsActive)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        Aktif
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">
+                                                        Nonaktif
+                                                    </span>
+                                                }
+
+                                            </td>
+
+
+                                            <!-- AKSI -->
+                                            <td>
+
+                                                <div class="d-flex gap-1">
+
+                                                    <!-- EDIT -->
+                                                    <a asp-action="Edit"
+                                                       asp-controller="Brands"
+                                                       asp-route-id="@item.Id"
+                                                       class="btn btn-sm btn-warning"
+                                                       title="Edit">
+
+                                                        <i class="bi bi-pencil-fill"></i>
+
+                                                    </a>
+
+
+                                                    <!-- DELETE -->
+                                                    <form asp-action="Delete"
+                                                          asp-controller="Brands"
+                                                          method="post"
+                                                          class="d-inline"
+                                                          onsubmit="return confirm('Apakah kamu yakin ingin menghapus brand ini?');">
+
+                                                        <input type="hidden"
+                                                               name="id"
+                                                               value="@item.Id" />
+
+                                                        <button type="submit"
+                                                                class="btn btn-sm btn-danger"
+                                                                title="Delete">
+
+                                                            <i class="bi bi-trash-fill"></i>
+
+                                                        </button>
+
+                                                    </form>
+
+                                                </div>
+
+                                            </td>
+
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+
+                                        <td colspan="5"
+                                            class="text-center py-5">
+
+                                            <i class="bi bi-inbox fs-1 text-muted"></i>
+
+                                            <div class="mt-2 text-muted">
+                                                Data brand tidak ditemukan.
+                                            </div>
+
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     PAGINATION
+                     ================================================= -->
+
+                <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+
+                    @{
+                        var startItem =
+                            Model.TotalCount == 0
+                                ? 0
+                                : ((Model.Page - 1) * Model.PageSize) + 1;
+
+                        var endItem =
+                            Math.Min(
+                                Model.Page * Model.PageSize,
+                                Model.TotalCount);
+
+                        var currentPage = Model.Page;
+                        var totalPages = Model.TotalPage;
+                    }
+
+
+                    <span class="menu-description small">
+
+                        Menampilkan
+
+                        <strong>
+                            @startItem – @endItem
+                        </strong>
+
+                        dari
+
+                        <strong>
+                            @Model.TotalCount
+                        </strong>
+
+                        data
+
+                    </span>
+
+
+                    <nav aria-label="Pagination">
+
+                        <ul class="pagination mb-0">
+
+                            <!-- SEBELUMNYA -->
+                            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new
+                                   {
+                                       search = search,
+                                       isActive = selectedIsActive,
+                                       page = currentPage - 1,
+                                       pageSize = Model.PageSize
+                                   })">
+
+                                    Sebelumnya
+
+                                </a>
+
+                            </li>
+
+
+                            <!-- NOMOR HALAMAN -->
+                            @for (int i = 1; i <= totalPages; i++)
+                            {
+                                <li class="page-item @(i == currentPage ? "active" : "")">
+
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new
+                                       {
+                                           search = search,
+                                           isActive = selectedIsActive,
+                                           page = i,
+                                           pageSize = Model.PageSize
+                                       })">
+
+                                        @i
+
+                                    </a>
+
+                                </li>
+                            }
+
+
+                            <!-- BERIKUTNYA -->
+                            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new
+                                   {
+                                       search = search,
+                                       isActive = selectedIsActive,
+                                       page = currentPage + 1,
+                                       pageSize = Model.PageSize
+                                   })">
+
+                                    Berikutnya
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </nav>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+}
+
+
+<!-- =========================================================
+     CSS
+     ========================================================= -->
+
+<style>
+
+    .brand-image,
+    .brand-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+    }
+
+    .brand-image {
+        object-fit: cover;
+        border: none;
+    }
+
+    .brand-avatar {
+        display: grid;
+        place-items: center;
+        background: #e9ecef;
+        color: #6c757d;
+        font-size: 18px;
+    }
+
+    /* PREVIEW IMAGE CREATE / EDIT */
+    .brand-form-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 0.375rem;
+        border: none;
+        display: block;
+    }
+
+    .supplier-table th {
+        white-space: nowrap;
+    }
+
+    .supplier-table td {
+        vertical-align: middle;
+    }
+
+    .btn-custom-square {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .supplier-filter .form-label {
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .supplier-form-card {
+        max-width: 100%;
+    }
+
+    .supplier-form-card .card-body {
+        padding: 24px;
+    }
+
+</style>

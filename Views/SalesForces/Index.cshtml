@@ -1,0 +1,904 @@
+@model PagedResult<ERP.Web.Models.SalesForceViewModel>
+
+@{
+    ViewData["Title"] = "Sales Force";
+}
+
+<div class="page-heading supplier-page">
+
+    <div class="mb-3">
+        <h4 class="page-title">
+        Sales Force
+        </h4>
+    </div>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+
+        <div class="attribute-filter-header">
+
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">Filter</span>
+            </div>
+
+            <button class="btn btn-sm text-muted p-0"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#filterCollapse"
+                    aria-expanded="true"
+                    aria-controls="filterCollapse">
+
+                <i class="bi bi-chevron-down"></i>
+
+            </button>
+
+        </div>
+
+        <div class="collapse show" id="filterCollapse">
+
+            <div class="card-body">
+
+                <form method="get"
+                      asp-action="Index"
+                      class="row g-2 align-items-end">
+
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">
+                            Cari
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="search"
+                               name="search"
+                               value="@Context.Request.Query["search"]" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="isActive" class="form-label">
+                            Is Active
+                        </label>
+
+                        <select class="form-select"
+                                id="isActive"
+                                name="isActive">
+
+                            <option value=""
+                                    selected="@(Context.Request.Query["isActive"] == "")">
+                                -- Semua --
+                            </option>
+
+                            <option value="true"
+                                    selected="@(Context.Request.Query["isActive"] == "true")">
+                                Aktif
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["isActive"] == "false")">
+                                Non-Aktif
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="pageSize" class="form-label">
+                            Per Halaman
+                        </label>
+
+                        <select class="form-select"
+                                id="pageSize"
+                                name="pageSize">
+
+                            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 d-flex gap-2">
+
+                        <button type="submit"
+                                class="btn btn-primary d-flex align-items-center gap-2">
+
+                            <i class="bi bi-search"></i>
+                            Terapkan
+
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary"
+                           title="Reset Filter">
+
+                            <i class="bi bi-arrow-counterclockwise"></i>
+
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+
+        <!-- HEADER -->
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+            <div class="d-flex align-items-center gap-2">
+
+                <strong class="attribute-card-title">
+                   Sales Force
+                 </strong>
+
+                <span class="badge badge-count">
+                    @Model.TotalCount
+                </span>
+
+                <span class="menu-description small ms-1">
+                    Tenaga penjual / salesman penanggung jawab customer
+                </span>
+
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+
+           <a asp-action="ExportPdf"
+              asp-controller="SalesForces"
+              class="btn btn-light btn-custom-square text-danger"
+              title="Export PDF">
+           <i class="bi bi-file-earmark-pdf-fill"></i>
+           </a>
+
+    
+          <a asp-action="ExportExcel"
+             asp-controller="SalesForces"
+             class="btn btn-light btn-custom-square text-success"
+             title="Export Excel">
+          <i class="bi bi-file-earmark-excel-fill"></i>
+          </a>
+
+   
+         <a asp-action="Print"
+            asp-controller="SalesForces"
+            class="btn btn-light btn-custom-square text-secondary"
+            title="Cetak"
+            target="_blank">
+         <i class="bi bi-printer-fill"></i>
+         </a>
+
+         <button type="button"
+                class="btn btn-light btn-custom-square"
+                title="Refresh"
+                onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+
+
+             
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Toggle Collapse"
+                        onclick="toggleSalesForceTable(this)">
+
+                    <i class="bi bi-chevron-up"></i>
+
+                </button>
+
+                <!-- Tambah SalesForce -->
+                <button type="button"
+                        class="btn btn-teal btn-custom-action"
+                        id="btnAddSupplier"
+                        onclick="openCreateSalesForce()">
+
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Tambah Sales Force</span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- BAGIAN YANG DITUTUP TOGGLE -->
+        <div id="salesForceTableContent">
+
+        <!-- TABLE BODY -->
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0 supplier-table">
+
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 50px;">#</th>
+                                <th style="width: 120px;">KODE</th>
+                                <th>NAMA</th>
+                                <th>TELEPON</th>
+                                <th>EMAIL</th>
+                                <th>AREA</th>
+                                <th style="width: 90px;">STATUS</th>
+                                <th class="text-center" style="width: 100px;">AKSI</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                            @if (Model.Data != null && Model.Data.Any())
+                            {
+                            var no = ((Model.Page - 1) * Model.PageSize) + 1;
+                            foreach (var item in Model.Data)
+                            {
+                            <tr>
+                                <!-- NOMOR -->
+                                <td class="text-center">@no</td>
+
+                                <!-- KODE -->
+                                <td>
+                                    <span class="badge bg-light text-dark border">@item.Code</span>
+                                </td>
+
+                                <!-- NAMA -->
+                                <td>
+                                    <span class="fw-bold">@item.Name</span>
+                                </td>
+
+                                <!-- TELEPON -->
+                                <td>@(string.IsNullOrWhiteSpace(item.Phone) ? "-" : item.Phone)</td>
+
+                                <!-- EMAIL -->
+                                <td>@(string.IsNullOrWhiteSpace(item.Email) ? "-" : item.Email)</td>
+
+                                <!-- AREA -->
+                                <td>@(string.IsNullOrWhiteSpace(item.Area) ? "-" : item.Area)</td>
+
+                                <!-- STATUS -->
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                    <span class="badge bg-success">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                    <span class="badge bg-secondary">Tidak Aktif</span>
+                                    }
+                                </td>
+
+                                <!-- AKSI -->
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <!-- EDIT -->
+                                        <button type="button" class="btn btn-sm menu-action-edit" title="Edit" onclick="openEditSalesForce(@item.Id)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+
+                                        <!-- DELETE -->
+                                        <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus Sales Force ini?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-sm menu-action-delete" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            no++;
+                            }
+                            }
+                            else
+                            {
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <span class="menu-description">Tidak ada data Sales Force.</span>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+
+                </table>
+                </div>
+
+            </div>
+
+            <!-- FOOTER / PAGINATION -->
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-2">
+                
+             @{
+                 var totalData = Model.TotalData;
+                 var currentPage = Model.Page < 1 ? 1 : Model.Page;
+                 var pageSize = Model.PageSize > 0 ? Model.PageSize : 10;
+
+                 // Hitung jumlah halaman berdasarkan total data
+                 var totalPages = totalData > 0
+                 ? (int)Math.Ceiling((double)totalData / pageSize)
+                 : 0;
+
+                 var startItem = totalData == 0
+                 ? 0
+                 : ((currentPage - 1) * pageSize) + 1;
+
+                 var endItem = Math.Min(
+                 currentPage * pageSize,
+                 totalData
+               );
+             } 
+               
+           <span class="menu-description small">
+               Menampilkan
+               <strong>@startItem – @endItem</strong>
+               dari
+              <strong>@totalData</strong>
+              data
+           </span>
+
+                <nav aria-label="Pagination">
+                    <ul class="pagination pagination-sm mb-0">
+
+                        <!-- SEBELUMNYA -->
+                        <li class="page-item @(Model.Page <= 1 ? " disabled" : "" )">
+                           
+                           @if (currentPage <= 1)
+                           {
+                              <span class="page-link">
+                               Sebelumnya
+                              </span>
+                           }
+                           else
+                          {
+                    
+                            <a class="page-link"
+                               href="@Url.Action("Index", new {
+                               search = Context.Request.Query["search"],
+                               isActive = Context.Request.Query["isActive"],
+                               page = currentPage - 1,
+                               pageSize = pageSize
+                             })">
+                             Sebelumnya
+                           </a>
+
+                         }
+                        </li>
+
+                        <!-- NOMOR HALAMAN -->
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                        <li class="page-item @(i == currentPage ? " active" : "" )">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new {
+                               search = Context.Request.Query["search"],
+                               isActive = Context.Request.Query["isActive"],
+                               page = i,
+                               pageSize = pageSize
+                             })">
+                             @i
+                           </a>
+
+                         </li>
+                       }
+
+                        <!-- BERIKUTNYA -->
+                        <li class="page-item @(Model.Page >= Model.TotalPage ? " disabled" : "" )">
+
+                           @if (currentPage >= totalPages || totalPages == 0)
+                           {
+                                <span class="page-link">
+                                    Berikutnya
+                                </span>
+                           }
+                          else
+                          {
+
+                               <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                   search = Context.Request.Query["search"],
+                                   isActive = Context.Request.Query["isActive"],
+                                   page = currentPage + 1,
+                                   pageSize = pageSize
+                                })">
+                                 Berikutnya
+                              </a>
+                          }
+                       </li>
+                    </ul>
+                </nav>
+               
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- =====================================================
+     MODAL TAMBAH SALES FORCE
+     ===================================================== -->
+
+<div class="modal fade"
+     id="createSalesForceModal"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Tambah Sales Force
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+
+            <form asp-action="Create"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+
+                    <div class="row g-3">
+
+                        <!-- KODE -->
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Kode
+                            </label>
+
+                            <input type="text"
+                                   name="Code"
+                                   class="form-control"
+                                   placeholder="Masukkan kode sales"
+                                   required />
+
+                        </div>
+
+
+                        <!-- NAMA -->
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Nama Sales
+                            </label>
+
+                            <input type="text"
+                                   name="Name"
+                                   class="form-control"
+                                   placeholder="Masukkan nama sales"
+                                   required />
+
+                        </div>
+
+
+                        <!-- TELEPON -->
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Telepon
+                            </label>
+
+                            <input type="text"
+                                   name="Phone"
+                                   class="form-control"
+                                   placeholder="Masukkan nomor telepon" />
+
+                        </div>
+
+
+                        <!-- EMAIL -->
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Email
+                            </label>
+
+                            <input type="email"
+                                   name="Email"
+                                   class="form-control"
+                                   placeholder="Masukkan email" />
+
+                        </div>
+
+
+                        <!-- AREA -->
+                        <div class="col-md-12">
+
+                            <label class="form-label">
+                                Area
+                            </label>
+
+                            <input type="text"
+                                   name="Area"
+                                   class="form-control"
+                                   placeholder="Masukkan area penjualan" />
+
+                        </div>
+
+
+                        <!-- STATUS -->
+                        <div class="col-md-12">
+                            <div class="form-check form-switch">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="createSalesForceActive"
+                                       name="IsActive"
+                                       value="true"
+                                       checked />
+
+                                <input type="hidden"
+                                       name="IsActive"
+                                       value="false" />
+
+                                <label class="form-check-label ms-2"
+                                       for="createSalesForceActive">
+                                    Aktif
+                                </label>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+
+                        Simpan
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- =====================================================
+     MODAL EDIT SALES FORCE
+     ===================================================== -->
+
+<div class="modal fade"
+     id="editSalesForceModal"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Edit Sales Force
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+
+            <form asp-action="Edit"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           name="Id"
+                           id="editSalesForceId" />
+
+
+                    <div class="row g-3">
+
+                        <!-- KODE -->
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Kode
+                            </label>
+
+                            <input type="text"
+                                   name="Code"
+                                   id="editSalesForceCode"
+                                   class="form-control"
+                                   required />
+
+                        </div>
+
+
+                        <!-- NAMA -->
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Nama Sales
+                            </label>
+
+                            <input type="text"
+                                   name="Name"
+                                   id="editSalesForceName"
+                                   class="form-control"
+                                   required />
+
+                        </div>
+
+
+                        <!-- TELEPON -->
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Telepon
+                            </label>
+
+                            <input type="text"
+                                   name="Phone"
+                                   id="editSalesForcePhone"
+                                   class="form-control" />
+
+                        </div>
+
+
+                        <!-- EMAIL -->
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Email
+                            </label>
+
+                            <input type="email"
+                                   name="Email"
+                                   id="editSalesForceEmail"
+                                   class="form-control" />
+
+                        </div>
+
+
+                        <!-- AREA -->
+                        <div class="col-md-12">
+
+                            <label class="form-label">
+                                Area
+                            </label>
+
+                            <input type="text"
+                                   name="Area"
+                                   id="editSalesForceArea"
+                                   class="form-control" />
+
+                        </div>
+
+
+                        <!-- STATUS -->
+                        <div class="col-md-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="editSalesForceIsActive"
+                                       name="IsActive"
+                                       value="true" />
+
+                                <input type="hidden"
+                                       id="editSalesForceIsActiveHidden"
+                                       name="IsActive"
+                                       value="false" />
+
+                                <label class="form-check-label ms-2"
+                                       for="editSalesForceIsActive">
+                                    Aktif
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+
+                        Simpan Perubahan
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+<script>
+
+// =========================
+// TOGGLE TABEL SALES FORCE
+// =========================
+
+function toggleSalesForceTable(button) {
+
+    const content = document.getElementById("salesForceTableContent");
+    const icon = button.querySelector("i");
+
+    if (content.style.display === "none") {
+
+        // BUKA
+        content.style.display = "";
+
+        icon.classList.remove("bi-chevron-down");
+        icon.classList.add("bi-chevron-up");
+
+    } else {
+
+        // TUTUP
+        content.style.display = "none";
+
+        icon.classList.remove("bi-chevron-up");
+        icon.classList.add("bi-chevron-down");
+
+    }
+}
+
+    // =========================
+    // TAMBAH SALES FORCE
+    // =========================
+
+    function openCreateSalesForce() {
+
+        const form = document.querySelector('#createSalesForceModal form');
+        if (form) {
+            form.reset();
+        }
+
+        document.getElementById("createSalesForceActive").checked = true;
+        const modal = new bootstrap.Modal(document.getElementById("createSalesForceModal"));
+
+        modal.show();
+    }
+
+
+    // =========================
+    // EDIT SALES FORCE
+    // =========================
+
+    async function openEditSalesForce(id) {
+
+        try {
+
+            const response =
+                await fetch(
+                    `/SalesForces/GetById?id=${id}`
+                );
+
+
+            if (!response.ok) {
+
+                alert(
+                    "Data Sales Force tidak ditemukan."
+                );
+
+                return;
+            }
+
+
+            const data =
+                await response.json();
+
+
+            // ID
+            document.getElementById("editSalesForceId").value = data.id;
+
+            // KODE
+            document.getElementById("editSalesForceCode").value = data.code ?? "";
+
+            // NAMA
+            document.getElementById("editSalesForceName").value = data.name ?? "";
+
+            // TELEPON
+            document.getElementById("editSalesForcePhone").value = data.phone ?? "";
+
+            // EMAIL
+            document.getElementById("editSalesForceEmail").value = data.email ?? "";
+
+            // AREA
+            document.getElementById("editSalesForceArea").value = data.area ?? "";
+
+               // STATUS AKTIF
+                const activeCheckbox = document.getElementById("editSalesForceIsActive");
+                const activeHidden = document.getElementById("editSalesForceIsActive");
+
+                // SET STATUS SESUAI DATA DARI API
+                activeCheckbox.checked = data.isActive === true;
+                activeHidden.value = activeCheckbox.checked
+                    ? "true"
+                    : "false";
+
+                // UPDATE NILAI SAAT CHECKBOX DIUBAH
+                activeCheckbox.onchange = function () {
+                    activeHidden.value = this.checked
+                        ? "true"
+                        : "false";
+                };
+
+                // TAMPILKAN MODAL
+                // const modalElement = document.getElementById(
+                //     "editSalesForceModal"
+                // );
+
+
+            // SHOW MODAL
+            const modal =
+                new bootstrap.Modal(
+                    document.getElementById(
+                        "editSalesForceModal"
+                    )
+                );
+
+            modal.show();
+
+        }
+        catch (error) {
+
+            console.error(error);
+
+            alert(
+                "Terjadi kesalahan saat mengambil data Sales Force."
+            );
+
+        }
+
+    }
+
+</script>
+
+}

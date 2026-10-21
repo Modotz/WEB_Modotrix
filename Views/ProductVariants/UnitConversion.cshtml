@@ -1,0 +1,348 @@
+@using ERP.Web.Models
+@model ProductUnitPageViewModel
+
+@{
+    ViewData["Title"] = "Satuan & Konversi Varian";
+
+    var product = Model;
+
+    var units = ViewBag.Units as IEnumerable<DropdownItemViewModel> ?? Enumerable.Empty<DropdownItemViewModel>();
+
+    // Data satuan alternatif berasal dari Model.Units,
+    // karena controller mengisi properti ini.
+    var productUnits = Model.Units ?? new List<ProductUnitViewModel>(); 
+    var baseUnitId = product.BaseUnitId;
+    var baseUnitName = product.BaseUnitName;
+
+    // Cari satuan dasar dari dropdown jika namanya belum tersedia.
+    if (string.IsNullOrWhiteSpace(baseUnitName))
+    {
+        baseUnitName = units.FirstOrDefault(x => x.Id == baseUnitId)?.Name
+            ?? "-";
+    }
+}
+<div class="page-heading supplier-page unit-page">
+
+    <div class="unit-page-title">
+        Satuan — @product.ProductName
+    </div>
+
+    <div class="unit-card">
+
+        <div class="unit-card-header">
+
+            <div class="unit-card-header-left">
+
+                <span class="unit-card-title">
+                    Satuan & Konversi — @product.ProductName
+                </span>
+
+                <span class="unit-card-sku">
+                    @product.ProductSku
+                </span>
+
+                <span class="unit-card-separator">
+                    ·
+                </span>
+
+                <span class="unit-card-base-label">
+                    Satuan dasar:
+                </span>
+
+                <span class="unit-base-badge">
+                    @baseUnitName
+                </span>
+
+                <span class="unit-base-name">
+                    @baseUnitName
+                </span>
+
+            </div>
+
+            <a asp-action="Index"
+               asp-controller="Products"
+               class="unit-back-btn">
+
+                <i class="bi bi-arrow-left"></i>
+                Produk
+
+            </a>
+
+        </div>
+
+        <div class="unit-card-body">
+
+            <!-- PENJELASAN -->
+            <div class="unit-description">
+
+                <i class="bi bi-info-circle"></i>
+
+                Konversi = jumlah satuan dasar dalam 1 satuan ini.
+                Contoh: 1 BOX = 12 @baseUnitName → isi 12.
+
+            </div>
+
+            <!-- TABEL SATUAN -->
+            <div class="unit-table-wrapper">
+
+                <table class="unit-table">
+
+                    <thead>
+                        <tr>
+                            <th>SATUAN</th>
+                            <th>KONVERSI (× @baseUnitName)</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <!-- SATUAN DASAR -->
+                        <tr class="unit-base-row">
+
+                            <td>
+                                <div class="unit-row-unit">
+
+                                    <span class="unit-row-badge">
+                                        @baseUnitName
+                                    </span>
+
+                                    <span class="unit-row-name">
+                                        @baseUnitName
+                                    </span>
+
+                                    <span class="unit-row-basic">
+                                        (dasar)
+                                    </span>
+
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="unit-conversion-value">
+                                    1
+                                </span>
+                            </td>
+
+                        </tr>
+
+                        <!-- SATUAN ALTERNATIF -->
+                        @foreach (var item in productUnits)
+                        {
+                            var unitInfo = units.FirstOrDefault(
+                                x => x.Id == item.UnitId);
+
+                            var unitName = !string.IsNullOrWhiteSpace(item.UnitName)
+                                ? item.UnitName
+                                : unitInfo?.Name ?? "-";
+
+                            <tr>
+
+                                <td>
+                                    <div class="unit-row-unit">
+
+                                        <span class="unit-row-badge">
+                                            @unitName
+                                        </span>
+
+                                        <span class="unit-row-name">
+                                            @unitName
+                                        </span>
+
+                                    </div>
+                                </td>
+
+                                <td>
+
+                                    <div class="d-flex align-items-center justify-content-end gap-2">
+
+                                        <span class="unit-conversion-value">
+                                            @item.Conversion.ToString("0.######")
+                                        </span>
+
+                                        <form asp-controller="ProductUnits"
+                                              asp-action="Delete"
+                                              method="post"
+                                              class="d-inline"
+                                              onsubmit="return confirm('Apakah Anda yakin ingin menghapus satuan konversi ini?');">
+
+                                            @Html.AntiForgeryToken()
+
+                                            <input type="hidden"
+                                                   name="id"
+                                                   value="@item.Id" />
+
+                                            <input type="hidden"
+                                                   name="productId"
+                                                   value="@product.ProductId" />
+
+                                            <button type="submit"
+                                                    class="btn btn-sm menu-action-delete"
+                                                    title="Hapus">
+
+                                                <i class="bi bi-trash"></i>
+
+                                            </button>
+
+                                        </form>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- EMPTY STATE -->
+            @if (!productUnits.Any())
+            {
+                <div class="unit-empty">
+                    Belum ada satuan alternatif.
+                </div>
+            }
+
+            <!-- DIVIDER -->
+            <div class="unit-divider"></div>
+
+            <!-- FORM TAMBAH -->
+            <form asp-controller="ProductUnits"
+                  asp-action="Create"
+                  method="post"
+                  id="productUnitForm">
+
+                @Html.AntiForgeryToken()
+
+                <input type="hidden"
+                       name="ProductId"
+                       value="@product.ProductId" />
+
+                <div class="unit-form">
+
+                    <div class="unit-form-row">
+
+                        <!-- SATUAN -->
+                        <div class="unit-form-group unit-form-unit">
+
+                            <label for="unitId"
+                                   class="unit-form-label">
+                                Satuan
+                            </label>
+
+                            <select class="unit-form-control"
+                                    id="unitId"
+                                    name="UnitId"
+                                    required>
+
+                                <option value="">
+                                    -- Pilih --
+                                </option>
+
+                                @{
+                                    var usedUnitIds = productUnits
+                                        .Select(x => x.UnitId)
+                                        .ToHashSet();
+                                }
+
+                                @foreach (var unit in units)
+                                {
+                                    if (unit.Id != baseUnitId &&
+                                        !usedUnitIds.Contains(unit.Id))
+                                    {
+                                        <option value="@unit.Id">
+                                            @unit.Name
+                                        </option>
+                                    }
+                                }
+
+                            </select>
+
+                        </div>
+
+                        <!-- KONVERSI -->
+                        <div class="unit-form-group unit-form-conversion">
+
+                            <label for="conversion"
+                                   class="unit-form-label">
+                                Konversi ke @baseUnitName
+                            </label>
+
+                            <input type="number"
+                                   class="unit-form-control"
+                                   id="conversion"
+                                   name="Conversion"
+                                   min="0.000001"
+                                   step="0.000001"
+                                   placeholder="mis. 12"
+                                   required />
+
+                        </div>
+
+                        <!-- BUTTON TAMBAH -->
+                        <div class="unit-form-button">
+
+                            <button type="submit"
+                                    class="unit-add-btn"
+                                    id="btnAddProductUnit">
+
+                                <i class="bi bi-plus-lg"></i>
+                                Tambah
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        const productUnitForm = document.getElementById("productUnitForm"); 
+        const btnAddProductUnit =  document.getElementById("btnAddProductUnit"); 
+        const unitIdInput = document.getElementById("unitId"); 
+        const conversionInput =  document.getElementById("conversion");
+
+        if (productUnitForm) { productUnitForm.addEventListener("submit", function (event) { 
+                const unitId = unitIdInput.value;
+                const conversion = Number(conversionInput.value);
+
+                if (
+                    !unitId ||
+                    !Number.isFinite(conversion) ||
+                    conversion <= 0
+                ) {
+                    event.preventDefault();
+
+                    alert(
+                        "Pilih satuan dan masukkan nilai konversi yang valid."
+                    );
+
+                    return;
+                }
+
+                if (!productUnitForm.checkValidity()) {
+                    event.preventDefault();
+                    productUnitForm.reportValidity();
+                    return;
+                }
+
+                btnAddProductUnit.disabled = true; 
+                btnAddProductUnit.innerHTML =
+                    '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+            });
+        }
+    </script>
+}

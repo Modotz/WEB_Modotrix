@@ -1,0 +1,555 @@
+@model ERP.Web.Models.CustomerGroupsViewModel
+
+@{
+    ViewData["Title"] = "Edit Kelompok Customer";
+}
+
+<style>
+    /* =========================================================
+       CUSTOMER GROUP EDIT
+       ========================================================= */
+
+    .customer-group-form-page {
+        padding: 18px 20px 30px;
+    }
+
+    .customer-group-form-title {
+        color: #f1f5f9;
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    /* =========================================================
+       GUIDE
+       ========================================================= */
+
+    .customer-group-guide {
+        background: #10192c;
+        border: 1px solid #009bb1;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 6px;
+        max-width: 1120px;
+    }
+
+    .customer-group-guide-header {
+        background: #00353b;
+        color: #5de7f4;
+        border-bottom: 1px solid #009bb1;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .customer-group-guide-body {
+        padding: 10px 12px 11px;
+        color: #e2e8f0;
+        font-size: 11px;
+        line-height: 1.55;
+    }
+
+    .customer-group-guide-body ol {
+        margin: 0;
+        padding-left: 18px;
+    }
+
+    /* =========================================================
+       FORM CARD
+       ========================================================= */
+
+    .customer-group-form-card {
+        max-width: 1120px;
+        background: #10192c;
+        border: 1px solid #293b59;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .customer-group-form-card .card-header {
+        background: #10192c;
+        color: #e5edf7;
+        border-bottom: 1px solid #293b59;
+        padding: 10px 12px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .customer-group-form-card .card-body {
+        padding: 14px 12px;
+    }
+
+    .customer-group-form-card .form-label {
+        color: #e5edf7;
+        font-size: 13px;
+        margin-bottom: 6px;
+    }
+
+    .customer-group-form-card .form-control,
+    .customer-group-form-card .form-select {
+        background: #0d1729;
+        border: 1px solid #293b59;
+        color: #f1f5f9;
+        border-radius: 5px;
+    }
+
+    .customer-group-form-card .form-control:focus,
+    .customer-group-form-card .form-select:focus {
+        background: #0d1729;
+        color: #fff;
+        border-color: #3974b9;
+        box-shadow: 0 0 0 .15rem rgba(57, 116, 185, .15);
+    }
+
+    .customer-group-form-card .form-select option {
+        background: #10192c;
+        color: #fff;
+    }
+
+    .required-mark {
+        color: #ef4444;
+    }
+
+    /* =========================================================
+       DISCOUNT
+       ========================================================= */
+
+    .discount-group {
+        display: flex;
+        max-width: 155px;
+    }
+
+    .discount-group .form-control {
+        border-radius: 5px 0 0 5px;
+    }
+
+    .discount-suffix {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 30px;
+        background: #17243a;
+        border: 1px solid #293b59;
+        border-left: none;
+        color: #f1f5f9;
+        border-radius: 0 5px 5px 0;
+        font-size: 13px;
+    }
+
+    /* =========================================================
+       PRICE LIST
+       ========================================================= */
+
+    .customer-group-price-info {
+        color: #82a2ca;
+        font-size: 11px;
+        margin-top: 5px;
+    }
+
+    /* =========================================================
+       SWITCH
+       ========================================================= */
+
+    .customer-group-switch {
+        margin-top: 2px;
+    }
+
+    .customer-group-switch .form-check-input {
+        cursor: pointer;
+        background-color: #263b58;
+        border-color: #49617e;
+    }
+
+    .customer-group-switch .form-check-input:checked {
+        background-color: #3974b9;
+        border-color: #3974b9;
+    }
+
+    .customer-group-switch .form-check-label {
+        color: #e5edf7;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    .customer-group-form-footer {
+        background: #172137;
+        border-top: 1px solid #293b59;
+        padding: 7px 12px;
+    }
+
+    .customer-group-save {
+        background: #356ca4;
+        border-color: #356ca4;
+        color: #fff;
+    }
+
+    .customer-group-save:hover {
+        background: #3974b9;
+        border-color: #3974b9;
+        color: #fff;
+    }
+
+    .customer-group-cancel {
+        background: #737d88;
+        border-color: #737d88;
+        color: #fff;
+    }
+
+    .customer-group-cancel:hover {
+        background: #626b75;
+        border-color: #626b75;
+        color: #fff;
+    }
+
+    /* =========================================================
+       VALIDATION
+       ========================================================= */
+
+    .customer-group-validation {
+        color: #fca5a5;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    @@media (max-width: 768px) {
+
+        .customer-group-form-page {
+            padding: 14px 10px 25px;
+        }
+
+        .customer-group-form-title {
+            font-size: 20px;
+        }
+    }
+</style>
+
+
+<div class="customer-group-form-page">
+
+    <!-- =====================================================
+         TITLE
+         ===================================================== -->
+
+    <h3 class="customer-group-form-title">
+        Edit Kelompok Customer
+    </h3>
+
+
+    <!-- =====================================================
+         PANDUAN
+         ===================================================== -->
+
+    <div class="customer-group-guide">
+
+        <div class="customer-group-guide-header">
+
+            <i class="bi bi-info-circle-fill me-1"></i>
+
+            Panduan Pengisian — Kelompok Customer
+
+            <button type="button"
+                    class="btn btn-sm text-info float-end p-0"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#customerGroupGuideCollapse">
+
+                <i class="bi bi-chevron-down"></i>
+
+            </button>
+
+        </div>
+
+
+        <div class="collapse show"
+             id="customerGroupGuideCollapse">
+
+            <div class="customer-group-guide-body">
+
+                <ol>
+
+                    <li>
+                        Isi <strong>Kode</strong> unik
+                        (mis. <em>RTL, GRS, VIP</em>)
+                        dan <strong>Nama kelompok</strong> — wajib.
+                    </li>
+
+                    <li>
+                        <strong>Diskon Default (%)</strong> opsional —
+                        potongan bawaan untuk pelanggan di kelompok ini
+                        (0 = tanpa diskon).
+                    </li>
+
+                    <li>
+                        <strong>Keterangan</strong> opsional untuk catatan singkat.
+                    </li>
+
+                    <li>
+                        Matikan <strong>Aktif</strong> bila kelompok
+                        tak dipakai lagi (data lama tetap aman).
+                    </li>
+
+                </ol>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         FORM
+         ===================================================== -->
+
+    <div class="card customer-group-form-card">
+
+        <div class="card-header">
+            Edit Kelompok Customer
+        </div>
+
+
+        <form asp-controller="CustomerGroups"
+              asp-action="Edit"
+              method="post">
+
+            @Html.AntiForgeryToken()
+
+            <!-- ID -->
+
+            <input asp-for="Id"
+                   type="hidden" />
+
+
+            <div class="card-body">
+
+                <div asp-validation-summary="ModelOnly"
+                     class="customer-group-validation mb-2">
+                </div>
+
+
+                <div class="row g-3">
+
+                    <!-- =================================================
+                         KODE
+                         ================================================= -->
+
+                    <div class="col-md-4">
+
+                        <label asp-for="Code"
+                               class="form-label">
+
+                            Kode
+                            <span class="required-mark">*</span>
+
+                        </label>
+
+                        <input asp-for="Code"
+                               class="form-control"
+                               maxlength="30"
+                               autocomplete="off"
+                               required />
+
+                        <span asp-validation-for="Code"
+                              class="customer-group-validation">
+                        </span>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         NAMA
+                         ================================================= -->
+
+                    <div class="col-md-8">
+
+                        <label asp-for="Name"
+                               class="form-label">
+
+                            Nama Kelompok
+                            <span class="required-mark">*</span>
+
+                        </label>
+
+                        <input asp-for="Name"
+                               class="form-control"
+                               maxlength="100"
+                               autocomplete="off"
+                               required />
+
+                        <span asp-validation-for="Name"
+                              class="customer-group-validation">
+                        </span>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         DISCOUNT
+                         ================================================= -->
+
+                    <div class="col-md-12">
+
+                        <label asp-for="DiscountPercent"
+                               class="form-label">
+
+                            Diskon Default (%)
+
+                        </label>
+
+                        <div class="discount-group">
+
+                            <input asp-for="DiscountPercent"
+                                   type="number"
+                                   class="form-control"
+                                   min="0"
+                                   max="100"
+                                   step="0.01" />
+
+                            <span class="discount-suffix">
+                                %
+                            </span>
+
+                        </div>
+
+                        <span asp-validation-for="DiscountPercent"
+                              class="customer-group-validation">
+                        </span>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         PRICE LIST
+                         ================================================= -->
+
+                    <div class="col-md-12">
+
+                        <label asp-for="PriceListId"
+                               class="form-label">
+
+                            Price List (Harga Kelompok)
+
+                        </label>
+
+                        <select asp-for="PriceListId"
+                                class="form-select"
+                                id="PriceListId">
+
+                            <option value="">
+                                — Tanpa price list (harga default) —
+                            </option>
+
+                            @if (ViewBag.PriceLists != null)
+                            {
+                                foreach (var priceList in ViewBag.PriceLists)
+                                {
+                                    <option value="@priceList.Id">
+                                        @priceList.Code — @priceList.Name
+                                    </option>
+                                }
+                            }
+
+                        </select>
+
+                        <div class="customer-group-price-info">
+
+                            Semua customer di kelompok ini memakai price list ini
+                            (bila customer tak punya list sendiri).
+                            Diskon default di atas tetap ditumpuk.
+
+                        </div>
+
+                        <span asp-validation-for="PriceListId"
+                              class="customer-group-validation">
+                        </span>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         DESCRIPTION
+                         ================================================= -->
+
+                    <div class="col-md-12">
+
+                        <label asp-for="Description"
+                               class="form-label">
+
+                            Keterangan
+
+                        </label>
+
+                        <input asp-for="Description"
+                               class="form-control"
+                               maxlength="255" />
+
+                        <span asp-validation-for="Description"
+                              class="customer-group-validation">
+                        </span>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ACTIVE
+                         ================================================= -->
+
+                    <div class="col-md-12">
+
+                        <div class="form-check form-switch customer-group-switch">
+
+                            <input asp-for="IsActive"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   role="switch"
+                                   id="IsActive" />
+
+                            <label class="form-check-label ms-2"
+                                   for="IsActive">
+
+                                Aktif
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =====================================================
+                 FOOTER
+                 ===================================================== -->
+
+            <div class="customer-group-form-footer">
+
+                <button type="submit"
+                        class="btn btn-sm customer-group-save">
+
+                    <i class="bi bi-save me-1"></i>
+                    Simpan
+
+                </button>
+
+
+                <a asp-controller="CustomerGroups"
+                   asp-action="Index"
+                   class="btn btn-sm customer-group-cancel">
+
+                    Batal
+
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>

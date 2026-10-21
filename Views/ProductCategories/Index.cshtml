@@ -1,0 +1,778 @@
+﻿
+@using ERP.Web.Models
+@model PagedResult<ProductCategoryViewModel>
+
+@{
+    ViewData["Title"] = "Kategori Produk";
+}
+
+<div class="page-heading supplier-page">
+
+    <!-- HEADER -->
+    <div class="mb-3">
+        <h4 class="page-title">Kategori Produk</h4>
+    </div>
+
+    <!-- FILTER -->
+    <div class="card supplier-card supplier-filter">
+
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <strong class="small">
+                <i class="bi bi-funnel me-1"></i>
+                Filter
+            </strong>
+
+            <i class="bi bi-chevron-down"></i>
+        </div>
+
+        <div class="card-body">
+            <form method="get" asp-action="Index">
+
+                <div class="row g-2 align-items-end">
+
+                    <!-- SEARCH -->
+                    <div class="col-md-4">
+                        <label class="form-label">Cari (kode / nama)</label>
+
+                        <input type="text"
+                               name="search"
+                               value="@ViewBag.Search"
+                               class="form-control"
+                               placeholder="Cari kategori..." />
+                    </div>
+
+                    <!-- INDUK -->
+                    <div class="col-md-3">
+                        <label class="form-label">Induk</label>
+
+                        <div class="position-relative">
+                            <select name="parentId"
+                                    class="form-select category-filter-select">
+
+                                <option value="">-- Semua --</option>
+
+                                <option value="0"
+                                        selected="@(ViewBag.ParentId?.ToString() == "0" ? "selected" : null)">
+                                    Kategori Utama saja
+                                </option>
+
+                                @foreach (var category in ViewBag.AllCategories)
+                                {
+                                    <option value="@category.Id"
+                                            selected="@(ViewBag.ParentId?.ToString() == category.Id.ToString() ? "selected" : null)">
+                                        @category.Name
+                                    </option>
+                                }
+
+                            </select>
+
+                            <i class="bi bi-chevron-down category-select-arrow"></i>
+                        </div>
+                    </div>
+
+                    <!-- STATUS -->
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+
+                        <div class="position-relative">
+                            <select name="isActive"
+                                    class="form-select category-filter-select">
+
+                                <option value="">-- Semua --</option>
+
+                                <option value="true"
+                                        selected="@(ViewBag.IsActive?.ToString()?.ToLower() == "true" ? "selected" : null)">
+                                    Aktif
+                                </option>
+
+                                <option value="false"
+                                        selected="@(ViewBag.IsActive?.ToString()?.ToLower() == "false" ? "selected" : null)">
+                                    Tidak Aktif
+                                </option>
+
+                            </select>
+
+                            <i class="bi bi-chevron-down category-select-arrow"></i>
+                        </div>
+                    </div>
+
+                    <!-- BUTTON -->
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button type="submit"
+                                class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search me-1"></i>
+                            Terapkan
+                        </button>
+
+                        <a asp-controller="WorkCenters"
+                           asp-action="Index"
+                           class="btn btn-outline-secondary"
+                           title="Reset">
+
+                           <i class="bi bi-arrow-counterclockwise"></i>
+                    
+
+                         </a>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CARD DAFTAR KATEGORI -->
+    <div class="card supplier-card supplier-table-card">
+
+        <!-- CARD HEADER -->
+        <div class="card-header bg-transparent d-flex align-items-center justify-content-between p-3">
+
+            <div class="d-flex align-items-center gap-2">
+                <strong class="fw-bold fs-5">Kategori</strong>
+
+                <span class="badge badge-count">
+                    @Model.TotalData
+                </span>
+
+                <small class="menu-description small ms-1 d-none d-md-inline">
+                    Struktur kategori &amp; sub-kategori produk
+                </small>
+            </div>
+
+           <div class="d-flex align-items-center gap-2">
+                <a asp-action="ExportPdf"
+                   asp-controller="ProductCategories"
+                   class="btn btn-light btn-custom-square text-danger"
+                   title="Export PDF">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                </a>
+
+                <!-- Export Excel -->
+                <a asp-action="ExportExcel"
+                   asp-controller="ProductCategories"
+                   class="btn btn-light btn-custom-square text-success"
+                   title="Export Excel">
+                    <i class="bi bi-file-earmark-excel-fill"></i>
+                </a>
+
+                <!-- 
+
+                -->
+                <a asp-action="Print"
+                   asp-controller="ProductCategories"
+                   class="btn btn-light btn-custom-square text-secondary"
+                   title="Cetak"
+                   target="_blank">
+                    <i class="bi bi-printer-fill"></i>
+                </a>
+
+                <!-- Refresh Data -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Refresh Data"
+                        onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+
+                <!-- Expand / Collapse -->
+                <button type="button" 
+                        class="btn btn-light btn-custom-square"
+                        title="Toggle"
+                        onclick="toggleCategoryTable(this)">
+                    <i class="bi bi-chevron-up"></i>
+                </button>
+
+                <!-- Tambah Supplier -->
+                <button type="button"
+                        class="btn btn-teal btn-custom-action"
+                        onclick="openCreateCategory()">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Tambah Kategori</span>
+                </button>
+              </div>
+        </div>
+
+        <!-- CARD BODY -->
+        <div class="card-body p-0" id="categoryTableBody">
+
+            <div class="table-responsive">
+                <table class="table align-middle category-table">
+
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 50px;">#</th>
+                            <th style="width: 130px;">CODE</th>
+                            <th>NAMA KATEGORI</th>
+                            <th style="width: 100px;">STATUS</th>
+                            <th class="text-center" style="width: 130px;">AKSI</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (Model.Data != null && Model.Data.Any())
+                        {
+                            var no = ((Model.Page - 1) * Model.PageSize) + 1;
+
+                            foreach (var item in Model.Data)
+                            {
+                                var isParent = item.ParentId == null || item.ParentId == 0;
+
+                                <tr class="@(isParent ? "category-parent-row" : "")">
+
+                                    <!-- NOMOR -->
+                                    <td class="text-center">@no</td>
+
+                                    <!-- KODE -->
+                                    <td class="category-code">
+                                        @(string.IsNullOrWhiteSpace(item.Code) ? "-" : item.Code)
+                                    </td>
+
+                                    <!-- NAMA & HIRARKI -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2 @(isParent ? "" : "ps-4")">
+
+                                            @if (isParent)
+                                            {
+                                                <i class="bi bi-folder-fill text-warning"></i>
+
+                                                <span class="fw-bold category-name">
+                                                    @item.Name
+                                                </span>
+
+                                                <span class="badge bg-light text-dark border">
+                                                    induk
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-arrow-return-right text-description"></i>
+                                                <i class="bi bi-tag text-description"></i>
+                                                <span class="category-name">
+                                                    @item.Name
+                                                </span>
+                                            }
+
+                                        </div>
+                                    </td>
+
+                                    <!-- STATUS -->
+                                    <td>
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge bg-success">
+                                                Aktif
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">
+                                                Tidak Aktif
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <!-- AKSI -->
+                                    <td class="category-action-cell">
+                                        <div class="actions-actions">
+
+                                            <button type="button"
+                                                    class="action-btn action-add"
+                                                    title="Tambah Subkategori"
+                                                    onclick="openCreateSubCategory(@item.Id)">
+                                                <i class="bi bi-plus-lg"></i>
+                                            </button>
+
+                                            <button type="button"
+                                                    class="action-btn action-edit"
+                                                    title="Edit"
+                                                    onclick="openEditCategory(@item.Id)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+
+                                            <form asp-action="Delete"
+                                                  method="post"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Yakin ingin menghapus kategori ini?');">
+
+                                                @Html.AntiForgeryToken()
+
+                                                <input type="hidden"
+                                                       name="id"
+                                                       value="@item.Id" />
+
+                                                <button type="submit"
+                                                        class="action-btn action-delete"
+                                                        title="Hapus">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+
+                                        </div>
+                                    </td>
+
+                                </tr>
+
+                                no++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5"
+                                    class="text-center text-muted py-4">
+                                    Tidak ada data kategori.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+
+                </table>
+            </div>
+      
+
+    <!--  FOOTER / PAGINATION -->
+   <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3" id="categoryTableFooter">
+
+                @{
+                    var totalData = Model.TotalData;
+                    var currentPage = Model.Page < 1 ? 1 : Model.Page;
+                    var pageSize = Model.PageSize > 0 ? Model.PageSize : 10;
+
+                    // Hitung jumlah halaman berdasarkan total data
+                    var totalPages = totalData > 0
+                        ? (int)Math.Ceiling((double)totalData / pageSize)
+                        : 0;
+
+                    var startItem = totalData == 0
+                        ? 0
+                        : ((currentPage - 1) * pageSize) + 1;
+
+                    var endItem = Math.Min(
+                        currentPage * pageSize,
+                        totalData
+                    );
+                }
+
+                <span class="menu-description small">
+                    Menampilkan
+                    <strong>@startItem – @endItem</strong>
+                    dari
+                    <strong>@totalData</strong>
+                    data
+                </span>
+
+                <nav aria-label="Pagination">
+                    <ul class="pagination mb-0">
+
+                        @* SEBELUMNYA *@
+                        <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+
+                            @if (currentPage <= 1)
+                            {
+                                <span class="page-link">Sebelumnya</span>
+                            }
+                            else
+                            {
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       search = Context.Request.Query["search"],
+                                       parentId = Context.Request.Query["parentId"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = currentPage - 1,
+                                       pageSize = pageSize
+                                   })">
+                                    Sebelumnya
+                                </a>
+                            }
+
+                        </li>
+
+                        @* NOMOR HALAMAN *@
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       search = Context.Request.Query["search"],
+                                       parentId = Context.Request.Query["parentId"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = i,
+                                       pageSize = pageSize
+                                   })">
+                                    @i
+                                </a>
+
+                            </li>
+                        }
+
+                        @* BERIKUTNYA *@
+                        <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                            @if (currentPage >= totalPages || totalPages == 0)
+                            {
+                                <span class="page-link">Berikutnya</span>
+                            }
+                            else
+                            {
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       search = Context.Request.Query["search"],
+                                       parentId = Context.Request.Query["parentId"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = currentPage + 1,
+                                       pageSize = pageSize
+                                   })">
+                                    Berikutnya
+                                </a>
+                            }
+
+                        </li>
+
+                    </ul>
+                </nav>
+
+            </div>
+
+    </div>
+
+</div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL TAMBAH KATEGORI
+     ===================================================== -->
+
+<div class="modal fade"
+     id="createCategoryModal"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Tambah Kategori</h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+            </div>
+
+            <form asp-action="Create" method="post">
+
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Kode</label>
+
+                        <input type="text"
+                               name="Code"
+                               class="form-control"
+                               placeholder="Masukkan kode kategori" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Nama Kategori
+                        </label>
+
+                        <input type="text"
+                               name="Name"
+                               class="form-control"
+                               placeholder="Masukkan nama kategori"
+                               required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Induk Kategori
+                        </label>
+
+                        <select name="ParentId" class="form-select">
+                            <option value="">-- Kategori Utama --</option>
+
+                            @foreach (var category in ViewBag.AllCategories)
+                            {
+                                <option value="@category.Id">
+                                    @category.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="createCategoryActive"
+                                       name="IsActive"
+                                       value="true"
+                                       checked />
+                          <input type="hidden" name="IsActive" value="false" />
+                          <label class="form-check-label ms-2" for="createCategoryActive">
+                                    Aktif
+                          </label>
+                     </div>          
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <button type="submit" class="btn btn-primary">
+                        Simpan
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================
+     MODAL EDIT KATEGORI
+     ===================================================== -->
+
+<div class="modal fade"
+     id="editCategoryModal"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Kategori</h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+            </div>
+
+            <form asp-action="Edit" method="post">
+
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           name="Id"
+                           id="editCategoryId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Kode</label>
+
+                        <input type="text"
+                               name="Code"
+                               id="editCategoryCode"
+                               class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Nama Kategori
+                        </label>
+
+                        <input type="text"
+                               name="Name"
+                               id="editCategoryName"
+                               class="form-control"
+                               required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Induk Kategori
+                        </label>
+
+                        <select name="ParentId"
+                                id="editCategoryParentId"
+                                class="form-select">
+
+                            <option value="">-- Kategori Utama --</option>
+
+                            @foreach (var category in ViewBag.AllCategories)
+                            {
+                                <option value="@category.Id">
+                                    @category.Name
+                                </option>
+                            }
+
+                        </select>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               role="switch"
+                               id="editCategoryIsActive"
+                               name="IsActive"
+                               value="true" />
+
+                        <input type="hidden"
+                               id="editCategoryIsActiveHidden"
+                               name="IsActive"
+                               value="false" />
+
+                        <label class="form-check-label ms-2"
+                               for="editCategoryIsActive">
+                            Aktif
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <button type="submit" class="btn btn-primary">
+                        Simpan Perubahan
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script>
+        // =========================
+        // TOGGLE TABEL KATEGORI
+        // =========================
+
+        function toggleCategoryTable(button) {
+    const tableBody = document.getElementById("categoryTableBody");
+    const tableFooter = document.getElementById("categoryTableFooter");
+    const icon = button.querySelector("i");
+
+    const isHidden = tableBody.style.display === "none";
+
+    tableBody.style.display = isHidden ? "" : "none";
+    tableFooter.style.display = isHidden ? "" : "none";
+
+    icon.classList.toggle("bi-chevron-up", isHidden);
+    icon.classList.toggle("bi-chevron-down", !isHidden);
+}
+
+        // =========================
+        // TAMBAH KATEGORI
+        // =========================
+
+        function openCreateCategory() {
+
+            const parentSelect = document.querySelector(
+                '#createCategoryModal select[name="ParentId"]'
+            );
+
+            if (parentSelect) {
+                parentSelect.value = "";
+            }
+
+            document.getElementById("createCategoryActive").checked = true;
+
+            const modal = new bootstrap.Modal(
+                document.getElementById("createCategoryModal")
+            );
+
+            modal.show();
+        }
+
+        // =========================
+        // TAMBAH SUB KATEGORI
+        // =========================
+
+        function openCreateSubCategory(parentId) {
+
+            const parentSelect = document.querySelector(
+                '#createCategoryModal select[name="ParentId"]'
+            );
+
+            if (parentSelect) {
+                parentSelect.value = parentId;
+            }
+
+            const modal = new bootstrap.Modal(
+                document.getElementById("createCategoryModal")
+            );
+
+            modal.show();
+        }
+
+        // =========================
+        // EDIT KATEGORI
+        // =========================
+
+        async function openEditCategory(id) {
+
+            try {
+                const response = await fetch(
+                    `/ProductCategories/GetById?id=${id}`
+                );
+
+                if (!response.ok) {
+                    alert("Data kategori tidak ditemukan.");
+                    return;
+                }
+
+                const data = await response.json();
+
+                document.getElementById("editCategoryId").value = data.id;
+                document.getElementById("editCategoryName").value = data.name ?? "";
+                document.getElementById("editCategoryCode").value = data.code ?? "";
+                document.getElementById("editCategoryParentId").value = data.parentId ?? "";
+
+               // STATUS AKTIF
+                const activeCheckbox = document.getElementById(
+                    "editCategoryIsActive"
+                );
+
+                const activeHidden = document.getElementById(
+                    "editCategoryIsActiveHidden"
+                );
+
+                // SET STATUS SESUAI DATA DARI API
+                activeCheckbox.checked = data.isActive === true;
+                activeHidden.value = activeCheckbox.checked
+                    ? "true"
+                    : "false";
+
+                // UPDATE NILAI SAAT CHECKBOX DIUBAH
+                activeCheckbox.onchange = function () {
+                    activeHidden.value = this.checked
+                        ? "true"
+                        : "false";
+                };
+
+                // TAMPILKAN MODAL
+                const modalElement = document.getElementById(
+                    "editCategoryModal"
+                );
+
+                const modal = bootstrap.Modal.getOrCreateInstance(
+                    modalElement
+                );
+
+                modal.show();
+
+            } catch (error) {
+                console.error(error);
+                alert("Terjadi kesalahan saat mengambil data kategori.");
+            }
+        }
+    </script>
+}

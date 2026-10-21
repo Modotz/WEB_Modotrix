@@ -1,0 +1,161 @@
+@model ERP.Web.ViewModels.GoodsRfqViewModel
+@using ERP.Web.Models
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Input Penawaran — RFQ " + Model.RfqNo;
+
+    var culture = new CultureInfo("id-ID");
+    var inv = CultureInfo.InvariantCulture;
+    var items = Model.Items ?? new List<GoodsRfqItemViewModel>();
+}
+
+<style>
+    .rfq-plain-readonly,
+    .rfq-plain-readonly:read-only {
+        background-color: transparent !important;
+        opacity: 1;
+    }
+</style>
+
+<div class="po-create-page">
+
+    <div class="product-page-title">
+        Input Penawaran — RFQ @Model.RfqNo
+    </div>
+
+    <div class="card po-detail-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Input Penawaran — RFQ @Model.RfqNo</strong>
+
+            <a asp-action="Details" asp-route-id="@Model.Id"
+               class="btn btn-sm btn-secondary" title="Kembali">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+        </div>
+
+        <div class="card-body">
+            <p class="mb-3">
+                Masukkan <strong>harga penawaran dari supplier</strong> untuk tiap item
+                (per satuan). Subtotal &amp; total dihitung otomatis. Setelah disimpan,
+                RFQ siap dijadikan PO.
+            </p>
+
+            <form asp-action="Quote" asp-route-id="@Model.Id" method="post" id="quoteForm">
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width:32px">#</th>
+                                <th>PRODUK</th>
+                                <th class="text-end" style="width:90px">QTY</th>
+                                <th style="width:100px">SATUAN</th>
+                                <th class="text-end" style="width:140px">EST. HARGA</th>
+                                <th style="width:170px">HARGA PENAWARAN</th>
+                                <th style="width:150px">SUBTOTAL</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="quoteBody">
+                            @for (var i = 0; i < items.Count; i++)
+                            {
+                                var item = items[i];
+                                var startPrice = item.QuotedPrice;
+
+                                <tr class="quote-row" data-qty="@item.Quantity.ToString(inv)">
+                                    <td class="text-end">@(i + 1)</td>
+                                    <td>@item.ProductName <span class="text-muted">— @item.Sku</span></td>
+                                    <td class="text-end">@item.Quantity.ToString("0.##", culture)</td>
+                                    <td>@(string.IsNullOrWhiteSpace(item.UnitSymbol) ? "-" : item.UnitSymbol)</td>
+                                    <td class="text-end">@item.EstPrice.ToString("N0", culture)</td>
+                                    <td>
+                                        <input type="hidden" name="items[@i].Id" value="@item.Id" />
+                                        <input type="number"
+                                               name="items[@i].QuotedPrice"
+                                               class="form-control form-control-sm quoted-price"
+                                               min="0"
+                                               step="0.01"
+                                               value="@startPrice.ToString(inv)"
+                                               required />
+                                    </td>
+                                    <td>
+                                        <input type="text"
+                                               class="form-control form-control-sm text-end quote-subtotal rfq-plain-readonly"
+                                               value="0"
+                                               readonly />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+
+                        <tfoot>
+                            <tr>
+                                <td colspan="6" class="text-end border-0">
+                                    <strong>Total Penawaran</strong>
+                                </td>
+                                <td class="border-0">
+                                    <input type="text"
+                                           id="quoteTotal"
+                                           class="form-control form-control-sm text-end fw-bold rfq-plain-readonly"
+                                           value="0"
+                                           readonly />
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="po-summary-wrap">
+                    <div class="po-form-actions">
+                        <button type="submit" class="btn po-btn-save">
+                            <i class="bi bi-save"></i> Simpan Penawaran
+                        </button>
+
+                        <a asp-action="Details" asp-route-id="@Model.Id"
+                           class="btn po-btn-cancel">
+                            Batal
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const quoteBody = document.getElementById('quoteBody');
+    const quoteTotal = document.getElementById('quoteTotal');
+
+    function formatNumber(value) {
+        return new Intl.NumberFormat('id-ID', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }).format(value);
+    }
+
+    function hitungPenawaran() {
+        let total = 0;
+
+        quoteBody.querySelectorAll('.quote-row').forEach(row => {
+            const qty = parseFloat(row.dataset.qty) || 0;
+            const price = parseFloat(row.querySelector('.quoted-price').value) || 0;
+            const subtotal = qty * price;
+
+            row.querySelector('.quote-subtotal').value = formatNumber(subtotal);
+            total += subtotal;
+        });
+
+        quoteTotal.value = formatNumber(total);
+    }
+
+    quoteBody.addEventListener('input', event => {
+        if (event.target.matches('.quoted-price')) {
+            hitungPenawaran();
+        }
+    });
+
+    hitungPenawaran();
+</script>
+}

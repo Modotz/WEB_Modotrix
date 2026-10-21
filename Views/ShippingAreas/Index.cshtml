@@ -1,0 +1,555 @@
+@using ERP.Web.Models
+@model PagedResult<ShippingAreaViewModel>
+
+@{
+    ViewData["Title"] = "Area Pengiriman";
+
+    var no = ((Model.Page - 1) * Model.PageSize);
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">Area Pengiriman</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">Filter</span>
+            </div>
+
+            <button class="btn btn-sm text-muted p-0"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#filterCollapse"
+                    aria-expanded="true"
+                    aria-controls="filterCollapse">
+
+                <i class="bi bi-chevron-down"></i>
+
+            </button>
+
+        </div>
+
+        <div class="collapse show" id="filterCollapse">
+
+            <div class="card-body">
+
+                <form method="get"
+                      asp-action="Index"
+                      class="row g-2 align-items-end">
+
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">
+                            Cari
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="search"
+                               name="search"
+                               value="@Context.Request.Query["search"]" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="isActive" class="form-label">
+                            Is Active
+                        </label>
+
+                        <select class="form-select"
+                                id="isActive"
+                                name="isActive">
+
+                            <option value=""
+                                    selected="@(Context.Request.Query["isActive"] == "")">
+                                -- Semua --
+                            </option>
+
+                            <option value="true"
+                                    selected="@(Context.Request.Query["isActive"] == "true")">
+                                Aktif
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["isActive"] == "false")">
+                                Non-Aktif
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="pageSize" class="form-label">
+                            Per Halaman
+                        </label>
+
+                        <select class="form-select"
+                                id="pageSize"
+                                name="pageSize">
+
+                            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 d-flex gap-2">
+
+                        <button type="submit"
+                                class="btn btn-primary d-flex align-items-center gap-2">
+
+                            <i class="bi bi-search"></i>
+                            Terapkan
+
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary"
+                           title="Reset Filter">
+
+                            <i class="bi bi-arrow-counterclockwise"></i>
+
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+
+        <!-- HEADER -->
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+            <div class="d-flex align-items-center gap-2">
+
+                <span class="fw-bold fs-5">Supplier</span>
+
+                <span class="badge badge-count">
+                    @Model.TotalCount
+                </span>
+
+                <span class="menu-description small ms-1">
+                    Tenaga penjual / salesman penanggung jawab Tarif kirim per item berdasarkan area tujuan
+                </span>
+
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <!-- Export PDF -->
+                <a asp-action="ExportPdf"
+                   asp-controller="ShippingAreas"
+                   class="btn btn-light btn-custom-square text-danger"
+                   title="Export PDF">
+
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+
+                </a>
+
+                <!-- Export Excel -->
+                <a asp-action="ExportExcel"
+                   asp-controller="ShippingAreas"
+                   class="btn btn-light btn-custom-square text-success"
+                   title="Export Excel">
+
+                    <i class="bi bi-file-earmark-excel-fill"></i>
+
+                </a>
+
+                <!-- Print -->
+                <a asp-action="Print"
+                   asp-controller="ShippingAreas"
+                   class="btn btn-light btn-custom-square text-secondary"
+                   title="Cetak"
+                   target="_blank">
+
+                    <i class="bi bi-printer-fill"></i>
+
+                </a>
+
+                <!-- Refresh Data -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Refresh Data"
+                        onclick="loadShippingAreas()">
+
+                    <i class="bi bi-arrow-clockwise"></i>
+
+                </button>
+
+                <!-- Expand / Collapse -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Toggle">
+
+                    <i class="bi bi-chevron-up"></i>
+
+                </button>
+
+                <!-- Tambah SalesForce -->
+                <button type="button"
+                        class="btn btn-teal btn-custom-action"
+                        id="btnAddSupplier"
+                        onclick="openCreateModal()">
+
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Tambah Area Pengiriman</span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- TABLE BODY -->
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0 supplier-table">
+
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 50px;">#</th>
+                            <th style="width: 100px;">KODE</th>
+                            <th>NAMA AREA</th>
+                            <th>TARIF / ITEM</th>
+                            <th>KETERANGAN</th>
+                            <th class="text-center">STATUS</th>
+                            <th class="text-center" style="width: 120px;">AKSI</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (Model.Data != null && Model.Data.Any())
+                        {
+                        foreach (var item in Model.Data)
+                        {
+                        <tr>
+                            <td class="ps-4">
+                                @(++no)
+                            </td>
+
+                            <td>
+                                <span class="badge badge-code">
+                                    @item.Code
+                                </span>
+                            </td>
+
+                            <td class="fw-bold">
+                                @item.Name
+                            </td>
+
+                            <td class="fw-semibold">
+                                Rp @item.Price.ToString("N0", new System.Globalization.CultureInfo("id-ID"))
+                            </td>
+
+                            <td class="text-secondary">
+                                @item.Description
+                            </td>
+
+                            <td class="text-center">
+                                @if (item.IsActive)
+                                {
+                                <span class="badge bg-success">
+                                    Aktif
+                                </span>
+                                }
+                                else
+                                {
+                                <span class="badge bg-secondary ms-">
+                                    Nonaktif
+                                </span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <button type="button"
+                                            class="btn btn-sm menu-action-edit"
+                                            onclick="openEditModal(
+                                                '@item.Id',
+                                                '@item.Code',
+                                                '@item.Name',
+                                                '@item.Price',
+                                                '@item.Description',
+                                                '@item.IsActive'
+                                            )">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    <form method="post"
+                                          asp-action="Delete"
+                                          class="d-inline"
+                                          onsubmit="return confirmDeleteShippingArea();">
+
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden"
+                                               name="id"
+                                               value="@item.Id" />
+
+                                        <button type="submit"
+                                                class="btn btn-sm menu-action-delete"
+                                                title="Nonaktifkan">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        }
+                        }
+                        else
+                        {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 form-label">
+                                <p class="menu-description">Belum ada area pengiriman.</p>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+
+            </div>
+
+            <!-- FOOTER / PAGINATION -->
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-2">
+                <small class="menu-description">
+                    Menampilkan <strong>@(Model.TotalData == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1) – @(Math.Min(Model.Page * Model.PageSize, Model.TotalData))</strong> dari <strong>@Model.TotalData</strong> data
+                </small>
+
+                @if (Model.TotalPage > 0)
+                {
+                <nav aria-label="Pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <!-- SEBELUMNYA -->
+                        <li class="page-item @(Model.Page <= 1 ? " disabled" : "" )">
+                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-pageSize="@Model.PageSize" asp-route-search="@ViewBag.Search" asp-route-isActive="@ViewBag.IsActive">
+                                Sebelumnya
+                            </a>
+                        </li>
+
+                        <!-- NOMOR HALAMAN -->
+                        @for (int i = 1; i <= Model.TotalPage; i++)
+                        {
+                        <li class="page-item @(i == Model.Page ? " active" : "" )">
+                            <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-pageSize="@Model.PageSize" asp-route-search="@ViewBag.Search" asp-route-isActive="@ViewBag.IsActive">
+                                @i
+                            </a>
+                        </li>
+                        }
+
+                        <!-- BERIKUTNYA -->
+                        <li class="page-item @(Model.Page >= Model.TotalPage ? " disabled" : "" )">
+                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-pageSize="@Model.PageSize" asp-route-search="@ViewBag.Search" asp-route-isActive="@ViewBag.IsActive">
+                                Berikutnya
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                }
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@* modal *@
+<div class="modal fade"
+     id="shippingAreaModal"
+     tabindex="-1"
+     aria-labelledby="modalTitle"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content menu-modal-content">
+            <form method="post" id="shippingAreaForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-header menu-modal-header">
+                    <h5 class="modal-title  fw-semibold menu-modal-title"
+                        id="modalTitle">
+                        Tambah Area
+                    </h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+                </div>
+           
+                <div class="modal-body py-4">
+                    <input type="hidden" id="Id" name="Id" />
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="Code" class="form-label fw-medium">
+                                Kode <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control bg-transparent text-white border-secondary"
+                                   id="Code"
+                                   name="Code" 
+                                   placeholder="mis. JKT-TIM"
+                                   required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="Name" class="form-label fw-medium">
+                                Nama Area <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control bg-transparent text-white border-secondary"
+                                   id="Name"
+                                   name="Name" 
+                                   placeholder="Jakarta Timur"
+                                   required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="Price" class="form-label fw-medium">
+                                Tarif Kirim per Item (Rp)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent text-white border-secondary">
+                                    Rp
+                                </span>
+                                <input type="number"
+                                       class="form-control bg-transparent text-white border-secondary"
+                                       id="Price"
+                                       name="Price"
+                                       value="0"
+                                       min="0" />
+                            </div>
+                            <div class="form-text border-secondary mt-2">
+                                Biaya kirim yang dikenakan per item saat customer order ke area ini.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="Description" class="form-label fw-medium">
+                                Keterangan
+                            </label>
+                            <input type="text"
+                                   class="form-control bg-transparent text-white border-secondary"
+                                   id="Description"
+                                   name="Description"/>
+                        </div>
+
+                        <div class="col-12 mt-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="IsActive"
+                                       name="IsActive"
+                                       value="true"
+                                       checked />
+                                <input type="hidden" name="IsActive" value="false" />
+                                <label class="form-check-label ms-2" for="IsActive">
+                                    Aktif
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer menu-modal-footer">
+                    <button type="submit" class="btn btn-primary px-3">
+                        <i class="bi bi-box-arrow-down me-2"></i>Simpan
+                    </button>
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">
+                        Batal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/Nestable2/1.6.0/jquery.nestable.min.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/nestable2@1.6.0/jquery.nestable.min.js"></script>
+
+    <script>
+        const shippingAreaModal = new bootstrap.Modal(
+            document.getElementById('shippingAreaModal')
+        );
+
+        function loadShippingAreas() {
+            location.reload();
+         }
+         
+        //create
+        function openCreateModal() {
+
+            document.getElementById('modalTitle').innerText = 'Tambah Area';
+            document.getElementById('shippingAreaForm').action = '@Url.Action("Create", "ShippingAreas")';
+            document.getElementById('Id').value = '';
+            document.getElementById('Code').value = '';
+            document.getElementById('Name').value = '';
+            document.getElementById('Price').value = '';
+            document.getElementById('Description').value = '';
+            document.getElementById('IsActive').checked = true;
+
+            shippingAreaModal.show();
+        }
+
+
+        // edit
+        function openEditModal(
+            id,
+            code,
+            name,
+            price,
+            description,
+            isActive
+        ) {
+
+            document.getElementById('modalTitle').innerText = 'Edit Area';
+            document.getElementById('shippingAreaForm').action = '@Url.Action("Edit", "ShippingAreas")';
+            document.getElementById('Id').value = id;
+            document.getElementById('Code').value = code || '';
+            document.getElementById('Name').value = name || '';
+            document.getElementById('Price').value = price || '';
+            document.getElementById('Description').value = description || '';
+
+            document.getElementById('IsActive').checked =
+                isActive === true ||
+                isActive === 'True' ||
+                isActive === 'true';
+
+            shippingAreaModal.show();
+        }
+
+
+        // soft-delete
+        function confirmDeleteShippingArea() {
+
+            return confirm(
+                "Hapus area ini?"
+            );
+        }
+
+    </script>
+}
+
+
+

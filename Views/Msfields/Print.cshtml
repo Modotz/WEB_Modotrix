@@ -1,0 +1,244 @@
+@using ERP.Web.Models
+@model PagedResult<MsfieldViewModel>
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    <title>Msfield</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #111;
+            background: #fff;
+            font-size: 11px;
+        }
+
+        .print-container {
+            width: 100%;
+        }
+
+        .header {
+            margin-bottom: 12px;
+        }
+
+        .header h1 {
+            margin: 0 0 4px 0;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .header-info {
+            font-size: 11px;
+            color: #444;
+        }
+
+        .header-info span {
+            margin-right: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            border: 1px solid #999;
+            padding: 5px 6px;
+            text-align: left;
+            vertical-align: middle;
+            word-wrap: break-word;
+        }
+
+        th {
+            background: #0d6efd;
+            color: white;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        td:first-child {
+            text-align: center;
+        }
+
+        .status {
+            text-align: center;
+        }
+
+        .footer {
+            margin-top: 12px;
+            font-size: 10px;
+            color: #555;
+        }
+
+        .print-button {
+            margin-bottom: 15px;
+        }
+
+        .print-button button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background: #0d6efd;
+            color: white;
+            cursor: pointer;
+        }
+
+        .close-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background: #6c757d;
+            color: white;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        @@media print {
+
+            @@page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+
+            body {
+                padding: 0;
+                font-size: 9px;
+            }
+
+            .print-button {
+                display: none;
+            }
+
+            .header h1 {
+                font-size: 16px;
+            }
+
+            table {
+                font-size: 8px;
+            }
+
+            th,
+            td {
+                padding: 3px 4px;
+            }
+
+            .footer {
+                font-size: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="print-container">
+
+        <div class="print-button">
+            <button type="button" onclick="window.print()">
+                Cetak
+            </button>
+
+            <button type="button"
+                    class="close-button"
+                    onclick="window.close()">
+                Tutup
+            </button>
+        </div>
+
+        <div class="header">
+
+            <h1>ERP-LITE</h1>
+
+            <div class="header-info">
+                <span>Msfield</span>
+                <span>•</span>
+                <span>
+                    Dicetak:
+                    @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                </span>
+                <span>•</span>
+                <span>
+                    Total:
+                    @Model.TotalData data
+                </span>
+            </div>
+
+        </div>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th style="width: 2%;">No</th>
+                    <th style="width: 9%;">Field Key</th>
+                    <th style="width: 15%;">Field Text</th>
+                    <th style="width: 15%;">Field Value</th>
+                    <th style="width: 15%;">Is Active</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @{
+                    var no = 1;
+                }
+
+                @foreach (var item in Model.Data)
+                {
+                    <tr>
+                        <td>@no</td>
+
+                        <td>
+                            @item.FieldKey
+                        </td>
+                       
+                        <td>
+                            @item.FieldText
+                        </td>
+
+                        <td>
+                            @item.FiledValue
+                        </td>
+
+                        <td>
+                            @item.IsActive
+                        </td>
+
+                    </tr>
+
+                    no++;
+                }
+
+            </tbody>
+
+        </table>
+
+        <div class="footer">
+            Dokumen dihasilkan otomatis oleh sistem.
+        </div>
+
+    </div>
+
+    <script>
+        window.onload = function () {
+            window.print();
+        };
+    </script>
+
+</body>
+</html>

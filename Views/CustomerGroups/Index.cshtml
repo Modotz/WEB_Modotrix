@@ -1,0 +1,1029 @@
+@model PagedResult<ERP.Web.Models.CustomerGroupsViewModel>
+
+@{
+    ViewData["Title"] = "Kelompok Customer";
+}
+
+<style>
+    /* =========================================================
+       CUSTOMER GROUPS PAGE
+       ========================================================= */
+
+    .customer-group-page {
+        padding: 18px 20px 30px;
+    }
+
+    .customer-group-title {
+        color: #f1f5f9;
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 18px;
+    }
+
+    .customer-group-card {
+        background: #10192c;
+        border: 1px solid #293b59;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    /* =========================================================
+       FILTER
+       ========================================================= */
+
+    .customer-group-filter {
+        margin-bottom: 10px;
+    }
+
+    .customer-group-filter .card-header {
+        background: #10192c;
+        border-bottom: 1px solid #293b59;
+        color: #f1f5f9;
+        padding: 12px 16px;
+    }
+
+    .customer-group-filter .card-body {
+        padding: 18px 16px 16px;
+    }
+
+    .customer-group-filter .form-label {
+        color: #e5e7eb;
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+
+    .customer-group-filter .form-control,
+    .customer-group-filter .form-select {
+        background: #0d1729;
+        border: 1px solid #293b59;
+        color: #e5e7eb;
+        min-height: 38px;
+    }
+
+    .customer-group-filter .form-control:focus,
+    .customer-group-filter .form-select:focus {
+        background: #0d1729;
+        color: #fff;
+        border-color: #3974b9;
+        box-shadow: 0 0 0 .15rem rgba(57, 116, 185, .15);
+    }
+
+    .customer-group-filter .form-select option {
+        background: #10192c;
+        color: #fff;
+    }
+
+    .customer-group-filter .btn-primary {
+        background: #2f669f;
+        border-color: #3974b9;
+    }
+
+    .customer-group-filter .btn-primary:hover {
+        background: #3974b9;
+        border-color: #3974b9;
+    }
+
+    .customer-group-filter .btn-outline-secondary {
+        color: #cbd5e1;
+        border-color: #53627a;
+    }
+
+    .customer-group-filter .btn-outline-secondary:hover {
+        background: #293b59;
+        color: #fff;
+    }
+
+    /* =========================================================
+       TABLE CARD
+       ========================================================= */
+
+    .customer-group-table-card {
+        background: #10192c;
+        border: 1px solid #293b59;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .customer-group-table-header {
+        background: #10192c;
+        border-bottom: 1px solid #293b59;
+        padding: 12px 16px;
+    }
+
+    .customer-group-table-header .title {
+        color: #f1f5f9;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    .customer-group-table-header .description {
+        color: #82a2ca;
+        font-size: 13px;
+    }
+
+    .customer-group-count {
+        background: #6c7784;
+        color: #fff;
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 6px;
+    }
+
+    .customer-group-toolbar .btn {
+        min-width: 36px;
+        height: 32px;
+    }
+
+    .btn-customer-group-add {
+        background: #16b7a6;
+        border-color: #16b7a6;
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .btn-customer-group-add:hover {
+        background: #13a696;
+        border-color: #13a696;
+        color: #fff;
+    }
+
+    .customer-group-table-wrapper {
+        background: #10192c;
+    }
+
+    .customer-group-table {
+        color: #dbe4ef;
+        margin-bottom: 0;
+    }
+
+    .customer-group-table thead th {
+        background: #17243a;
+        color: #8fb0d6;
+        border-bottom: 1px solid #344662;
+        border-top: none;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 9px 10px;
+        white-space: nowrap;
+    }
+
+    .customer-group-table tbody td {
+        background: #10192c;
+        border-color: #293b59;
+        color: #dbe4ef;
+        padding: 11px 10px;
+        vertical-align: middle;
+    }
+
+    .customer-group-table tbody tr:hover td {
+        background: #142238;
+    }
+
+    .customer-group-code {
+        display: inline-block;
+        padding: 3px 8px;
+        background: #f8fafc;
+        color: #111827;
+        border-radius: 5px;
+        border: 1px solid #cbd5e1;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .customer-group-name {
+        color: #f1f5f9;
+        font-weight: 700;
+    }
+
+    .customer-group-description {
+        color: #8ca9cd !important;
+    }
+
+    .customer-group-discount {
+        color: #f1f5f9;
+        font-weight: 500;
+    }
+
+    .customer-group-status-active {
+        background: #159447;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .customer-group-status-inactive {
+        background: #6b7280;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    /* =========================================================
+       ACTION BUTTON
+       ========================================================= */
+
+    .customer-group-action {
+        width: 34px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 5px;
+    }
+
+    .customer-group-edit {
+        background: #ffc107;
+        border-color: #ffc107;
+        color: #111827;
+    }
+
+    .customer-group-edit:hover {
+        background: #eab308;
+        border-color: #eab308;
+        color: #111827;
+    }
+
+    .customer-group-delete {
+        background: transparent;
+        border: 1px solid #dc3545;
+        color: #dc3545;
+    }
+
+    .customer-group-delete:hover {
+        background: #dc3545;
+        color: #fff;
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    .customer-group-footer {
+        background: #172137;
+        border-top: 1px solid #293b59;
+        color: #82a2ca;
+        padding: 9px 16px;
+    }
+
+    .customer-group-footer strong {
+        color: #dbe4ef;
+    }
+
+    /* =========================================================
+       PAGINATION (tombol terpisah, sudut membulat)
+       ========================================================= */
+
+    .customer-group-pagination {
+        gap: 6px;
+    }
+
+    .customer-group-pagination .page-item .page-link {
+        background: #17243a;
+        border: 1px solid #293b59;
+        color: #9ab5d5;
+        border-radius: 6px;
+        margin-left: 0;
+        min-width: 34px;
+        text-align: center;
+        padding: 5px 12px;
+    }
+
+    .customer-group-pagination .page-item:first-child .page-link,
+    .customer-group-pagination .page-item:last-child .page-link {
+        border-radius: 6px;
+    }
+
+    .customer-group-pagination .page-item .page-link:hover {
+        background: #243858;
+        color: #fff;
+    }
+
+    .customer-group-pagination .page-item.active .page-link {
+        background: #356ca4;
+        border-color: #356ca4;
+        color: #fff;
+    }
+
+    .customer-group-pagination .page-item.disabled .page-link {
+        background: #17243a;
+        border-color: #293b59;
+        color: #596b83;
+    }
+
+    /* =========================================================
+       EMPTY
+       ========================================================= */
+
+    .customer-group-empty {
+        color: #82a2ca !important;
+        padding: 25px !important;
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @@media (max-width: 768px) {
+
+        .customer-group-page {
+            padding: 14px 10px 25px;
+        }
+
+        .customer-group-title {
+            font-size: 23px;
+        }
+
+        .customer-group-table {
+            min-width: 900px;
+        }
+
+        .customer-group-table-header {
+            align-items: flex-start !important;
+        }
+
+        .customer-group-toolbar {
+            margin-top: 8px;
+        }
+    }
+</style>
+
+
+<div class="customer-group-page">
+
+    <!-- =====================================================
+         PAGE TITLE
+         ===================================================== -->
+
+    <h3 class="customer-group-title">
+        Kelompok Customer
+    </h3>
+
+
+    <!-- =====================================================
+         FILTER
+         ===================================================== -->
+
+    <div class="card customer-group-card customer-group-filter">
+
+        <div class="card-header d-flex justify-content-between align-items-center">
+
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">Filter</span>
+            </div>
+
+            <button type="button"
+                    class="btn btn-sm text-light p-0"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#customerGroupFilterCollapse"
+                    aria-expanded="true"
+                    aria-controls="customerGroupFilterCollapse">
+
+                <i class="bi bi-chevron-down"></i>
+
+            </button>
+
+        </div>
+
+
+        <div class="collapse show"
+             id="customerGroupFilterCollapse">
+
+            <div class="card-body">
+
+                <form method="get"
+                      asp-action="Index"
+                      class="row g-2 align-items-end">
+
+                    <!-- CARI -->
+
+                    <div class="col-md-4">
+
+                        <label for="search"
+                               class="form-label">
+
+                            Cari (kode / nama)
+
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="search"
+                               name="search"
+                               value="@Context.Request.Query["search"]"
+                               placeholder="Cari kode atau nama..." />
+
+                    </div>
+
+
+                    <!-- STATUS -->
+
+                    <div class="col-md-3">
+
+                        <label for="isActive"
+                               class="form-label">
+
+                            Status
+
+                        </label>
+
+                        <select class="form-select"
+                                id="isActive"
+                                name="isActive">
+
+                            <option value=""
+                                    selected="@(Context.Request.Query["isActive"] == "")">
+
+                                -- Semua --
+
+                            </option>
+
+                            <option value="true"
+                                    selected="@(Context.Request.Query["isActive"] == "true")">
+
+                                Aktif
+
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["isActive"] == "false")">
+
+                                Non-Aktif
+
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- PAGE SIZE -->
+
+                    <div class="col-md-2">
+
+                        <label for="pageSize"
+                               class="form-label">
+
+                            Per Halaman
+
+                        </label>
+
+                        <select class="form-select"
+                                id="pageSize"
+                                name="pageSize">
+
+                            <option value="10"
+                                    selected="@(Model.PageSize == 10)">
+                                10
+                            </option>
+
+                            <option value="25"
+                                    selected="@(Model.PageSize == 25)">
+                                25
+                            </option>
+
+                            <option value="50"
+                                    selected="@(Model.PageSize == 50)">
+                                50
+                            </option>
+
+                            <option value="100"
+                                    selected="@(Model.PageSize == 100)">
+                                100
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- BUTTON -->
+
+                    <div class="col-md-3 d-flex gap-2">
+
+                        <button type="submit"
+                                class="btn btn-primary d-flex align-items-center gap-2">
+
+                            <i class="bi bi-search"></i>
+                            Terapkan
+
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary"
+                           title="Reset Filter">
+
+                            <i class="bi bi-arrow-counterclockwise"></i>
+
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         TABLE
+         ===================================================== -->
+
+    <div class="card customer-group-table-card">
+
+        <!-- HEADER -->
+
+        <div class="customer-group-table-header
+                    d-flex
+                    justify-content-between
+                    align-items-center
+                    flex-wrap">
+
+            <!-- LEFT -->
+
+            <div class="d-flex align-items-center gap-2">
+
+                <span class="title">
+                    Kelompok Customer
+                </span>
+
+                <span class="customer-group-count">
+                    @Model.TotalData
+                </span>
+
+                <span class="description ms-1">
+                    Pengelompokan pelanggan (Retail/Grosir/VIP) &amp; diskon default
+                </span>
+
+            </div>
+
+
+<!-- RIGHT -->
+
+<div class="customer-group-toolbar d-flex align-items-center gap-2">
+
+    @{
+        var search = ViewBag.Search as string ?? "";
+        var selectedIsActive = ViewBag.IsActive;
+    }
+
+        <!-- EXPORT PDF -->
+
+    <a asp-action="ExportPdf"
+       asp-controller="CustomerGroups"
+       asp-route-search="@search"
+       asp-route-isActive="@selectedIsActive"
+       class="btn btn-light btn-sm btn-custom-square text-danger"
+       title="Export PDF">
+
+        <i class="bi bi-file-earmark-pdf-fill"></i>
+
+    </a>
+
+
+    <!-- EXPORT EXCEL -->
+
+    <a asp-action="ExportExcel"
+       asp-controller="CustomerGroups"
+       asp-route-search="@search"
+       asp-route-isActive="@selectedIsActive"
+       class="btn btn-light btn-sm btn-custom-square text-success"
+       title="Export Excel">
+
+        <i class="bi bi-file-earmark-excel-fill"></i>
+
+    </a>
+
+
+    <!-- PRINT -->
+
+    <a asp-action="Print"
+       asp-controller="CustomerGroups"
+       asp-route-search="@search"
+       asp-route-isActive="@selectedIsActive"
+       target="_blank"
+       class="btn btn-light btn-sm btn-custom-square text-secondary"
+       title="Print">
+
+        <i class="bi bi-printer-fill"></i>
+
+    </a>
+
+
+    <!-- REFRESH -->
+
+    <button type="button"
+            class="btn btn-light btn-sm"
+            title="Refresh"
+            onclick="location.reload()">
+
+        <i class="bi bi-arrow-clockwise"></i>
+
+    </button>
+
+
+    <!-- COLLAPSE -->
+
+    <button type="button"
+            class="btn btn-light btn-sm"
+            title="Toggle"
+            data-bs-toggle="collapse"
+            data-bs-target="#customerGroupTableCollapse">
+
+        <i class="bi bi-chevron-up"></i>
+
+    </button>
+
+
+    <!-- ADD -->
+
+    <a asp-controller="CustomerGroups"
+       asp-action="Create"
+       class="btn btn-customer-group-add btn-sm">
+
+        <i class="bi bi-plus-circle"></i>
+        Tambah Kelompok
+
+    </a>
+
+</div>
+
+ </div>
+
+        <!-- COLLAPSIBLE TABLE -->
+
+        <div class="collapse show"
+             id="customerGroupTableCollapse">
+
+            <div class="customer-group-table-wrapper">
+
+                <div class="table-responsive">
+
+                    <table class="table table-hover
+                                  align-middle
+                                  customer-group-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th class="text-center"
+                                    style="width: 55px;">
+
+                                    #
+
+                                </th>
+
+                                <th style="width: 120px;">
+                                    KODE
+                                </th>
+
+                                <th>
+                                    NAMA KELOMPOK
+                                </th>
+
+                                <th class="text-end"
+                                    style="width: 150px;">
+
+                                    DISKON DEFAULT
+
+                                </th>
+
+                                <th>
+                                    KETERANGAN
+                                </th>
+
+                                <th class="text-center"
+                                    style="width: 100px;">
+
+                                    STATUS
+
+                                </th>
+
+                                <th class="text-center"
+                                    style="width: 100px;">
+
+                                    AKSI
+
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            @if (Model.Data != null && Model.Data.Any())
+                            {
+
+                                var no =
+                                    ((Model.Page - 1) * Model.PageSize) + 1;
+
+                                foreach (var item in Model.Data)
+                                {
+
+                                    <tr>
+
+                                        <!-- NOMOR -->
+
+                                        <td class="text-center">
+                                            @no
+                                        </td>
+
+
+                                        <!-- KODE -->
+
+                                        <td>
+
+                                            <span class="customer-group-code">
+                                                @item.Code
+                                            </span>
+
+                                        </td>
+
+
+                                        <!-- NAMA -->
+
+                                        <td>
+
+                                            <span class="customer-group-name">
+                                                @item.Name
+                                            </span>
+
+                                        </td>
+
+
+                                        <!-- DISKON -->
+
+                                        <td class="text-end">
+
+                                            <span class="customer-group-discount">
+
+                                                @item.DiscountPercent.ToString("0.##")%
+
+                                            </span>
+
+                                        </td>
+
+
+                                        <!-- KETERANGAN -->
+
+                                        <td class="customer-group-description">
+
+                                            @(string.IsNullOrWhiteSpace(item.Description)
+                                                ? "-"
+                                                : item.Description)
+
+                                        </td>
+
+
+                                        <!-- STATUS -->
+
+                                        <td class="text-center">
+
+                                            @if (item.IsActive)
+                                            {
+
+                                                <span class="customer-group-status-active">
+                                                    Aktif
+                                                </span>
+
+                                            }
+                                            else
+                                            {
+
+                                                <span class="customer-group-status-inactive">
+                                                    Tidak Aktif
+                                                </span>
+
+                                            }
+
+                                        </td>
+
+
+                                        <!-- AKSI -->
+
+                                        <td class="text-center">
+
+                                            <div class="d-flex
+                                                        justify-content-center
+                                                        gap-1">
+
+                                                <!-- EDIT -->
+
+                                                <a asp-controller="CustomerGroups"
+                                                   asp-action="Edit"
+                                                   asp-route-id="@item.Id"
+                                                   class="btn btn-sm customer-group-action customer-group-edit"
+                                                   title="Edit">
+
+                                                    <i class="bi bi-pencil"></i>
+
+                                                </a>
+
+
+                                                <!-- DELETE -->
+
+                                                <form asp-controller="CustomerGroups"
+                                                      asp-action="Delete"
+                                                      method="post"
+                                                      class="d-inline"
+                                                      onsubmit="return confirmDeleteCustomerGroup();">
+
+                                                    @Html.AntiForgeryToken()
+
+                                                    <input type="hidden"
+                                                           name="id"
+                                                           value="@item.Id" />
+
+                                                    <button type="submit"
+                                                            class="btn btn-sm customer-group-action customer-group-delete"
+                                                            title="Delete">
+
+                                                        <i class="bi bi-trash"></i>
+
+                                                    </button>
+
+                                                </form>
+
+                                            </div>
+
+                                        </td>
+
+                                    </tr>
+
+                                    no++;
+
+                                }
+
+                            }
+                            else
+                            {
+
+                                <tr>
+
+                                    <td colspan="7"
+                                        class="text-center customer-group-empty">
+
+                                        Tidak ada data kelompok customer.
+
+                                    </td>
+
+                                </tr>
+
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <!-- =================================================
+                     FOOTER / PAGINATION
+                     ================================================= -->
+
+                <div class="customer-group-footer
+                            d-flex
+                            justify-content-between
+                            align-items-center">
+
+                    <small>
+
+                        Menampilkan
+
+                        <strong>
+                            @(Model.TotalData == 0
+                                ? 0
+                                : ((Model.Page - 1) * Model.PageSize) + 1)
+                        </strong>
+
+                        –
+
+                        <strong>
+                            @(Math.Min(
+                                Model.Page * Model.PageSize,
+                                Model.TotalData))
+                        </strong>
+
+                        dari
+
+                        <strong>
+                            @Model.TotalData
+                        </strong>
+
+                        data
+
+                    </small>
+
+
+                    @if (Model.TotalPage > 0)
+                    {
+
+                        <nav aria-label="Customer Group Pagination">
+
+                            <ul class="pagination
+                                       pagination-sm
+                                       customer-group-pagination
+                                       mb-0">
+
+                                <!-- SEBELUMNYA -->
+
+                                <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+
+                                    <a class="page-link"
+                                       asp-action="Index"
+                                       asp-route-page="@(Model.Page - 1)"
+                                       asp-route-pageSize="@Model.PageSize"
+                                       asp-route-search="@ViewBag.Search"
+                                       asp-route-isActive="@ViewBag.IsActive">
+
+                                        Sebelumnya
+
+                                    </a>
+
+                                </li>
+
+
+                                <!-- NOMOR -->
+
+                                @for (int i = 1; i <= Model.TotalPage; i++)
+                                {
+
+                                    <li class="page-item @(i == Model.Page ? "active" : "")">
+
+                                        <a class="page-link"
+                                           asp-action="Index"
+                                           asp-route-page="@i"
+                                           asp-route-pageSize="@Model.PageSize"
+                                           asp-route-search="@ViewBag.Search"
+                                           asp-route-isActive="@ViewBag.IsActive">
+
+                                            @i
+
+                                        </a>
+
+                                    </li>
+
+                                }
+
+
+                                <!-- BERIKUTNYA -->
+
+                                <li class="page-item @(Model.Page >= Model.TotalPage ? "disabled" : "")">
+
+                                    <a class="page-link"
+                                       asp-action="Index"
+                                       asp-route-page="@(Model.Page + 1)"
+                                       asp-route-pageSize="@Model.PageSize"
+                                       asp-route-search="@ViewBag.Search"
+                                       asp-route-isActive="@ViewBag.IsActive">
+
+                                        Berikutnya
+
+                                    </a>
+
+                                </li>
+
+                            </ul>
+
+                        </nav>
+
+                    }
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section Scripts {
+
+<script>
+
+    function confirmDeleteCustomerGroup() {
+
+        return confirm(
+            "Yakin ingin menghapus kelompok customer ini?"
+        );
+
+    }
+
+</script>
+
+}

@@ -1,0 +1,493 @@
+@using ERP.Web.Models
+@using System.Globalization
+@model GoodsPurchaseOrderViewModel
+
+@{
+    Layout = null;
+
+    var po = Model;
+    var culture = new CultureInfo("id-ID");
+
+    string Rupiah(decimal? value) =>
+        (value ?? 0).ToString("#,##0.##", culture);
+
+    string Tanggal(object? value)
+    {
+        if (value == null) return "-";
+
+        if (DateTime.TryParse(value.ToString(), out var date))
+            return date.ToString("dd-MM-yyyy");
+
+        return value.ToString() ?? "-";
+    }
+}
+
+<!DOCTYPE html>
+<html lang="id">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Cetak PO Barang</title>
+
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                padding: 26px;
+                color: #172b49;
+                background: #fff;
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 11px;
+            }
+
+            .print-container {
+                width: 100%;
+            }
+
+            .toolbar {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+
+            .toolbar button,
+            .toolbar a {
+                display: inline-block;
+                padding: 9px 16px;
+                border: 0;
+                border-radius: 4px;
+                color: #fff;
+                background: #2864e8;
+                font-size: 12px;
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            .toolbar .back {
+                background: #64748b;
+            }
+
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 24px;
+                padding-bottom: 20px;
+                border-bottom: 3px solid #2864ff;
+            }
+
+            .company {
+                max-width: 60%;
+            }
+
+            .logo {
+                margin: 0 0 6px;
+                color: #0878d1;
+                font-size: 27px;
+                font-weight: 800;
+                letter-spacing: 1px;
+            }
+
+            .company-info {
+                color: #52627a;
+                font-size: 9px;
+                line-height: 1.7;
+            }
+
+            .document-info {
+                min-width: 270px;
+                text-align: right;
+            }
+
+            .document-title {
+                margin: 0 0 9px;
+                color: #2864ff;
+                font-size: 21px;
+                font-weight: 700;
+            }
+
+            .info-row {
+                display: flex;
+                justify-content: flex-end;
+                gap: 12px;
+                margin: 5px 0;
+            }
+
+            .info-label {
+                color: #64748b;
+            }
+
+            .info-value {
+                min-width: 105px;
+                font-weight: 700;
+            }
+
+            .po-number {
+                display: inline-block;
+                padding: 4px 8px;
+                border: 1px solid #b9d3ff;
+                border-radius: 3px;
+                color: #173c77;
+                background: #f3f7ff;
+            }
+
+            .section {
+                margin-top: 16px;
+            }
+
+            .section-title {
+                margin-bottom: 7px;
+                color: #64748b;
+                font-size: 9px;
+                font-weight: 700;
+                text-transform: uppercase;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+            }
+
+            th {
+                padding: 9px 7px;
+                border: 1px solid #203d63;
+                color: #fff;
+                background: #203d63;
+                font-size: 9px;
+                text-align: left;
+            }
+
+            td {
+                padding: 8px 7px;
+                border: 1px solid #d8e1ed;
+                overflow-wrap: anywhere;
+                vertical-align: top;
+            }
+
+            tbody tr:nth-child(even) {
+                background: #f7f9fc;
+            }
+
+            .text-center {
+                text-align: center;
+            }
+
+            .text-right {
+                text-align: right;
+            }
+
+            .bottom-section {
+                display: grid;
+                grid-template-columns: 1.2fr 1fr;
+                gap: 18px;
+                margin-top: 14px;
+                align-items: start;
+            }
+
+            .note {
+                min-height: 55px;
+                padding: 10px;
+                border-left: 3px solid #2864ff;
+                background: #f5f8fc;
+                color: #334155;
+                line-height: 1.6;
+                overflow-wrap: anywhere;
+            }
+
+            .totals {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .totals td {
+                padding: 7px 9px;
+                border: 0;
+                border-bottom: 1px solid #dce4ef;
+            }
+
+            .totals .grand-total td {
+                color: #fff;
+                background: #203d63;
+                font-size: 12px;
+                font-weight: 700;
+            }
+
+            .signatures {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 18px;
+                margin-top: 36px;
+                page-break-inside: avoid;
+            }
+
+            .signature {
+                text-align: center;
+            }
+
+            .signature-title {
+                margin-bottom: 44px;
+                font-weight: 700;
+            }
+
+            .signature-line {
+                height: 1px;
+                border-bottom: 1px solid #64748b;
+            }
+
+            .signature-name {
+                margin-top: 5px;
+                color: #64748b;
+                font-size: 9px;
+            }
+
+            .footer {
+                margin-top: 18px;
+                padding-top: 10px;
+                border-top: 1px solid #dce4ef;
+                color: #94a3b8;
+                font-size: 9px;
+                text-align: center;
+            }
+
+            .empty {
+                padding: 24px;
+                color: #64748b;
+                text-align: center;
+            }
+
+            @@media print {
+                @@page {
+                    size: A4 landscape;
+                    margin: 10mm;
+                }
+
+                body {
+                    padding: 0;
+                    font-size: 9px;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+
+                .toolbar {
+                    display: none !important;
+                }
+
+                .header {
+                    padding-bottom: 12px;
+                }
+
+                .logo {
+                    font-size: 23px;
+                }
+
+                .document-title {
+                    font-size: 17px;
+                }
+
+                th, td {
+                    padding: 5px;
+                }
+
+                .section {
+                    margin-top: 12px;
+                }
+
+                .signatures {
+                    margin-top: 28px;
+                }
+
+                thead {
+                    display: table-header-group;
+                }
+
+                tr {
+                    page-break-inside: avoid;
+                }
+            }
+        </style>
+    </head>
+
+       <body>
+        <div class="print-container">
+
+            <div class="toolbar">
+                <button type="button" onclick="window.print()">
+                    Cetak
+                </button>
+
+                <button type="button"
+                        class="back"
+                        onclick="window.close()">
+                    Kembali
+                </button>
+            </div>
+
+            <div class="header">
+                <div class="company">
+                    <h1 class="logo">ERPLITE</h1>
+
+                    <div class="company-info">
+                        Jl. Kran V No.20, RT.15/RW.3, Gn. Sahari Sel., Kec. Kemayoran,
+                        Kota Jakarta Pusat, DKI Jakarta 10810<br />
+                        Telp: 021-7875-2345<br />
+                        Email: admin@erplite.com
+                    </div>
+                </div>
+
+                <div class="document-info">
+                    <h2 class="document-title">PURCHASE ORDER BARANG</h2>
+
+                    <div class="info-row">
+                        <span class="info-label">Nomor</span>
+                        <span class="info-value">
+                            <span class="po-number">@po.PONo</span>
+                        </span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Tanggal</span>
+                        <span class="info-value">@Tanggal(po.PODate)</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Perkiraan</span>
+                        <span class="info-value">@Tanggal(po.ExpectedDate)</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Supplier</span>
+                        <span class="info-value">@po.SupplierName</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Gudang</span>
+                        <span class="info-value">@po.WarehouseName</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Status</span>
+                        <span class="info-value">
+                            @((po.Status ?? "-").Replace("_", " ").ToUpperInvariant())
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:4%" class="text-center">NO</th>
+                            <th style="width:31%">PRODUK</th>
+                            <th style="width:10%">SATUAN</th>
+                            <th style="width:7%" class="text-right">QTY</th>
+                            <th style="width:12%" class="text-right">HARGA</th>
+                            <th style="width:10%" class="text-right">DISK</th>
+                            <th style="width:10%" class="text-right">PAJAK</th>
+                            <th style="width:16%" class="text-right">SUBTOTAL</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (po.Details != null && po.Details.Count > 0)
+                        {
+                            var no = 1;
+
+                            @foreach (var item in po.Details)
+                            {
+                                <tr>
+                                    <td class="text-center">@no</td>
+                                    <td>@item.ProductName</td>
+                                    <td>@item.UnitCode</td>
+                                    <td class="text-right">
+                                        @item.Qty.ToString("#,##0.###", culture)
+                                    </td>
+                                    <td class="text-right">
+                                        @Rupiah(item.UnitPrice)
+                                    </td>
+                                    <td class="text-right">
+                                        @item.DiscPercent.GetValueOrDefault().ToString("#,##0.##", culture)%
+                                    </td>
+                                    <td class="text-right">
+                                        @item.TaxPercent.GetValueOrDefault().ToString("#,##0.##", culture)%
+                                    </td>
+                                    <td class="text-right">
+                                        @Rupiah(item.Subtotal)
+                                    </td>
+                                </tr>
+
+                                no++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="empty">
+                                    Detail barang tidak tersedia untuk PO ini.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bottom-section">
+                <div>
+                    <div class="section-title">Catatan</div>
+                    <div class="note">
+                        @(string.IsNullOrWhiteSpace(po.Note) ? "-" : po.Note)
+                    </div>
+                </div>
+
+                <table class="totals">
+                    <tr>
+                        <td>Subtotal</td>
+                        <td class="text-right">Rp @Rupiah(po.SubtotalAmount)</td>
+                    </tr>
+                    <tr>
+                        <td>Diskon</td>
+                        <td class="text-right">- Rp @Rupiah(po.DiscountAmount)</td>
+                    </tr>
+                    <tr>
+                        <td>Pajak (@po.TaxPercent.ToString("N0", new System.Globalization.CultureInfo("id-ID"))%)</td>
+                        <td class="text-right">Rp @Rupiah(po.TaxAmount)</td>
+                    </tr>
+                    <tr class="grand-total">
+                        <td>TOTAL</td>
+                        <td class="text-right">Rp @Rupiah(po.TotalAmount)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="signatures">
+                <div class="signature">
+                    <div class="signature-title">Dibuat oleh</div>
+                    <div class="signature-line"></div>
+                    <div class="signature-name">Administrator</div>
+                </div>
+
+                <div class="signature">
+                    <div class="signature-title">Disetujui</div>
+                    <div class="signature-line"></div>
+                    <div class="signature-name">(Nama &amp; Tanda Tangan)</div>
+                </div>
+
+                <div class="signature">
+                    <div class="signature-title">Supplier</div>
+                    <div class="signature-line"></div>
+                    <div class="signature-name">(Nama &amp; Tanda Tangan)</div>
+                </div>
+            </div>
+
+            <div class="footer">
+                &copy; @DateTime.Now.Year Modotz App ·
+                Dicetak @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+            </div>
+
+        </div>
+    </body>
+</html>

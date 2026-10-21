@@ -1,0 +1,440 @@
+@using ERP.Web.Models
+@model PagedResult<GoodsReceiptViewModel> 
+
+@{
+    ViewData["Title"] = "Penerimaan Barang";
+
+    @*var culture = new CultureInfo("id-ID");*@
+    var no = (Model.Page - 1) * Model.PageSize;
+
+    var search = Context.Request.Query["search"].ToString(); 
+    var warehouses = ViewBag.Warehouses as IEnumerable<DropdownItemViewModel> ?? Enumerable.Empty<DropdownItemViewModel>();
+    var selectedStatus = Context.Request.Query["status"].ToString();
+}
+
+<div class="product-page-title">
+    Penerimaan Barang
+</div>
+ 
+<div class="product-filter-card">
+
+    <div class="product-filter-header"
+         data-bs-toggle="collapse"
+         data-bs-target="#productFilter">
+
+        <div class="product-filter-title">
+            <i class="bi bi-funnel"></i>
+            <span>Filter</span>
+        </div>
+
+        <i class="bi bi-chevron-down"></i>
+
+    </div>
+
+
+    <div id="productFilter"
+         class="collapse show">
+
+        <div class="product-filter-body">
+
+            <form method="get"
+                  asp-action="Index"
+                  asp-controller="GoodsPurchaseOrders">
+
+                <div class="product-filter-row">
+                    <div>
+                        <label class="product-filter-label">
+                            Cari (No / Ref)
+                        </label>
+
+                        <input type="text" class="form-control"
+                               id="search"
+                               name="search"
+                               value="@Context.Request.Query["search"]"
+                        />
+                    </div>
+                
+
+                    <div>
+                        <label class="product-filter-label">
+                            Status
+                        </label>
+
+                        <select id="status"
+                                name="status"
+                                class="form-select">
+
+                            <option value="">-- Semua --</option>
+
+                            <option value="draft"
+                                    selected="@(selectedStatus == "posted")">
+                                Posted
+                            </option>
+
+                            <option value="cancelled"
+                                    selected="@(selectedStatus == "cancelled")">
+                                Cancelled
+                            </option> 
+                        </select>
+                    </div>
+ 
+                    <div>
+                        <label class="product-filter-label">
+                            Status Faktur
+                        </label>
+
+                        <select name="subCategoryId"
+                                class="form-select"
+                                id="subCategoryId">
+
+                            <option value="">-- Semua --</option>
+
+                            <option value="draft"
+                                    selected="@(selectedStatus == "posted")">
+                                Belum Difaktur
+                            </option>
+
+                            <option value="submitted"
+                                    selected="@(selectedStatus == "cancelled")">
+                                Sudah Difaktur
+                            </option> 
+                        </select> 
+                    </div>
+
+                    <div>
+                       <label class="product-filter-label"> Tanggal Dari </label>
+                         <input type="date"
+                                   class="form-control"  />
+                     </div>
+
+                    <div>
+                       <label class="product-filter-label"> Tanggal Sampai  </label>
+                         <input type="date"
+                                   class="form-control"   />
+                     </div>
+
+                </div>
+
+                <div class="product-filter-row-bottom">
+                   
+                    <div>
+
+                        <label class="product-filter-label">
+                            Per Halaman
+                        </label>
+                        <select name="pageSize"
+                                class="form-select"
+                                onchange="this.form.submit()">
+
+                            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+
+                        </select>
+                    </div>
+
+
+                    <div class="product-filter-actions">
+                       
+
+                        <button type="submit"
+                                class="btn btn-primary">
+
+                            <i class="bi bi-search me-1"></i>
+                            Terapkan
+
+                        </button>
+
+
+                        <a asp-action="Index"
+                           asp-controller="Products"
+                           class="btn filter-reset-btn">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            Reset
+                        </a>
+
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="product-table-card">
+    <div class="product-table-header">
+        <div class="product-table-heading">
+
+            <span class="product-table-title"> Penerimaan Barang </span>
+            <span class="badge badge-count"> @Model.TotalCount </span>
+            <span class="product-table-subtitle"> Barang masuk ke gudang </span>
+        </div>
+
+         <div class="d-flex align-items-center gap-2">
+            <!-- Refresh Data -->
+            <button type="button"
+                    class="btn btn-light p-1 px-2 btn-custom-square"
+                    title="Refresh Data"
+                    onclick="loadProducts()">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+
+            <!-- Expand / Collapse -->
+            <button type="button" 
+                    class="btn btn-light p-1 px-2 btn-custom-square "
+                    title="Toggle">
+                <i class="bi bi-chevron-up"></i>
+            </button>
+
+            <button type="button"
+                    class="btn btn-teal btn-custom-action"
+                    onclick="window.location.href='/GoodsReceipts/Create'">
+                <i class="bi bi-plus-circle"></i>
+                <span>Tambah Penerimaan</span>
+            </button>
+          </div>
+    </div>
+
+
+    <!-- TABLE -->
+
+    <div id="productTableBody"
+         class="collapse show">
+        <div class="product-table-wrapper">
+            <table class="table product-table">
+                <thead>
+                    <tr>
+                        <th class="text-center" >#</th> 
+                        <th class="text-start" >NO. PENERIMAAN</th>
+                        <th class="text-start" >TANGGAL</th>
+                        <th class="text-start" >GUDANG</th>
+                        <th class="text-start" >SUPPLIER</th>
+                        <th class="text-start" >REF</th>
+                        <th class="text-start" >STATUS</th> 
+                        <th class="text-start" >FAKTUR</th>
+                        <th class="text-start">AKSI</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @if (Model.Data != null && Model.Data.Any())
+                    {
+                        foreach (var item in Model.Data)
+                        {
+                            no++;
+
+                            var status = (item.Status ?? "draft")
+                                .Trim()
+                                .ToLowerInvariant();
+
+                            var statusText = status switch
+                            {
+                                "posted" => "Posted",
+                                "cancelled" => "Cancelled",
+                                _ => item.Status
+                            };
+
+                            var statusClass = status switch
+                            {
+                                "draft" or "pending" => "product-badge-unit", 
+                                "partial"  => "product-badge-serial", 
+                                "posted"  => "product-badge-stock", 
+                                "cancelled"  => "product-badge-no-stock",
+                                  
+                                _ => "product-badge-type"
+                            };
+
+                            <tr>
+                                <td class="text-center">
+                                    @no
+                                </td>
+
+                                <td class="text-start">
+                                    <span class="product-number ">
+                                        @item.ReceiptNo
+                                    </span>
+                                </td>
+
+                                <td class="text-start" >
+                                    @item.ReceiptDate.ToString("dd MMM yyyy")
+                                </td>
+
+
+                                <td class="text-start">
+                                   @if (!string.IsNullOrWhiteSpace(item.WarehouseName))
+                                    {
+                                        <span class="product-badge product-badge-brand">
+                                            @item.WarehouseName
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-description">
+                                            -
+                                        </span>
+                                    } 
+                                </td>
+
+                                <td class="text-start">
+                                   @if (!string.IsNullOrWhiteSpace(item.SupplierName))
+                                    {
+                                        <span class="product-badge">
+                                            @item.SupplierName
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-description">
+                                            -
+                                        </span>
+                                    } 
+                                </td>
+                                 
+                                <td class="text-start">
+                                    <span class="product-number ">
+                                        @item.RefNo
+                                    </span>
+                                </td>
+
+                                <td class="text-start">
+                                    <span class="product-badge @statusClass">
+                                        @statusText
+                                    </span>
+                                </td>
+
+                                <td class="text-start">
+                                    <span class="product-badge @statusClass">
+                                        faktur
+                                    </span>
+                                </td> 
+
+                                <td class="text-start">
+                                    <span class="text-description">-</span>
+                                </td>
+
+                                <td>
+                                    <div class="product-actions">
+
+                                        <a asp-controller="GoodsPurchaseOrders"
+                                           asp-action="Details"
+                                           asp-route-id="@item.Id"
+                                           class="product-action-btn product-action-copy"
+                                           title="Detail PO">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+
+                                        <a asp-controller="GoodsPurchaseOrders"
+                                           asp-action="Details"
+                                           asp-route-id="@item.Id"
+                                           class="product-action-btn product-action-copy"
+                                           title="Detail PO">
+                                            <i class="bi bi-x-circle"></i>
+                                        </a>
+
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="10" class="product-empty">
+                                <i class="bi bi-inbox"></i>
+                                Tidak ada data Penerimaan Barang.
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+        </div>
+
+        @* <!-- Footer / Pagination !--> *@
+        <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+         @{
+             var startItem = Model.TotalCount == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1;
+             var endItem = Math.Min(Model.Page * Model.PageSize, Model.TotalCount);
+          }
+          <span class="menu-description small"> Menampilkan <strong>@startItem – @endItem</strong> dari <strong>@Model.TotalCount</strong> data </span>
+          @{
+             var currentPage = Model.Page;
+             var totalPages = Model.TotalPage;
+           }
+              <nav aria-label="Pagination">
+                 <ul class="pagination">
+                    <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                       <a class="page-link" href="@Url.Action("Index", new
+                            {
+                                page = currentPage - 1,
+                                pageSize = Model.PageSize,
+                                search = Context.Request.Query["search"].ToString(),
+                                brandId = Context.Request.Query["brandId"].ToString(),
+                                categoryId = Context.Request.Query["categoryId"].ToString(),
+                                subCategoryId = Context.Request.Query["subCategoryId"].ToString(),
+                                productType = Context.Request.Query["productType"].ToString(),
+                                unitId = Context.Request.Query["unitId"].ToString(),
+                                trackStock = Context.Request.Query["trackStock"].ToString(),
+                                isActive = Context.Request.Query["isActive"].ToString(),
+                                showVariant = Context.Request.Query["showVariant"].ToString()
+                            })">
+                             Sebelumnya
+                       </a>
+                    </li>
+
+                    @for (int i = 1; i <= totalPages; i++)
+                    {
+                        <li class="page-item @(i == currentPage ? "active" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new
+                               {
+                                   page = i,
+                                   pageSize = Model.PageSize,
+                                   search = Context.Request.Query["search"].ToString(),
+                                   brandId = Context.Request.Query["brandId"].ToString(),
+                                   categoryId = Context.Request.Query["categoryId"].ToString(),
+                                   subCategoryId = Context.Request.Query["subCategoryId"].ToString(),
+                                   productType = Context.Request.Query["productType"].ToString(),
+                                   unitId = Context.Request.Query["unitId"].ToString(),
+                                   trackStock = Context.Request.Query["trackStock"].ToString(),
+                                   isActive = Context.Request.Query["isActive"].ToString(),
+                                   showVariant = Context.Request.Query["showVariant"].ToString()
+                               })">
+
+                                @i
+
+                            </a>
+
+                        </li>
+                    }
+                       <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new
+                               {
+                                   page = currentPage + 1,
+                                   pageSize = Model.PageSize,
+                                   search = Context.Request.Query["search"].ToString(),
+                                   brandId = Context.Request.Query["brandId"].ToString(),
+                                   categoryId = Context.Request.Query["categoryId"].ToString(),
+                                   subCategoryId = Context.Request.Query["subCategoryId"].ToString(),
+                                   productType = Context.Request.Query["productType"].ToString(),
+                                   unitId = Context.Request.Query["unitId"].ToString(),
+                                   trackStock = Context.Request.Query["trackStock"].ToString(),
+                                   isActive = Context.Request.Query["isActive"].ToString(),
+                                   showVariant = Context.Request.Query["showVariant"].ToString()
+                               })">
+
+                                Berikutnya
+
+                            </a>
+
+                        </li>
+                   </ul>
+              </nav>
+        </div>  
+    </div>
+</div> 

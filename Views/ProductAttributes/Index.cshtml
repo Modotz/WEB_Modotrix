@@ -1,0 +1,724 @@
+﻿@model PagedResult<ERP.Web.Models.ProductAttributeViewModel>
+
+@{
+    ViewData["Title"] = "Atribut & Varian";
+}
+<div class="supplier-page">
+
+    <!-- HEADER -->
+    <div class="mb-3">
+        <h4 class="page-title">Atribut &amp; Varian</h4>
+    </div>
+
+    <!-- FILTER -->
+    <div class="card supplier-card supplier-filter">
+
+        <div class="attribute-filter-header">
+            <strong>
+                <i class="bi bi-funnel me-1"></i>
+                Filter
+            </strong>
+
+            <i class="bi bi-chevron-down"></i>
+        </div>
+
+        <div class="attribute-filter-body">
+
+            <form method="get" asp-action="Index">
+
+                <div class="row g-2 align-items-end">
+
+                    <!-- SEARCH -->
+                    <div class="col-md-4">
+                        <label class="form-label">
+                            Cari (Kode/Name)
+                        </label>
+
+                        <input type="text"
+                               name="search"
+                               value="@ViewBag.Search"
+                               class="form-control"
+                               placeholder="Cari atribut..." />
+                    </div>
+
+                    <!-- PER HALAMAN -->
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            Per Halaman
+                        </label>
+
+                        <select name="pageSize" class="form-select">
+                            <option value="10" selected="@(Model.PageSize == 10 ? "selected" : null)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25 ? "selected" : null)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50 ? "selected" : null)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100 ? "selected" : null)">100</option>
+                        </select>
+                    </div>
+
+                    <!-- BUTTON -->
+                    <div class="col-md-3">
+                        <div class="attribute-filter-actions">
+
+                            <button type="submit"
+                                    class="btn attribute-apply-btn">
+                                <i class="bi bi-search me-1"></i>
+                                Terapkan
+                            </button>
+
+                            <a asp-action="Index"
+                               class="btn attribute-reset-btn"
+                               title="Reset">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </a>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- DAFTAR ATRIBUT -->
+    <div class="card supplier-card supplier-table-card">
+
+        <!-- CARD HEADER -->
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+            <div class="d-flex align-items-center gap-2">
+
+                <strong class="attribute-card-title">
+                    Atribut &amp; Varian
+                </strong>
+
+                <span class="attribute-count">
+                    @Model.TotalData
+                </span>
+
+                <small class="attribute-card-description d-none d-md-inline">
+                    Atribut produk (Warna, Ukuran, ...) beserta nilai variannya
+                </small>
+
+              </div>
+
+            <div class="d-flex align-items-center gap-2">
+               
+
+                <div class="d-flex align-items-center gap-2">
+                <a asp-action="ExportPdf"
+                   asp-controller="ProductAttributes"
+                   class="btn btn-light btn-custom-square text-danger"
+                   title="Export PDF">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                </a>
+
+                <!-- Export Excel -->
+                <a asp-action="ExportExcel"
+                   asp-controller="ProductAttributes"
+                   class="btn btn-light btn-custom-square text-success"
+                   title="Export Excel">
+                    <i class="bi bi-file-earmark-excel-fill"></i>
+                </a>
+
+                <!-- 
+
+                -->
+                <a asp-action="Print"
+                   asp-controller="ProductAttributes"
+                   class="btn btn-light btn-custom-square text-secondary"
+                   title="Cetak"
+                   target="_blank">
+                    <i class="bi bi-printer-fill"></i>
+                </a>
+
+                    <button type="button"
+                            class="btn btn-light btn-custom-square"
+                            title="Refresh"
+                            onclick="location.relod()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-light btn-custom-square"
+                            title="Toggle Collapse"
+                            onclick="toggleAttributeTable(this)">
+                        <i class="bi bi-chevron-up"></i>
+                    </button>
+
+                </div>
+
+                <!-- TAMBAH ATRIBUT -->
+                <button type="button"
+                        class="btn btn-primary btn-sm attribute-add-btn"
+                        onclick="openCreateAttribute()">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Tambah Atribut
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- CARD BODY -->
+        <div id="attributeTableBody">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle attribute-table">
+
+                    <thead>
+                        <tr>
+                            <th class="attribute-number">#</th>
+                            <th style="width: 20%;">KODE</th>
+                            <th style="width: 38%;">NAMA ATRIBUT</th>
+                            <th class="text-center" style="width: 15%;">JML VARIAN</th>
+                            <th style="width: 16%;">STATUS</th>
+                            <th style="width: 140px;">AKSI</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @if (Model.Data != null && Model.Data.Any())
+                        {
+                            var no = ((Model.Page - 1) * Model.PageSize) + 1;
+
+                            foreach (var item in Model.Data)
+                            {
+                                <tr>
+
+                                    <!-- NOMOR -->
+                                    <td class="attribute-number">
+                                        @no
+                                    </td>
+
+                                    <!-- CODE -->
+                                    <td class="attribute-code">
+                                        @(string.IsNullOrWhiteSpace(item.Code) ? "-" : item.Code)
+                                    </td>
+
+                                    <!-- NAMA -->
+                                    <td>
+                                        <strong>
+                                            @item.Name
+                                        </strong>
+                                    </td>
+
+                                    <!-- JUMLAH VARIAN -->
+                                    <td class="attribute-variant-count">
+                                        <span class="attribute-variant-badge">
+                                            @item.VariantCount
+                                        </span>
+                                    </td>
+
+                                    <!-- STATUS -->
+                                    <td>
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge bg-success">
+                                                Aktif
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">
+                                                Tidak Aktif
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <!-- AKSI -->
+                                    <td class="attribute-action-cell">
+
+                                        <div class="attribute-actions">
+
+                                            <!-- VARIAN -->
+                                            <button type="button"
+                                                    class="attribute-btn attribute-btn-variant"
+                                                    title="Varian"
+                                                    onclick="openVariant(@item.Id)">
+                                                <i class="bi bi-list-ul"></i>
+                                                Varian
+                                            </button>
+
+                                            <!-- EDIT -->
+                                            <button type="button"
+                                                    class="attribute-btn attribute-btn-edit"
+                                                    title="Edit"
+                                                    onclick="openEditAttribute(@item.Id)">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+
+                                            <!-- DELETE -->
+                                            @using (Html.BeginForm(
+                                                "Delete",
+                                                "ProductAttributes",
+                                                FormMethod.Post,
+                                                new
+                                                {
+                                                    @class = "role-delete-form",
+                                                    onsubmit = "return confirm('Yakin ingin menghapus atribut ini?');"
+                                                }))
+                                            {
+                                                @Html.AntiForgeryToken()
+
+                                                <input type="hidden"
+                                                       name="id"
+                                                       value="@item.Id" />
+
+                                                <button type="submit"
+                                                        class="attribute-btn attribute-btn-delete"
+                                                        title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+
+                                no++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6"
+                                    class="text-center text-muted py-4">
+                                    Tidak ada data atribut.
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- FOOTER / PAGINATION -->
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+
+                @{
+                    var startItem = Model.TotalData == 0
+                        ? 0
+                        : ((Model.Page - 1) * Model.PageSize) + 1;
+
+                    var endItem = Math.Min(
+                        Model.Page * Model.PageSize,
+                        Model.TotalData
+                    );
+                }
+
+                <span class="menu-description small">
+                    Menampilkan
+                    <strong>@startItem – @endItem</strong>
+                    dari
+                    <strong>@Model.TotalData</strong>
+                    data
+                </span>
+
+                @{
+                    var currentPage = Model.Page;
+
+                    var totalPages = Model.PageSize > 0
+                        ? (int) Math.Ceiling(
+                            (double)Model.TotalData / Model.PageSize)
+                        : 0;
+                }
+                
+               <nav aria-label="Pagination">
+
+                    <ul class="pagination mb-0">
+
+                        <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new {
+                                   search = Context.Request.Query["search"],
+                                   isActive = Context.Request.Query["isActive"],
+                                   page = currentPage - 1,
+                                   pageSize = Model.PageSize
+                               })">
+
+                                Sebelumnya
+
+                            </a>
+
+                        </li>
+
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       search = Context.Request.Query["search"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = i,
+                                       pageSize = Model.PageSize
+                                   })">
+
+                                    @i
+
+                                </a>
+
+                            </li>
+                        }
+
+                        <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new {
+                                   search = Context.Request.Query["search"],
+                                   isActive = Context.Request.Query["isActive"],
+                                   page = currentPage + 1,
+                                   pageSize = Model.PageSize
+                               })">
+
+                                Berikutnya
+
+                            </a>
+
+                        </li>
+
+                    </ul>
+
+                </nav>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- =====================================================
+     MODAL TAMBAH ATRIBUT
+     ===================================================== -->
+
+<div class="modal fade"
+     id="createAttributeModal"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Tambah Atribut
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            @using (Html.BeginForm(
+                "Create",
+                "ProductAttributes",
+                FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+
+                    <!-- CODE -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Kode
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               placeholder="Otomatis saat disimpan (ATRxxx)"
+                               readonly />
+
+                        <small class="text-muted">
+                            Kode atribut dibuat otomatis oleh sistem.
+                        </small>
+                    </div>
+
+                    <!-- NAME -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Nama Atribut <span class="text-danger">*</span>
+                        </label>
+
+                        <input type="text"
+                               name="Name"
+                               class="form-control"
+                               placeholder="mis. Warna, Ukuran"
+                               required />
+                    </div>
+
+                    <!-- ACTIVE -->
+                    <div class="form-check form-switch">
+                        <input type="checkbox"
+                               name="IsActive"
+                               value="true"
+                               class="form-check-input"
+                               id="createAttributeActive"
+                               checked />
+
+                        <label class="form-check-label"
+                               for="createAttributeActive">
+                            Active
+                        </label>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>
+                        Simpan
+                    </button>
+
+                </div>
+            }
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- =====================================================
+     MODAL EDIT ATRIBUT
+     ===================================================== -->
+
+<div class="modal fade"
+     id="editAttributeModal"
+     tabindex="-1">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Edit Atribut
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            @using (Html.BeginForm(
+                "Edit",
+                "ProductAttributes",
+                FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           name="Id"
+                           id="editAttributeId" />
+
+                    <!-- CODE -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Kode
+                        </label>
+
+                        <input type="text"
+                               name="Code"
+                               id="editAttributeCode"
+                               class="form-control" />
+                    </div>
+
+                    <!-- NAME -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Nama Atribut
+                        </label>
+
+                        <input type="text"
+                               name="Name"
+                               id="editAttributeName"
+                               class="form-control"
+                               required />
+                    </div>
+
+                    <!-- ACTIVE -->
+                    <div class="form-check">
+                        <input type="checkbox"
+                               name="IsActive"
+                               value="true"
+                               id="editAttributeActive"
+                               class="form-check-input" />
+
+                        <label class="form-check-label"
+                               for="editAttributeActive">
+                            Active
+                        </label>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Simpan Perubahan
+                    </button>
+
+                </div>
+            }
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <script>
+
+        // =========================
+        // TOGGLE TABLE
+        // =========================
+
+        function toggleAttributeTable(button) {
+
+            const tableBody = document.getElementById("attributeTableBody");
+            const icon = button.querySelector("i");
+
+            if (tableBody.style.display === "none") {
+
+                tableBody.style.display = "";
+
+                icon.classList.remove("bi-chevron-down");
+                icon.classList.add("bi-chevron-up");
+
+            } else {
+
+                tableBody.style.display = "none";
+
+                icon.classList.remove("bi-chevron-up");
+                icon.classList.add("bi-chevron-down");
+
+            }
+        }
+
+        // =========================
+        // CREATE ATTRIBUTE
+        // =========================
+
+        function openCreateAttribute() {
+
+            const form = document.querySelector(
+                "#createAttributeModal form"
+            );
+
+            if (form) {
+
+                form.reset();
+
+                document.getElementById(
+                    "createAttributeActive"
+                ).checked = true;
+            }
+
+            const modal = new bootstrap.Modal(
+                document.getElementById("createAttributeModal")
+            );
+
+            modal.show();
+        }
+
+        // =========================
+        // EDIT ATTRIBUTE
+        // =========================
+
+        async function openEditAttribute(id) {
+
+            try {
+
+                const response = await fetch(
+                    `/ProductAttributes/GetById?id=${id}`
+                );
+
+                if (!response.ok) {
+
+                    alert("Data atribut tidak ditemukan.");
+
+                    return;
+                }
+
+                const data = await response.json();
+
+                document.getElementById(
+                    "editAttributeId"
+                ).value = data.id;
+
+                document.getElementById(
+                    "editAttributeCode"
+                ).value = data.code ?? "";
+
+                document.getElementById(
+                    "editAttributeName"
+                ).value = data.name ?? "";
+
+                document.getElementById(
+                    "editAttributeActive"
+                ).checked = data.isActive;
+
+                const modal = new bootstrap.Modal(
+                    document.getElementById("editAttributeModal")
+                );
+
+                modal.show();
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "Terjadi kesalahan saat mengambil data atribut."
+                );
+            }
+        }
+
+        // =========================
+        // OPEN CREATE VARIANT
+        // =========================
+
+        function openVariant(attributeId) {
+
+            window.location.href =
+                `/AttributeVariants/Index?attributeId=${attributeId}`;
+        }
+
+    </script>
+
+}

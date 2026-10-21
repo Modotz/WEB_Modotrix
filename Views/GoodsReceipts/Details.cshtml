@@ -1,0 +1,486 @@
+@using ERP.Web.Models
+@model GoodsPurchaseOrderViewModel
+
+@{
+    ViewData["Title"] = $"PO {Model.PONo}";
+
+    var details = Model.Details ?? new List<GoodsPurchaseOrderItemViewModel>();
+    var subtotal = details.Sum(x => x.Subtotal);
+
+    var status = (Model.Status ?? "draft").Trim().ToLowerInvariant();
+    var isDraft = status == "draft";
+    var isCancelled = status == "cancelled" || status == "canceled";
+    var statusText = status.Replace("_", " ");
+      
+    var statusClass = (status == "draft" || status == "pending")
+    ? "product-badge-unit"
+    : status == "partial"
+        ? "product-badge-serial"
+        : status == "received"
+            ? "product-badge-stock"
+            : "product-badge-no-stock";
+    var no = 1;
+
+}
+
+
+
+<div class="po-view-page">
+     
+    <h1 class="po-view-title">PO @Model.PONo</h1> 
+    <section class="po-view-card po-info-card"> 
+        <div class="po-view-card-header po-info-header">
+
+            <div class="po-info-heading">
+                <strong>PO @Model.PONo</strong>
+
+                <span class="po-status-badge @statusClass">
+                    @statusText
+                </span>
+            </div>
+
+            <div class="po-actions">
+
+                @if (isDraft)
+                {
+                    <a asp-controller="GoodsPurchaseOrders"
+                       asp-action="Edit"
+                       asp-route-id="@Model.Id"
+                       class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+
+                    <form asp-action="Approve"
+                          asp-route-id="@Model.Id"
+                          method="post"
+                          class="po-action-form">
+                        @Html.AntiForgeryToken()
+
+                        <button type="button"
+                                class="btn btn-primary btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#approvePOModal">
+                            <i class="bi bi-check2-circle"></i> Setujui
+                        </button>
+                    </form>
+
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#cancelPOModal">
+                        <i class="bi bi-x-circle"></i> Batalkan
+                    </button>
+                }
+
+                @if (status == "ordered" || status == "partial")
+                {
+                    <a asp-controller="GoodsReceipts"
+                       asp-action="Create"
+                       asp-route-poId="@Model.Id"
+                       class="btn btn-success btn-sm">
+                        <i class="bi bi-box-arrow-in-down"></i> Terima Barang
+                    </a>
+
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            onclick="alert('Fitur pengajuan pembatalan akan dibuat berikutnya.');">
+                        <i class="bi bi-x-circle"></i> Ajukan Pembatalan
+                    </button>
+                }
+
+                @if (isCancelled || status == "received")
+                {
+                    <form asp-action="Delete"
+                          asp-route-id="@Model.Id"
+                          method="post"
+                          class="po-action-form"
+                          onsubmit="return confirm('Yakin ingin menghapus Purchase Order ini?');">
+                        @Html.AntiForgeryToken()
+
+                        <button type="submit"
+                                class="btn btn-outline-danger btn-sm"
+                                title="Hapus PO">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                }
+
+                <a asp-controller="GoodsPurchaseOrders"
+                   asp-action="Print"
+                   asp-route-id="@Model.Id"
+                   target="_blank"
+                   class="btn btn-light btn-sm">
+                    <i class="bi bi-printer"></i> Cetak
+                </a>
+
+                <a asp-controller="GoodsPurchaseOrders"
+                   asp-action="ExportPdf"
+                   asp-route-id="@Model.Id"
+                   class="btn btn-danger btn-sm">
+                    <i class="bi bi-file-pdf"></i> PDF
+                </a>
+
+                <a asp-action="Index"
+                   class="btn btn-secondary btn-sm"
+                   title="Kembali">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+
+            </div>
+
+        </div>
+
+       
+        <div class="po-info-grid">
+
+            <div class="po-info-column">
+
+                <div class="po-info-row">
+                    <strong>Tanggal PO</strong>
+                    <span>@Model.PODate.ToString("yyyy-MM-dd")</span>
+                </div>
+
+                <div class="po-info-row">
+                    <strong>Supplier</strong>
+                    <span>@(Model.SupplierName ?? "-")</span>
+                </div>
+
+                <div class="po-info-row">
+                    <strong>Catatan</strong>
+                    <span>
+                        @(string.IsNullOrWhiteSpace(Model.Note)
+                            ? "-"
+                            : Model.Note)
+                    </span>
+                </div>
+
+            </div>
+
+            <div class="po-info-column">
+
+                <div class="po-info-row">
+                    <strong>Perkiraan Terima</strong>
+                    <span>
+                        @(Model.ExpectedDate?.ToString("yyyy-MM-dd") ?? "-")
+                    </span>
+                </div>
+
+                <div class="po-info-row">
+                    <strong>Gudang Tujuan</strong>
+                    <span>@(Model.WarehouseName ?? "-")</span>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ITEM PURCHASE ORDER -->
+    <section class="po-view-card po-items-card">
+
+        <div class="po-view-card-header">
+            <strong>Item</strong>
+        </div>
+
+        <div class="po-table-wrapper">
+            <table class="table po-items-table">
+
+                <thead>
+                    <tr>
+                        <th class="po-number-col">#</th>
+                        <th class="text-start">Produk</th>
+                        <th class="text-start">Satuan</th>
+                        <th>Qty Pesan</th>
+                        <th>Diterima</th>
+                        <th>Sisa</th>
+                        <th>Harga</th>
+                        <th>Disk%</th>
+                        <th class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (details.Any())
+                    {
+                        no = 1;
+
+                        foreach (var item in details)
+                        {
+                            var remainingQty = item.Qty - item.ReceivedQty;
+
+                            <tr>
+                                <td class="po-number-col">@no</td>
+
+                                <td class="text-start po-product-cell">
+                                    <div class="po-product-name">
+                                        @item.ProductName
+                                    </div>
+
+                                    <small class="po-muted">
+                                        input: @item.Qty.ToString("N0") @item.UnitCode
+                                    </small>
+                                </td>
+
+                                <td class="text-start">
+                                    @item.UnitCode
+                                </td>
+
+                                <td class="text-end">
+                                    @item.Qty.ToString("N0")
+                                </td>
+
+                                <td class="text-end">
+                                    @item.ReceivedQty.ToString("N0")
+                                </td>
+
+                                <td class="text-end">
+                                    <span class="po-remaining-value @(remainingQty > 0 ? "has-remaining" : "fully-received")">
+                                        @remainingQty.ToString("N0")
+                                    </span>
+                                </td>
+
+                                <td class="text-end">
+                                    @item.UnitPrice.ToString("N0", new System.Globalization.CultureInfo("id-ID"))
+                                </td>
+
+                                <td class="text-end">
+                                    @((item.DiscPercent ?? 0).ToString("N0"))
+                                </td>
+
+                                <td class="text-end po-money">
+                                    @item.Subtotal.ToString("N0", new System.Globalization.CultureInfo("id-ID"))
+                                </td>
+                            </tr>
+
+                            no++;
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="po-empty">
+                                <i class="bi bi-inbox"></i>
+                                Belum ada item Purchase Order.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+
+                <tfoot>
+                    <tr class="po-subtotal-row">
+                        <td colspan="8" class="text-end">Subtotal</td>
+                        <td class="text-end po-money">
+                            @subtotal.ToString("N0",  new System.Globalization.CultureInfo("id-ID"))
+                        </td>
+                    </tr>
+
+                    <tr class="po-subtotal-row">
+                        <td colspan="8" class="text-end">Diskon</td>
+                        <td class="text-end po-money">
+                           - @Model.DiscountAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID"))
+                        </td>
+                    </tr>
+
+                    <tr class="po-subtotal-row">
+                        <td colspan="8" class="text-end">
+                            Pajak(@Model.TaxPercent.ToString("N0", new System.Globalization.CultureInfo("id-ID"))%)
+                        </td>
+                        <td class="text-end po-money">
+                            @Model.TaxAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID"))
+                        </td>
+                    </tr>
+
+                    <tr class="po-total-row">
+                        <td colspan="8" class="text-end">Total</td>
+                        <td class="text-end po-money">
+                            @Model.TotalAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID"))
+                        </td>
+                    </tr>
+                </tfoot>
+
+            </table>
+        </div>
+    </section>
+
+    <!-- PENERIMAAN TERKAIT -->
+    <div class="po-receipt-grid">
+
+        <!-- DAFTAR PENERIMAAN -->
+        <section class="po-view-card po-related-card">
+
+            <div class="po-view-card-header">
+                <strong>Penerimaan Terkait</strong>
+            </div>
+
+            <div class="po-table-wrapper">
+                <table class="table po-related-table">
+
+                    <thead>
+                        <tr>
+                            <th>No. Penerimaan</th>
+                            <th>Tanggal</th>
+                            <th>Faktur</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <td colspan="3" class="po-empty">
+                                Belum ada penerimaan.
+                            </td>
+                        </tr>
+                    </tbody>
+
+                </table>
+            </div>
+        </section>
+
+        <!-- DETAIL PENERIMAAN -->
+        <section class="po-view-card po-related-detail-card">
+
+            <div class="po-view-card-header">
+                <strong>Detail Penerimaan Terkait</strong>
+            </div>
+
+            <div class="po-table-wrapper">
+                <table class="table po-related-table">
+
+                    <thead>
+                        <tr>
+                            <th class="po-number-col">#</th>
+                            <th class="text-start">Produk</th>
+                            <th>Qty (Satuan)</th>
+                            <th>Qty Dasar</th>
+                            <th>Harga</th>
+                            <th class="text-end">Subtotal</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="po-empty">
+                                <i class="bi bi-arrow-left"></i>
+                                Klik ikon <i class="bi bi-eye"></i>
+                                pada daftar penerimaan untuk melihat detailnya di sini.
+                            </td>
+                        </tr>
+                    </tbody>
+
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+</div>
+
+@* modal pesan*@
+ 
+@if (isDraft)
+{
+    <div class="modal fade"
+         id="cancelPOModal"
+         tabindex="-1"
+         aria-labelledby="cancelPOModalLabel"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cancelPOModalLabel">
+                        Konfirmasi Pembatalan PO
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Tutup">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    Apakah kamu yakin ingin membatalkan Purchase Order
+                    <strong>@Model.PONo</strong>?
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary btn-sm"
+                            data-bs-dismiss="modal">
+                        Tidak
+                    </button>
+
+                    <form asp-action="Cancel"
+                          asp-route-id="@Model.Id"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <button type="submit"
+                                class="btn btn-danger btn-sm">
+                            Ya, batalkan
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    
+@if (isDraft)
+{
+    <div class="modal fade"
+         id="approvePOModal"
+         tabindex="-1"
+         aria-labelledby="approvePOModalLabel"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="approvePOModalLabel">
+                        Konfirmasi Persetujuan PO
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Tutup">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    Apakah kamu yakin ingin menyetujui Purchase Order
+                    <strong>@Model.PONo</strong>?
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary btn-sm"
+                            data-bs-dismiss="modal">
+                        Tidak
+                    </button>
+
+                    <form asp-action="Approve"
+                          asp-route-id="@Model.Id"
+                          method="post">
+                        @Html.AntiForgeryToken()
+
+                        <button type="submit"
+                                class="btn btn-primary btn-sm">
+                            <i class="bi bi-check2-circle"></i>
+                            Ya, setujui
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+}

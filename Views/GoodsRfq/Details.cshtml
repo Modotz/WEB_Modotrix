@@ -1,0 +1,398 @@
+@model ERP.Web.ViewModels.GoodsRfqViewModel
+@using ERP.Web.Models
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "RFQ " + Model.RfqNo;
+
+    var culture = new CultureInfo("id-ID");
+    var items = Model.Items ?? new List<GoodsRfqItemViewModel>();
+
+    var status = (Model.Status ?? "draft").Trim().ToLowerInvariant().Replace(" ", "_");
+
+    var (statusText, statusClass) = status switch
+    {
+        "draft"    => ("Draft", "bg-secondary"),
+        "sent" => ("Terkirim", "bg-info text-dark"),
+        "quoted"  => ("Ditawar", "bg-primary"),
+        "converted"  => ("Jadi PO", "bg-success"),
+        "cancelled"    => ("Batal", "bg-danger"),
+        _          => (Model.Status ?? "-", "bg-secondary")
+    };
+
+    var hasQuote = items.Any(i => i.QuotedPrice > 0);
+
+    // Estimasi total = qty x est. harga (selalu ada)
+    var estimateTotal = items.Sum(i => i.Quantity * i.EstPrice);
+
+    // Total penawaran = qty x harga penawaran (baru ada setelah input penawaran)
+    var quoteTotal = items.Where(i => i.QuotedPrice > 0)
+                          .Sum(i => i.Quantity * i.QuotedPrice);
+
+    var no = 1;
+}
+
+<div class="po-view-page">
+
+
+    <!-- JUDUL HALAMAN -->
+    <h1 class="po-view-title">RFQ @Model.RfqNo</h1>
+
+    @if (TempData["Error"] != null)
+    {
+      <div class="alert alert-danger alert-dismissible fade show">
+        <strong>Gagal:</strong> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    }
+
+    <!-- INFORMASI RFQ -->
+    <section class="po-view-card po-info-card">
+
+        <div class="po-view-card-header po-info-header">
+
+            <div class="po-info-heading">
+                <strong>RFQ @Model.RfqNo</strong>
+
+                <span class="badge @statusClass">@statusText</span>
+            </div>
+
+            <div class="po-actions">
+
+                @if (status == "draft")
+                {
+                    <a asp-action="Edit"
+                       asp-route-id="@Model.Id"
+                       class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil"></i>
+                        Edit
+                    </a>
+
+                    <button type="button"
+                            class="btn btn-info btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#sendModal">
+                        <i class="bi bi-send"></i>
+                        Kirim ke Supplier
+                    </button>
+                }
+
+                @if (status == "sent" || status == "quoted")
+                {
+                    <a asp-action="Quote"
+                       asp-route-id="@Model.Id"
+                       class="btn btn-primary btn-sm">
+                        <i class="bi bi-cash-coin"></i>
+                        Input Penawaran
+                    </a>
+                }
+
+                @if (status == "quoted")
+                {
+                   <a asp-action="ConvertToPo" asp-route-id="@Model.Id"
+                      class="btn btn-success btn-sm">
+                      <i class="bi bi-cart-check"></i>
+                      Jadikan PO
+                  </a>
+                }
+
+                <!-- selalu ada -->
+               <a asp-action="Print" asp-route-id="@Model.Id" target="_blank"
+                  class="btn btn-light btn-sm" title="Cetak">
+                  <i class="bi bi-printer"></i>
+               </a>
+
+              <a asp-action="ExportPdf" asp-route-id="@Model.Id" 
+                 class="btn btn-danger btn-sm" title="Export PDF">
+                 <i class="bi bi-file-pdf"></i> 
+             </a>
+
+                @if (status == "draft" || status == "sent" || status == "quoted")
+                {
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#cancelModal">
+                        <i class="bi bi-x-circle"></i>
+                        Batal
+                    </button>
+                }
+
+
+                <a asp-action="Index"
+                   class="btn btn-secondary btn-sm"
+                   title="Kembali">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+
+            </div>
+        </div>
+
+        <div class="po-info-grid">
+
+            <div class="po-info-column">
+
+                <div class="po-info-row">
+                    <strong>Supplier</strong>
+                    <span>@(Model.SupplierName ?? "-")</span>
+                </div>
+
+                <div class="po-info-row">
+                    <strong>Berlaku s/d</strong>
+                    <span>@(Model.ValidUntil?.ToString("yyyy-MM-dd") ?? "-")</span>
+                </div>
+
+                <div class="po-info-row">
+                    <strong>Catatan</strong>
+                    <span>
+                        @(string.IsNullOrWhiteSpace(Model.Note) ? "-" : Model.Note)
+                    </span>
+                </div>
+
+            </div>
+
+            <div class="po-info-column">
+
+                <div class="po-info-row">
+                    <strong>Tanggal</strong>
+                    <span>@Model.RfqDate.ToString("yyyy-MM-dd")</span>
+                </div>
+
+               <div class="po-info-row">
+                   <strong>Dari PR</strong>
+                   <span>@(Model.PrId?.ToString() ?? "-")</span>
+              </div>
+
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ITEM RFQ -->
+    <section class="po-view-card po-items-card">
+
+        <div class="po-view-card-header">
+            <strong>Item</strong>
+        </div>
+
+        <div class="po-table-wrapper">
+            <table class="table po-items-table">
+
+                <thead>
+                    <tr>
+                        <th class="po-number-col">#</th>
+                        <th class="text-start">Produk</th>
+                        <th>Qty</th>
+                        <th>Est. Harga</th>
+                        <th>Harga Penawaran</th>
+                        <th class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (items.Any())
+                    {
+                        no = 1;
+
+                        foreach (var item in items)
+                        {
+                            var quoted = item.QuotedPrice > 0;
+
+                            <tr>
+                                <td class="po-number-col">@no</td>
+
+                                <td class="text-start po-product-cell">
+                                    <div class="po-product-name">
+                                        @(string.IsNullOrWhiteSpace(item.ProductName) ? "-" : item.ProductName)
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(item.Sku))
+                                    {
+                                        <small class="po-muted">@item.Sku</small>
+                                    }
+                                </td>
+
+                                <td class="text-end">
+                                    @item.Quantity.ToString("0.##", culture)
+                                    <span class="po-muted">@item.UnitSymbol</span>
+                                </td>
+
+                                <td class="text-end">
+                                    @item.EstPrice.ToString("N0", culture)
+                                </td>
+
+                                <td class="text-end">
+                                    @(quoted ? item.QuotedPrice.ToString("N0", culture) : "—")
+                                </td>
+
+                                <td class="text-end po-money">
+                                    @(quoted
+                                        ? (item.Quantity * item.QuotedPrice).ToString("N0", culture)
+                                        : "—")
+                                </td>
+                            </tr>
+
+                            no++;
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="po-empty">
+                                <i class="bi bi-inbox"></i>
+                                Belum ada item RFQ.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+
+                <tfoot>
+                @if (!hasQuote)
+                    { 
+                    <tr class="po-subtotal-row">
+                        <td colspan="5" class="text-end">Estimasi Total</td>
+                        <td class="text-end po-money">
+                            @estimateTotal.ToString("N0", culture)
+                        </td>
+                    </tr>
+                    }
+
+                    @if (hasQuote)
+                    {
+                        <tr class="po-subtotal-row">
+                            <td colspan="5" class="text-end">Total Penawaran</td>
+                            <td class="text-end po-money">
+                                @quoteTotal.ToString("N0", culture)
+                            </td>
+                        </tr>
+                    }
+                </tfoot>
+
+            </table>
+        </div>
+    </section>
+
+    <!-- PO TERKAIT -->
+    <section class="po-view-card po-related-card">
+
+        <div class="po-view-card-header">
+            <strong>PO Terkait</strong>
+        </div>
+
+        <div class="po-table-wrapper">
+            <table class="table po-related-table">
+
+                <thead>
+                    <tr>
+                        <th class="text-start" style="width:220px;">No. PO</th>
+                        <th class="text-start">Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr>
+                        <td colspan="2" class="po-empty">
+                            Belum ada PO.
+                        </td>
+                    </tr>
+                </tbody>
+
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- MODAL KONFIRMASI: KIRIM KE SUPPLIER -->
+<div class="modal fade" id="sendModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Send" asp-route-id="@Model.Id" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Kirim RFQ ke Supplier</h5>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    Kirim RFQ <strong>@Model.RfqNo</strong> ke
+                    <strong>@Model.SupplierName</strong>?
+                    Setelah dikirim, status berubah menjadi <strong>Terkirim</strong>
+                    dan RFQ tidak bisa diedit lagi.
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="bi bi-send"></i> Ya, Kirim
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL KONFIRMASI: BATALKAN RFQ -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Cancel" asp-route-id="@Model.Id" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Batalkan RFQ</h5>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    Batalkan RFQ <strong>@Model.RfqNo</strong>?
+                    Status akan menjadi <strong>Batal</strong>.
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Tidak</button>
+                    <button type="submit" class="btn btn-danger">
+                        Ya, Batalkan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL KONFIRMASI: HAPUS RFQ -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Hapus RFQ</h5>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Hapus RFQ <strong>@Model.RfqNo</strong> beserta semua itemnya?
+                    Tindakan ini tidak bisa dibatalkan.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Tidak</button>
+                    <button type="submit" class="btn btn-danger">Ya, Hapus</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Notifikasi sukses (dari layout) hilang otomatis setelah 4 detik
+    setTimeout(() => {
+        document.querySelectorAll('.alert-success').forEach(el => {
+            bootstrap.Alert.getOrCreateInstance(el).close();
+        });
+    }, 4000);
+</script>
+}

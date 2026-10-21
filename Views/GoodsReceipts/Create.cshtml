@@ -1,0 +1,1095 @@
+@using System.Text.Json
+@using ERP.Web.Models
+@model GoodsReceiptViewModel
+
+@{
+    ViewData["Title"] = "Tambah Penerimaan Barang";
+
+    var suppliers = ViewBag.Suppliers as IEnumerable<SupplierViewModel> ?? Enumerable.Empty<SupplierViewModel>(); 
+    var warehouses = ViewBag.Warehouses as IEnumerable<WarehouseViewModel> ?? Enumerable.Empty<WarehouseViewModel>(); 
+    var products = ViewBag.Products as IEnumerable<ProductViewModel> ?? Enumerable.Empty<ProductViewModel>(); 
+    var units = ViewBag.Units as IEnumerable<DropdownItemViewModel> ?? Enumerable.Empty<DropdownItemViewModel>(); 
+    var purchaseOrders = ViewBag.PurchaseOrders as IEnumerable<GoodsPurchaseOrderViewModel> ?? Enumerable.Empty<GoodsPurchaseOrderViewModel>();
+
+    var productOptions = products.Select(p => new
+    {
+        id = p.Id,
+        name = p.Name,
+        sku = p.Sku,
+        categoryName = p.CategoryName,
+        unitId = p.UnitId,
+        unitName = p.UnitName,
+        costPrice = p.CostPrice
+    }).ToList();
+
+    var unitOptions = units.Select(u => new
+    {
+        id = u.Id,
+        code = u.Code,
+        name = u.Name
+    }).ToList();
+
+   var poOptions = purchaseOrders
+    .Where(po =>
+        string.Equals( po.Status, "ordered", StringComparison.OrdinalIgnoreCase )
+        ||
+        string.Equals( po.Status, "partial", StringComparison.OrdinalIgnoreCase )
+    )
+    .Select(po => new
+    {
+        id = po.Id,
+        poNo = po.PONo,
+        status = po.Status,
+        supplierId = po.SupplierId,
+        warehouseId = po.WarehouseId,
+        supplierName = po.SupplierName,
+        warehouseName = po.WarehouseName,
+
+        details = (po.Details
+            ?? new List<GoodsPurchaseOrderItemViewModel>())
+            .Select(d => new
+            {
+                productId = d.ProductId,
+                productName = d.ProductName,
+                qty = d.Qty,
+                receivedQty = d.ReceivedQty,
+                unitId = d.UnitId,
+                unitCode = d.UnitCode,
+                unitPrice = d.UnitPrice
+            })
+            .ToList()
+    })
+    .ToList();
+
+    var jsonOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    var productsJson = JsonSerializer.Serialize(productOptions, jsonOptions);
+    var unitsJson = JsonSerializer.Serialize(unitOptions, jsonOptions);
+    var purchaseOrdersJson = JsonSerializer.Serialize(poOptions, jsonOptions);
+}
+
+<div class="po-create-page">
+     
+    <div class="product-page-title">
+        Tambah Penerimaan
+    </div>
+     
+    <div class="product-info-card">
+
+        <div class="product-info-header"
+             role="button"
+             data-bs-toggle="collapse"
+             data-bs-target="#productInfo"
+             aria-expanded="true"
+             aria-controls="productInfo">
+
+            <div>
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <strong>Panduan Pengisian — Penerimaan Barang</strong>
+            </div>
+
+            <i class="bi bi-chevron-down"></i>
+        </div>
+
+        <div id="productInfo" class="collapse show">
+            <div class="product-info-body">
+
+                <ol>
+                    <li>
+                        <strong>Dari PO?</strong>
+                        Bila barang berasal dari Purchase Order, pilih PO pada kotak biru di bawah —
+                        item, gudang, dan supplier akan terisi otomatis dan status PO ikut ter-update saat diposting.
+                    </li>
+
+                    <li>
+                        Isi <strong>Tanggal</strong> dan
+                        <strong>Gudang Tujuan</strong> (wajib).
+                        <i>Supplier</i> dan <i>No. Referensi (PO/Faktur)</i> boleh dikosongkan.
+                    </li>
+
+                    <li>
+                        Klik <strong>Tambah Baris</strong>, lalu pada kolom
+                        <strong>Produk</strong> ketik nama/kode untuk mencari.
+                        Isi <strong>Qty</strong>, pilih <strong>Satuan</strong>, dan isi
+                        <strong>Harga Beli</strong>.
+                    </li>
+
+                    <li>
+                        Produk ber-serial dapat memerlukan nomor serial.
+                        Jika fitur serial aktif pada produk, masukkan serial sesuai prosedur yang digunakan sistem.
+                    </li>
+
+                    <li>
+                        Selesai? Klik <strong>Simpan &amp; Posting</strong>
+                        untuk langsung menambah stok, atau <strong>Simpan Draft</strong>
+                        bila belum final (stok belum berubah dan dokumen masih bisa diedit).
+                    </li>
+                </ol>
+
+                <div class="product-info-tip">
+                    <i class="bi bi-lightbulb"></i>
+                    Tips: gunakan tombol <span class="required-mark">×</span>
+                    untuk menghapus baris. Panel ini bisa ditutup dengan mengeklik judulnya.
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- PILIH PO -->
+    <div class="receipt-po-picker" id="receiptPoPicker">
+
+        <div id="poPickerDefault">
+
+            <div class="receipt-po-picker-label">
+                <i class="bi bi-clipboard-check me-2"></i>
+                Menerima barang dari Purchase Order? Pilih PO-nya agar item terisi otomatis &amp; status PO ikut ter-update:
+            </div>
+
+             <select class="form-select form-select-sm" id="POId">
+                <option value="">-- Dari PO (opsional) --</option>
+
+                @foreach (var po in purchaseOrders.Where(po =>
+                    string.Equals(
+                        po.Status,
+                        "ordered",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    ||
+                    string.Equals(
+                        po.Status,
+                        "partial",
+                        StringComparison.OrdinalIgnoreCase
+                    )))
+                {
+                    <option value="@po.Id"
+                            selected="@(Model?.POId == po.Id)">
+                        @po.PONo
+                    </option>
+                }
+            </select>
+             
+        </div>
+
+        <div id="poPickerSelected"
+             class="receipt-po-selected"
+             style="display:none">
+
+            <i class="bi bi-link-45deg me-2"></i>
+            <span id="poSelectedMessage"></span>
+
+        </div>
+
+        <div id="poMessage" class="small mt-2" style="display:none"></div>
+
+    </div>
+
+    <!-- FORM PENERIMAAN -->
+    <form method="post"
+          asp-controller="GoodsReceipts"
+          asp-action="Create"
+          id="receiptForm">
+
+        @Html.AntiForgeryToken()
+
+        <input type="hidden"
+               id="ReceiptPOId"
+               name="POId"
+               value="@Model?.POId" />
+
+        <div class="card po-detail-card">
+
+            <div class="card-header">
+                <strong>Tambah Penerimaan</strong>
+            </div>
+
+            <div class="card-body">
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger">
+                        <strong>Data belum dapat disimpan.</strong>
+
+                        <ul class="mb-0 mt-2">
+                            @foreach (var item in ViewData.ModelState)
+                            {
+                                @foreach (var error in item.Value.Errors)
+                                {
+                                    <li>
+                                        @(string.IsNullOrWhiteSpace(error.ErrorMessage)
+                                            ? error.Exception?.GetBaseException().Message
+                                                ?? "Nilai tidak valid."
+                                            : error.ErrorMessage)
+                                    </li>
+                                }
+                            }
+                        </ul>
+                    </div>
+                }
+
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger">
+                        @TempData["Error"]
+                    </div>
+                }
+
+                <div class="row g-2">
+
+                    <!-- NOMOR PENERIMAAN -->
+                    <div class="col-md-4">
+                        <label class="form-label" for="ReceiptNo">
+                            No. Penerimaan
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="ReceiptNo"
+                               name="ReceiptNo"
+                               value="@Model?.ReceiptNo"
+                               readonly />
+                    </div>
+
+                    <!-- TANGGAL -->
+                    <div class="col-md-4">
+                        <label class="form-label" for="ReceiptDate">
+                            Tanggal <span class="text-danger">*</span>
+                        </label>
+
+                        <input type="date"
+                               class="form-control"
+                               id="ReceiptDate"
+                               name="ReceiptDate"
+                               value="@(Model?.ReceiptDate.ToString("yyyy-MM-dd"))"
+                               required />
+                    </div>
+
+                    <!-- GUDANG -->
+                    <div class="col-md-4">
+                        <label class="form-label" for="WarehouseId">
+                            Gudang Tujuan <span class="text-danger">*</span>
+                        </label>
+
+                        <select class="form-select"
+                                id="WarehouseId"
+                                name="WarehouseId"
+                                required>
+
+                            <option value="">-- Pilih --</option>
+
+                            @foreach (var warehouse in warehouses)
+                            {
+                                <option value="@warehouse.Id"
+                                        selected="@(Model?.WarehouseId == warehouse.Id)">
+                                    @warehouse.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- SUPPLIER -->
+                    <div class="col-md-4">
+                        <label class="form-label" for="SupplierId">
+                            Supplier
+                        </label>
+
+                        <select class="form-select"
+                                id="SupplierId"
+                                name="SupplierId">
+
+                            <option value="">-- Tanpa Supplier --</option>
+
+                            @foreach (var supplier in suppliers)
+                            {
+                                <option value="@supplier.Id"
+                                        selected="@(Model?.SupplierId == supplier.Id)">
+                                    @supplier.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- REFERENSI -->
+                    <div class="col-md-4">
+                        <label class="form-label small mb-1" for="RefNo">
+                            No. Referensi (PO/Faktur)
+                        </label>
+
+                        <!-- Tambahkan kelas input-group-sm di sini -->
+                        <div class="input-group input-group-sm">
+                            <input type="text"
+                                   class="form-control"
+                                   id="RefNo"
+                                   name="RefNo"
+                                   value="@Model?.RefNo"
+                                   placeholder="Ketik No. PO lalu Cek" />
+
+                            <button type="button"
+                                    class="btn btn-outline-primary"
+                                    id="btnCekPO">
+                                <i class="bi bi-search"></i> Cek
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CATATAN -->
+                    <div class="col-md-4">
+                        <label class="form-label" for="Note">
+                            Catatan
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="Note"
+                               name="Note"
+                               value="@Model?.Note" />
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAIL ITEM -->
+        <div class="card receipt-items-card mt-2">
+
+            <div class="card-header">
+                <strong>Detail Item</strong>
+
+                <button type="button"
+                        class="btn btn-sm btn-add-row"
+                        id="btnTambahBaris">
+                    <i class="bi bi-plus-lg"></i>
+                    Tambah Baris
+                </button>
+            </div>
+
+            <!-- SCAN SKU -->
+            <div class="receipt-scan-area">
+
+                <div class="receipt-scan-row">
+                    <i class="bi bi-upc-scan text-success"></i>
+
+                    <input type="text"
+                           id="scanSku"
+                           class="form-control form-control-sm"
+                           placeholder="Scan / ketik SKU atau barcode, lalu Enter..." />
+
+                    <label for="scanQty" class="form-label mb-0">
+                        Qty
+                    </label>
+
+                    <input type="number"
+                           id="scanQty"
+                           class="form-control form-control-sm"
+                           min="0.01"
+                           step="0.01"
+                           value="1" />
+                </div>
+
+                <div class="receipt-scan-help">
+                    <i class="bi bi-lightbulb"></i>
+                    Input cepat: scan barcode/SKU untuk menambahkan barang.
+                    Produk yang sama discan lagi akan menambah Qty.
+                    Stok baru masuk saat Simpan &amp; Posting.
+                </div>
+
+            </div>
+
+            <!-- TABEL -->
+            <div class="receipt-table-wrap">
+
+                <table class="table table-sm align-middle mb-0"
+                       id="tableDetail">
+
+                    <thead>
+                        <tr>
+                            <th style="width:32px">#</th>
+                            <th>PRODUK</th>
+                            <th style="width:80px">QTY PESAN</th>
+                            <th style="width:80px">QTY SISA</th>
+                            <th style="width:85px">QTY</th>
+                            <th style="width:90px">SATUAN</th>
+                            <th style="width:125px">HARGA BELI</th>
+                            <th style="width:120px">SUBTOTAL</th>
+                            <th style="width:35px"></th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="detailBody"></tbody>
+
+                </table>
+
+            </div>
+
+            <!-- TOTAL DAN AKSI -->
+            <div class="po-summary-wrap">
+
+                <div class="po-summary-row">
+                    <label class="form-label" for="TotalAmount">
+                        Total
+                    </label>
+
+                    <input type="number"
+                           id="TotalAmount"
+                           name="TotalAmount"
+                           class="form-control form-control-sm"
+                           value="0"
+                           readonly />
+                </div>
+
+                <div class="po-form-actions">
+
+                    <button type="submit"
+                            name="submitAction"
+                            value="post"
+                            class="btn po-btn-save">
+                        <i class="bi bi-save"></i>
+                        Simpan &amp; Posting
+                    </button>
+
+                    <button type="submit"
+                            name="submitAction"
+                            value="draft"
+                            class="btn btn-outline-secondary po-btn-cancel">
+                        <i class="bi bi-file-earmark"></i>
+                        Simpan Draft
+                    </button>
+
+                    <a asp-controller="GoodsReceipts"
+                       asp-action="Index"
+                       class="btn btn-secondary">
+                        Batal
+                    </a>
+
+                </div>
+
+            </div>
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+
+<script>
+    const products = @Html.Raw(productsJson);
+    const units = @Html.Raw(unitsJson);
+    const purchaseOrders = @Html.Raw(purchaseOrdersJson);
+
+    const tbody = document.getElementById('detailBody');
+
+    const poSelect = document.getElementById('POId');
+    const poMessage = document.getElementById('poMessage');
+
+    const poPickerDefault = document.getElementById('poPickerDefault');
+    const poPickerSelected = document.getElementById('poPickerSelected');
+    const poSelectedMessage = document.getElementById('poSelectedMessage');
+
+    const referenceInput = document.getElementById('RefNo');
+    const supplierSelect = document.getElementById('SupplierId');
+    const warehouseSelect = document.getElementById('WarehouseId');
+    const receiptPOId = document.getElementById('ReceiptPOId');
+
+    const receiptForm = document.getElementById('receiptForm');
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[char]);
+    }
+
+    function formatNumber(value) {
+        return Number(value || 0).toFixed(2);
+    }
+
+    function buildProductOptionsHtml(selectedId = '') {
+        const sorted = [...products].sort((a, b) => {
+            const ca = a.categoryName?.trim() || '';
+            const cb = b.categoryName?.trim() || '';
+
+            if (!ca && cb) return -1;
+            if (ca && !cb) return 1;
+
+            return ca.localeCompare(cb, 'id')
+                || String(a.name ?? '').localeCompare(
+                    String(b.name ?? ''), 'id'
+                );
+        });
+
+        const groups = {};
+
+        sorted.forEach(p => {
+            const category = p.categoryName?.trim() || 'Tanpa Kategori';
+
+            if (!groups[category]) {
+                groups[category] = [];
+            }
+
+            groups[category].push(p);
+        });
+
+        return Object.keys(groups).map(category => `
+            <optgroup label="${escapeHtml(category)}">
+                ${groups[category].map(p => `
+                    <option value="${p.id}"
+                        ${String(p.id) === String(selectedId) ? 'selected' : ''}>
+                        ${escapeHtml(p.name)}
+                        ${p.sku ? ' — ' + escapeHtml(p.sku) : ''}
+                    </option>
+                `).join('')}
+            </optgroup>
+        `).join('');
+    }
+
+    function buildUnitOptionsHtml(selectedId = '') {
+        return `
+            <option value="">-</option>
+            ${[...units].sort((a, b) =>
+                String(a.code ?? '').localeCompare(
+                    String(b.code ?? ''), 'id'
+                )
+            ).map(u => `
+                <option value="${u.id}"
+                    ${String(u.id) === String(selectedId) ? 'selected' : ''}>
+                    ${escapeHtml(u.code)}
+                </option>
+            `).join('')}
+        `;
+    }
+
+    function tampilkanPesan(message, success = true) {
+        poMessage.textContent = message;
+
+        poMessage.className = 'small mt-2 ' +
+            (success ? 'text-success' : 'text-danger');
+
+        poMessage.style.display = 'block';
+    }
+
+    function sembunyikanPesan() {
+        poMessage.textContent = '';
+        poMessage.style.display = 'none';
+    }
+
+    function tampilkanPanelPO(po) {
+        if (!po) {
+            poPickerDefault.style.display = 'block';
+            poPickerSelected.style.display = 'none';
+            return;
+        }
+
+        poPickerDefault.style.display = 'none';
+        poPickerSelected.style.display = 'flex';
+
+        poSelectedMessage.innerHTML =
+            `Penerimaan untuk <strong>${escapeHtml(po.poNo)}</strong>. ` +
+            `Item outstanding sudah diisi otomatis — scan serial bila perlu, ` +
+            `lalu Simpan &amp; Posting untuk memperbarui status PO.`;
+    }
+
+    function perbaruiNomor() {
+        tbody.querySelectorAll('tr').forEach((row, index) => {
+            row.querySelector('.row-number').textContent = index + 1;
+
+            row.querySelectorAll('[name]').forEach(input => {
+                input.name = input.name.replace(
+                    /Details\[\d+\]/,
+                    `Details[${index}]`
+                );
+            });
+        });
+    }
+
+    function perbaruiSisa(row) {
+        const ordered = Number(
+            row.querySelector('.ordered-qty')?.value
+        ) || 0;
+
+        const qty = Number(
+            row.querySelector('.qty')?.value
+        ) || 0;
+
+        const remaining = row.querySelector('.remaining-qty');
+
+        if (!remaining) return;
+
+        if (row.dataset.poItem === 'true') {
+            const alreadyReceived = Number(
+                row.dataset.receivedQty
+            ) || 0;
+
+            remaining.value = formatNumber(
+                Math.max(0, ordered - alreadyReceived - qty)
+            );
+        } else {
+            remaining.value = formatNumber(0);
+        }
+    }
+
+    function hitungBaris(row) {
+        const qtyInput = row.querySelector('.qty');
+        const priceInput = row.querySelector('.price');
+        const subtotalInput = row.querySelector('.subtotal');
+
+        const qty = Math.max(0, Number(qtyInput?.value) || 0);
+        const price = Math.max(0, Number(priceInput?.value) || 0);
+
+        if (subtotalInput) {
+            subtotalInput.value = formatNumber(qty * price);
+        }
+
+        perbaruiSisa(row);
+    }
+
+    function hitungTotal() {
+        let total = 0;
+
+        tbody.querySelectorAll('tr').forEach(row => {
+            hitungBaris(row);
+            total += Number(
+                row.querySelector('.subtotal')?.value
+            ) || 0;
+        });
+
+        document.getElementById('TotalAmount').value =
+            formatNumber(total);
+    }
+
+    function tambahBaris(data = {}) {
+        const row = document.createElement('tr');
+
+        row.dataset.poItem = data.fromPO ? 'true' : 'false';
+        row.dataset.receivedQty = Number(data.receivedQty || 0);
+
+        row.innerHTML = `
+            <td class="row-number text-end"></td>
+
+            <td>
+                <select class="form-select form-select-sm product-select"
+                        name="Details[0].ProductId"
+                        required>
+                    <option value="">-- Cari produk --</option>
+                    ${buildProductOptionsHtml(data.productId ?? '')}
+                </select>
+            </td>
+
+            <td>
+                <input type="number"
+                       class="form-control form-control-sm ordered-qty"
+                       value="${Number(data.orderedQty ?? 0)}"
+                       readonly />
+            </td>
+
+            <td>
+                <input type="number"
+                       class="form-control form-control-sm remaining-qty"
+                       value="${Number(data.remainingQty ?? 0)}"
+                       readonly />
+            </td>
+
+            <td>
+                <input type="number"
+                       class="form-control form-control-sm qty"
+                       name="Details[0].Qty"
+                       min="0.01"
+                       step="0.01"
+                       value="${Number(data.qty ?? 1)}"
+                       required />
+            </td>
+
+            <td>
+                <select class="form-select form-select-sm unit-select"
+                        name="Details[0].UnitId"
+                        required>
+                    ${buildUnitOptionsHtml(data.unitId ?? '')}
+                </select>
+            </td>
+
+            <td>
+                <input type="number"
+                       class="form-control form-control-sm price"
+                       name="Details[0].UnitPrice"
+                       min="0"
+                       step="0.01"
+                       value="${Number(data.unitPrice ?? 0)}"
+                       required />
+            </td>
+
+            <td>
+                <input type="number"
+                       class="form-control form-control-sm subtotal"
+                       name="Details[0].Subtotal"
+                       value="0"
+                       readonly />
+            </td>
+
+            <td>
+                <button type="button"
+                        class="btn btn-sm btn-danger btn-hapus"
+                        title="Hapus baris">
+                    ×
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(row);
+
+        perbaruiNomor();
+        hitungTotal();
+
+        return row;
+    }
+
+    function resetPO() {
+        tbody.innerHTML = '';
+
+        receiptPOId.value = '';
+        supplierSelect.value = '';
+        warehouseSelect.value = '';
+        referenceInput.value = '';
+
+        tampilkanPanelPO(null);
+        sembunyikanPesan();
+
+        tambahBaris();
+        hitungTotal();
+    }
+
+    function pilihPO(po) {
+        if (!po) {
+            resetPO();
+            return;
+        }
+
+        tbody.innerHTML = '';
+
+        receiptPOId.value = String(po.id);
+        referenceInput.value = po.poNo ?? '';
+
+        tampilkanPanelPO(po);
+        sembunyikanPesan();
+
+        supplierSelect.value = po.supplierId != null
+            ? String(po.supplierId)
+            : '';
+
+        warehouseSelect.value = po.warehouseId != null
+            ? String(po.warehouseId)
+            : '';
+
+        let count = 0;
+
+        (po.details ?? []).forEach(item => {
+            const ordered = Number(item.qty) || 0;
+            const received = Number(item.receivedQty) || 0;
+            const remaining = Math.max(0, ordered - received);
+
+            // Abaikan item yang sudah diterima seluruhnya.
+            if (remaining <= 0) return;
+
+            tambahBaris({
+                fromPO: true,
+                productId: item.productId,
+                orderedQty: ordered,
+                receivedQty: received,
+                remainingQty: remaining,
+                qty: remaining,
+                unitId: item.unitId,
+                unitPrice: item.unitPrice
+            });
+
+            count++;
+        });
+
+        if (count === 0) {
+            tampilkanPesan(
+                'Semua item pada PO ini sudah diterima atau tidak ada item tersisa.',
+                false
+            );
+        } else {
+            tampilkanPesan(
+                `PO ${po.poNo} ditemukan — ${count} item outstanding dimuat otomatis.`,
+                true
+            );
+        }
+
+        hitungTotal();
+    }
+
+    // Pilih PO melalui dropdown.
+    poSelect.addEventListener('change', function () {
+        const po = purchaseOrders.find(
+            p => String(p.id) === String(this.value)
+        );
+
+        if (!this.value) {
+            resetPO();
+            return;
+        }
+
+        if (!po) {
+            tampilkanPesan(
+                'Data PO tidak tersedia. Pastikan controller memuat daftar PO beserta detailnya.',
+                false
+            );
+            return;
+        }
+
+        pilihPO(po);
+    });
+
+    // Cari PO berdasarkan nomor referensi.
+    document.getElementById('btnCekPO').addEventListener('click', function () {
+        const number = referenceInput.value.trim().toLowerCase();
+
+        if (!number) {
+            tampilkanPesan(
+                'Masukkan nomor PO terlebih dahulu.',
+                false
+            );
+            return;
+        }
+
+        const po = purchaseOrders.find(
+            p => String(p.poNo ?? '').trim().toLowerCase() === number
+        );
+
+        if (!po) {
+            tampilkanPesan(
+                'Nomor PO tidak ditemukan pada daftar PO yang dimuat.',
+                false
+            );
+            return;
+        }
+
+        poSelect.value = String(po.id);
+        pilihPO(po);
+    });
+
+    // Tambah baris item manual.
+    document.getElementById('btnTambahBaris').addEventListener('click', function () {
+        tambahBaris({
+            fromPO: false,
+            orderedQty: 0,
+            remainingQty: 0,
+            qty: 1,
+            unitPrice: 0
+        });
+    });
+
+    // Ketika produk dipilih, isi satuan dan harga beli.
+    tbody.addEventListener('change', function (event) {
+        if (!event.target.matches('.product-select')) return;
+
+        const row = event.target.closest('tr');
+
+        const product = products.find(
+            p => String(p.id) === String(event.target.value)
+        );
+
+        if (!product) {
+            hitungTotal();
+            return;
+        }
+
+        const unitSelect = row.querySelector('.unit-select');
+        const priceInput = row.querySelector('.price');
+
+        if (product.unitId != null) {
+            unitSelect.value = String(product.unitId);
+        }
+
+        priceInput.value = Number(product.costPrice ?? 0).toFixed(2);
+
+        hitungTotal();
+    });
+
+    // Perhitungan Qty, sisa, subtotal, dan total.
+    tbody.addEventListener('input', function (event) {
+        if (event.target.matches('.qty, .price')) {
+            const row = event.target.closest('tr');
+
+            if (row) {
+                hitungBaris(row);
+            }
+
+            let total = 0;
+
+            tbody.querySelectorAll('.subtotal').forEach(input => {
+                total += Number(input.value) || 0;
+            });
+
+            document.getElementById('TotalAmount').value =
+                formatNumber(total);
+        }
+    });
+
+    // Hapus baris.
+    tbody.addEventListener('click', function (event) {
+        const button = event.target.closest('.btn-hapus');
+
+        if (!button) return;
+
+        button.closest('tr').remove();
+
+        perbaruiNomor();
+        hitungTotal();
+    });
+
+    // Scan SKU atau barcode.
+    document.getElementById('scanSku').addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter') return;
+
+        event.preventDefault();
+
+        const sku = this.value.trim().toLowerCase();
+
+        if (!sku) return;
+
+        const product = products.find(p =>
+            String(p.sku ?? '').trim().toLowerCase() === sku
+        );
+
+        if (!product) {
+            alert('Produk dengan SKU tersebut tidak ditemukan.');
+            return;
+        }
+
+        const scanQtyInput = document.getElementById('scanQty');
+        const scanQty = Number(scanQtyInput.value);
+
+        if (!Number.isFinite(scanQty) || scanQty <= 0) {
+            alert('Qty scan harus lebih besar dari 0.');
+            scanQtyInput.focus();
+            return;
+        }
+
+        const existingRow = [...tbody.querySelectorAll('tr')].find(row =>
+            row.querySelector('.product-select')?.value === String(product.id)
+        );
+
+        if (existingRow) {
+            const qtyInput = existingRow.querySelector('.qty');
+            const newQty = (Number(qtyInput.value) || 0) + scanQty;
+
+            if (existingRow.dataset.poItem === 'true') {
+                const ordered = Number(
+                    existingRow.querySelector('.ordered-qty').value
+                ) || 0;
+
+                const received = Number(
+                    existingRow.dataset.receivedQty
+                ) || 0;
+
+                const maxQty = Math.max(0, ordered - received);
+
+                if (newQty > maxQty) {
+                    alert(
+                        `Qty penerimaan melebihi sisa PO. Maksimal yang dapat diterima: ${maxQty}.`
+                    );
+                    return;
+                }
+            }
+
+            qtyInput.value = formatNumber(newQty);
+        } else {
+            tambahBaris({
+                productId: product.id,
+                unitId: product.unitId,
+                unitPrice: product.costPrice,
+                qty: scanQty,
+                orderedQty: 0,
+                remainingQty: 0,
+                fromPO: false
+            });
+        }
+
+        this.value = '';
+        hitungTotal();
+        this.focus();
+    });
+
+    // Pastikan POId dikirim melalui form.
+    receiptForm.addEventListener('submit', function (event) {
+        receiptPOId.value = poSelect.value || '';
+
+        if (tbody.querySelectorAll('tr').length === 0) {
+            event.preventDefault();
+            alert('Tambahkan minimal satu item penerimaan.');
+            return;
+        }
+
+        let invalidQty = false;
+
+        tbody.querySelectorAll('tr').forEach(row => {
+            const qty = Number(row.querySelector('.qty')?.value) || 0;
+
+            if (qty <= 0) {
+                invalidQty = true;
+            }
+
+            if (row.dataset.poItem === 'true') {
+                const ordered = Number(
+                    row.querySelector('.ordered-qty').value
+                ) || 0;
+
+                const received = Number(
+                    row.dataset.receivedQty
+                ) || 0;
+
+                if (qty > Math.max(0, ordered - received)) {
+                    invalidQty = true;
+                }
+            }
+        });
+
+        if (invalidQty) {
+            event.preventDefault();
+            alert(
+                'Periksa kembali Qty. Jumlah penerimaan harus lebih dari 0 dan tidak boleh melebihi sisa PO.'
+            );
+        }
+    });
+
+    // Inisialisasi halaman.
+    (function init() {
+        const initialPOId =
+            poSelect.value ||
+            receiptPOId.value ||
+            '';
+
+        if (initialPOId) {
+            const selectedPO = purchaseOrders.find(
+                p => String(p.id) === String(initialPOId)
+            );
+
+            if (selectedPO) {
+                poSelect.value = String(selectedPO.id);
+                pilihPO(selectedPO);
+                return;
+            }
+        }
+
+        tampilkanPanelPO(null);
+
+        if (tbody.querySelectorAll('tr').length === 0) {
+            tambahBaris({
+                fromPO: false,
+                orderedQty: 0,
+                remainingQty: 0,
+                qty: 1,
+                unitPrice: 0
+            });
+        }
+    })();
+</script>
+
+} 

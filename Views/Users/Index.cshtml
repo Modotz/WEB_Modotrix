@@ -1,0 +1,1597 @@
+@model PagedResult<UserViewModel>
+
+@{
+    ViewData["Title"] = "Master Users";
+
+    var no = ((Model.Page - 1) * Model.PageSize); 
+    var roles = ViewBag.Roles as List<RoleViewModel>
+        ?? new List<RoleViewModel>();
+    var selectedRoleId = ViewBag.RoleId != null
+        ? Convert.ToInt64(ViewBag.RoleId)
+        : (long?)null;
+}
+
+
+<div class="page-heading supplier-page">
+    
+    <h3 class="fw-bold mb-3">Master User</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">Filter</span>
+            </div>
+
+            <button class="btn btn-sm text-muted p-0"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#filterCollapse"
+                    aria-expanded="true"
+                    aria-controls="filterCollapse">
+
+                <i class="bi bi-chevron-down"></i>
+
+            </button>
+        </div>
+
+        <div class="collapse show" id="filterCollapse">
+
+            <div class="card-body">
+
+                <form method="get"
+                      asp-action="Index"
+                      class="row g-2 align-items-end">
+
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">
+                            Cari
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="search"
+                               name="search"
+                               value="@Context.Request.Query["search"]" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            Role
+                        </label>
+
+                        <select name="roleId"
+                                class="form-select">
+
+                            <option value="">
+                                Semua Role
+                            </option>
+
+                            @foreach (var role in roles)
+                            {
+                            if (role.IsActive)
+                            {
+                            <option value="@role.Id"
+                                    selected="@(selectedRoleId == role.Id ? " selected" : null)">
+                                @role.Name
+                            </option>
+                            }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="isActive" class="form-label">
+                            Is Active
+                        </label>
+
+                        <select class="form-select"
+                                id="isActive"
+                                name="isActive">
+
+                            <option value=""
+                                    selected="@(Context.Request.Query["isActive"] == "")">
+                                -- Semua --
+                            </option>
+
+                            <option value="true"
+                                    selected="@(Context.Request.Query["isActive"] == "true")">
+                                Aktif
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["isActive"] == "false")">
+                                Non-Aktif
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="pageSize" class="form-label">
+                            Per Halaman
+                        </label>
+
+                        <select class="form-select"
+                                id="pageSize"
+                                name="pageSize">
+
+                            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 d-flex gap-2">
+
+                        <button type="submit"
+                                class="btn btn-primary d-flex align-items-center gap-2">
+
+                            <i class="bi bi-search"></i>
+                            Terapkan
+
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary"
+                           title="Reset Filter">
+
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* table user *@
+     <div class="card supplier-card supplier-table-card">
+
+        <!-- HEADER -->
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+            <div class="d-flex align-items-center gap-2">
+                <span class="menu-description small ms-1">
+                    Kelola data pengguna aplikasi
+                </span>
+
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+
+                <!-- Export PDF -->
+                <a asp-action="ExportPdf"
+                   asp-controller="Users"
+                   class="btn btn-light btn-custom-square text-danger"
+                   title="Export PDF">
+
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+
+                </a>
+
+                <!-- Export Excel -->
+                <a asp-action="ExportExcel"
+                   asp-controller="Users"
+                   class="btn btn-light btn-custom-square text-success"
+                   title="Export Excel">
+
+                    <i class="bi bi-file-earmark-excel-fill"></i>
+
+                </a>
+
+                <!-- Print -->
+                <a asp-action="Print"
+                   asp-controller="Users"
+                   class="btn btn-light btn-custom-square text-secondary"
+                   title="Cetak"
+                   target="_blank">
+
+                    <i class="bi bi-printer-fill"></i>
+
+                </a>
+
+                <!-- Refresh Data -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Refresh Data"
+                        onclick="refreshUsers()">
+
+                    <i class="bi bi-arrow-clockwise"></i>
+
+                </button>
+
+                <!-- Tambah Supplier -->
+                <button type="button"
+                        class="btn btn-teal btn-custom-action"
+                        id="btnAddUser"
+                        onclick="openCreateUser()">
+
+                    <i class="bi bi-plus-circle"></i>
+                    <span> Tambah User</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- TABLE BODY -->
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0 supplier-table">
+
+                    <thead>
+                        <tr>
+                            <th class="ps-4">#</th>
+                            <th>FOTO</th>
+                            <th>NAMA</th>
+                            <th>USERNAME</th>
+                            <th>EMAIL</th>
+                            <th>ROLE</th>
+                            <th>STATUS</th>
+                            <th>AKSI</th>
+                        </tr>
+                    </thead>
+
+                        <tbody>
+
+                            @if (Model.Data != null && Model.Data.Count > 0)
+                            {
+                            @foreach (var item in Model.Data)
+                            {
+                            no++;
+
+                            <tr>
+
+                                <td>
+                                    @no
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(item.Photo))
+                                    {
+                                    var photoPath = item.Photo.Trim().Replace("\\", "/");
+
+                                   var photoUrl = photoPath.StartsWith(
+                                        "http",
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                    ? photoPath
+                                    : $"https://localhost:7101/{photoPath.TrimStart('/')}";
+
+                                    <img src="@photoUrl"
+                                         alt="@item.Name"
+                                         class="user-photo"
+                                         onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='grid';" />
+
+                                    <div class="avatar" style="display:none;">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                    }
+                                    else
+                                    {
+                                    <div class="avatar">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                    }
+                                </td>
+
+
+                                <td>
+
+                                    <strong>
+                                        @item.Name
+                                    </strong>
+
+                                </td>
+
+
+                                <td>
+                                    @item.Username
+                                </td>
+
+
+                                <td>
+                                    @item.Email
+                                </td>
+                                <td>
+                                    @{
+                                    var userRole = roles.FirstOrDefault(r => r.Id == item.RoleId);
+                                    }
+
+                                    <span class="badge role-badge">
+                                        @(userRole?.Name ?? "Unknown")
+                                    </span>
+                                </td>
+                                <td>
+
+                                    @if (item.IsActive)
+                                    {
+                                    <span class="badge status-active">
+                                        Aktif
+                                    </span>
+                                    }
+                                    else
+                                    {
+                                    <span class="badge status-inactive">
+                                        Tidak Aktif
+                                    </span>
+                                    }
+
+                                </td>
+
+
+                                <td>
+
+                                    <button type="button"
+                                            class="btn btn-sm menu-action-edit"
+                                            title="Edit User"
+                                            onclick="openEditUser(@item.Id)">
+
+                                        <i class="bi bi-pencil-square"></i>
+
+                                    </button>
+
+
+                                    <form method="post"
+                                          asp-controller="Users"
+                                          asp-action="Delete"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Yakin ingin menghapus user ini?');">
+
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden"
+                                               name="id"
+                                               value="@item.Id" />
+
+                                        <button type="submit"
+                                                class="btn btn-sm menu-action-delete"
+                                                title="Hapus User">
+
+                                            <i class="bi bi-trash"></i>
+
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            }
+                            }
+                            else
+                            {
+                            <tr>
+
+                                <td colspan="8"
+                                    class="text-center py-5">
+
+                                    <i class="bi bi-inbox fs-1 text-muted"></i>
+
+                                    <div class="mt-2 text-muted">
+                                        Data user tidak ditemukan.
+                                    </div>
+
+                                </td>
+
+                            </tr>
+                            }
+                    </tbody>
+                </table>
+            </div>
+            <!-- FOOTER / PAGINATION -->
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+
+                @{
+                    var startItem = Model.TotalCount == 0
+                        ? 0
+                        : ((Model.Page - 1) * Model.PageSize) + 1;
+
+                    var endItem = Math.Min(
+                        Model.Page * Model.PageSize,
+                        Model.TotalCount
+                    );
+                }
+
+                <span class="menu-description small">
+                    Menampilkan
+                    <strong>@startItem – @endItem</strong>
+                    dari
+                    <strong>@Model.TotalCount</strong>
+                    data
+                </span>
+
+                @{
+                    var currentPage = Model.Page;
+                    var totalPages = Model.TotalPage;
+                }
+
+                <nav aria-label="Pagination">
+
+                    <ul class="pagination">
+
+                        <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new {
+                                   search = Context.Request.Query["search"],
+                                   isActive = Context.Request.Query["isActive"],
+                                   page = currentPage - 1,
+                                   pageSize = Model.PageSize
+                               })">
+
+                                Sebelumnya
+
+                            </a>
+
+                        </li>
+
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       search = Context.Request.Query["search"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = i,
+                                       pageSize = Model.PageSize
+                                   })">
+
+                                    @i
+
+                                </a>
+
+                            </li>
+                        }
+
+                        <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new {
+                                   search = Context.Request.Query["search"],
+                                   isActive = Context.Request.Query["isActive"],
+                                   page = currentPage + 1,
+                                   pageSize = Model.PageSize
+                               })">
+
+                                Berikutnya
+
+                            </a>
+
+                        </li>
+
+                    </ul>
+
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================
+     MODAL CREATE / EDIT USER
+     ===================================================== -->
+
+<div class="modal fade"
+     id="userModal"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <form method="post"
+                  id="userForm">
+
+                @Html.AntiForgeryToken()
+
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title"
+                        id="userModalTitle">
+
+                        Tambah User
+
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           id="Id"
+                           name="Id" />
+
+                    <input type="hidden"
+                           id="Photo"
+                           name="Photo" />
+
+                    <input type="hidden"
+                           id="Signature"
+                           name="Signature" />
+
+
+                    <!-- PHOTO -->
+
+                    <div class="text-center mb-4">
+
+                        <div id="photoPreviewContainer"
+                             class="mb-2">
+
+                            <div class="avatar avatar-lg mx-auto"
+                                 id="defaultPhoto">
+
+                                <i class="bi bi-person-fill"></i>
+
+                            </div>
+
+                            <img id="photoPreview"
+                                 alt="Photo Preview"
+                                 class="photo-preview" />
+
+                        </div>
+
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                onclick="document.getElementById('photoFile').click()">
+
+                            <i class="bi bi-camera"></i>
+                            Pilih Foto
+
+                        </button>
+
+
+                        <input type="file"
+                               id="photoFile"
+                               accept="image/*"
+                               hidden />
+
+                    </div>
+
+
+                    <div class="row g-3">
+
+                        <!-- NAME -->
+
+                        <div class="col-12">
+
+                            <label class="form-label">
+                                Nama Lengkap
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   id="Name"
+                                   name="Name"
+                                   maxlength="100"
+                                   autocomplete="off"
+                                   required />
+
+                        </div>
+
+
+                        <!-- USERNAME -->
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Username
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   id="Username"
+                                   name="Username"
+                                   maxlength="50"
+                                   autocomplete="off"
+                                   required />
+
+                        </div>
+
+
+                        <!-- EMAIL -->
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+                                Email
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <input type="email"
+                                   class="form-control"
+                                   id="Email"
+                                   name="Email"
+                                   maxlength="191"
+                                   autocomplete="off"
+                                   required />
+
+                        </div>
+
+
+                        <!-- ROLE -->
+
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                Role
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <select class="form-select"
+                                    id="RoleId"
+                                    name="RoleId"
+                                    required>
+
+                                <option value="">
+                                    -- Pilih Role --
+                                </option>
+                                @foreach (var role in roles)
+                                {
+                                    if (role.IsActive)
+                                    {
+                                        <option value="@role.Id">
+                                            @role.Name
+                                        </option>
+                                    }
+                                }
+                            </select>
+
+                        </div>
+
+
+                        <!-- PASSWORD -->
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+
+                                Password
+
+                                <span id="passwordRequired"
+                                      class="text-danger">
+                                    *
+                                </span>
+
+                            </label>
+
+
+                            <div class="input-group">
+
+                                <input type="password"
+                                       class="form-control"
+                                       id="Password"
+                                       name="Password"
+                                       autocomplete="new-password" />
+
+                                <button class="btn btn-outline-secondary password-toggle"
+                                        type="button"
+                                        id="btnTogglePassword"
+                                        onclick="togglePassword()">
+
+                                    <i class="bi bi-eye"
+                                       id="passwordIcon">
+                                    </i>
+
+                                </button>
+
+                            </div>
+
+
+                            <div class="form-text d-none"
+                                 id="passwordHelp">
+
+                                Kosongkan jika tidak ingin mengubah password.
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- STATUS -->
+
+                        <div class="col-12">
+
+                            <div class="form-check form-switch">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="IsActive"
+                                       name="IsActive"
+                                       value="true"
+                                       checked />
+
+                                <label class="form-check-label"
+                                       for="IsActive">
+
+                                    Akun Aktif
+
+                                </label>
+
+                                <input type="hidden"
+                                       name="IsActive"
+                                       value="false" />
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- SIGNATURE -->
+
+                        <div class="col-12">
+
+                            <label class="form-label">
+
+                                <i class="bi bi-pen"></i>
+                                Tanda Tangan Digital
+
+                            </label>
+
+                            <div class="form-text mb-2">
+
+                                Gambar tanda tangan pada kotak di bawah menggunakan
+                                mouse atau layar sentuh.
+
+                            </div>
+
+                            <canvas id="signatureCanvas"
+                                    width="650"
+                                    height="220">
+                            </canvas>
+
+                            <div class="mt-2">
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        onclick="clearSignature()">
+
+                                    <i class="bi bi-eraser"></i>
+                                    Bersihkan
+
+                                </button>
+
+                                <span class="ms-2 text-muted"
+                                      id="signatureStatus">
+
+                                    Belum ada tanda tangan
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- MODAL FOOTER -->
+
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            class="btn btn-primary">
+
+                        <i class="bi bi-save"></i>
+                        Simpan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     =========================================================
+     BAGIAN 2 — JAVASCRIPT
+     =========================================================
+     ========================================================= -->
+
+@section Scripts
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        function getPhotoUrl(src) {
+            if (!src) return '';
+            src = src.trim().replace(/\\/g, '/');
+            if (/^https?:\/\//i.test(src)) {
+                return src;
+            }
+            return 'https://localhost:7101/' + src.replace(/^\/+/, '');
+        }
+
+        // =====================================================
+        // MODAL
+        // =====================================================
+
+        const modalElement =
+            document.getElementById('userModal');
+
+        const userModal =
+            new bootstrap.Modal(modalElement);
+
+        const userForm =
+            document.getElementById('userForm');
+
+
+        // =====================================================
+        // SIGNATURE
+        // =====================================================
+
+        const canvas =
+            document.getElementById('signatureCanvas');
+
+        const ctx =
+            canvas.getContext('2d');
+
+        let drawing = false;
+        let signatureChanged = false;
+
+
+        // =====================================================
+        // CREATE USER
+        // =====================================================
+
+        function openCreateUser() {
+
+            resetForm();
+
+            document.getElementById('userModalTitle').innerText =
+                'Tambah User';
+
+            userForm.action =
+                '@Url.Action("Create", "Users")';
+
+            document.getElementById('Id').disabled = true;
+
+            document.getElementById('Password').required = true;
+
+            document.getElementById('passwordRequired')
+                .classList.remove('d-none');
+
+            document.getElementById('passwordHelp')
+                .classList.add('d-none');
+
+            userModal.show();
+        }
+
+
+        // =====================================================
+        // EDIT USER
+        // =====================================================
+
+        async function openEditUser(id) {
+
+            resetForm();
+
+            try {
+
+                const response =
+                    await fetch(
+                        '@Url.Action("GetById", "Users")?id=' + id
+                    );
+
+                if (!response.ok) {
+
+                    alert('Data user tidak ditemukan.');
+                    return;
+
+                }
+
+                const user =
+                    await response.json();
+
+
+                document.getElementById('userModalTitle').innerText =
+                    'Edit User';
+
+                userForm.action =
+                    '@Url.Action("Edit", "Users")';
+
+
+                const idInput =
+                    document.getElementById('Id');
+
+                idInput.disabled = false;
+                idInput.value = user.id;
+
+
+                document.getElementById('Name').value =
+                    user.name ?? '';
+
+                document.getElementById('Username').value =
+                    user.username ?? '';
+
+                document.getElementById('Email').value =
+                    user.email ?? '';
+
+                document.getElementById('RoleId').value =
+                    user.roleId ?? '';
+
+                document.getElementById('IsActive').checked =
+                    user.isActive === true;
+
+
+                document.getElementById('Password').required =
+                    false;
+
+                document.getElementById('Password').value =
+                    '';
+
+                document.getElementById('passwordRequired')
+                    .classList.add('d-none');
+
+                document.getElementById('passwordHelp')
+                    .classList.remove('d-none');
+
+
+                if (user.photo) {
+
+                    document.getElementById('Photo').value =
+                        user.photo;
+
+                    showPhoto(user.photo);
+
+                }
+
+
+                if (user.signature) {
+
+                    document.getElementById('Signature').value =
+                        user.signature;
+
+                    loadSignature(user.signature);
+
+                }
+
+
+                userModal.show();
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                alert(
+                    'Terjadi kesalahan saat mengambil data user.'
+                );
+
+            }
+
+        }
+
+
+        // =====================================================
+        // RESET FORM
+        // =====================================================
+
+        function resetForm() {
+
+            userForm.reset();
+
+            const id =
+                document.getElementById('Id');
+
+            id.disabled = false;
+            id.value = '';
+
+            document.getElementById('Photo').value = '';
+
+            document.getElementById('Signature').value = '';
+
+            document.getElementById('IsActive').checked = true;
+
+
+            const password =
+                document.getElementById('Password');
+
+            const passwordIcon =
+                document.getElementById('passwordIcon');
+
+            const passwordButton =
+                document.getElementById('btnTogglePassword');
+
+            password.value = '';
+            password.type = 'password';
+
+            passwordIcon.classList.remove('bi-eye-slash');
+            passwordIcon.classList.add('bi-eye');
+
+            passwordButton.title =
+                'Tampilkan password';
+
+
+            resetPhoto();
+            resetSignature();
+
+            signatureChanged = false;
+
+        }
+
+
+        // =====================================================
+        // PASSWORD
+        // =====================================================
+
+        function togglePassword() {
+
+            const password =
+                document.getElementById('Password');
+
+            const icon =
+                document.getElementById('passwordIcon');
+
+            const button =
+                document.getElementById('btnTogglePassword');
+
+
+            if (password.type === 'password') {
+
+                password.type = 'text';
+
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+
+                button.title =
+                    'Sembunyikan password';
+
+            }
+            else {
+
+                password.type = 'password';
+
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+
+                button.title =
+                    'Tampilkan password';
+
+            }
+
+        }
+
+
+        // =====================================================
+        // PHOTO
+        // =====================================================
+
+        const photoFile =
+            document.getElementById('photoFile');
+
+        photoFile.addEventListener(
+            'change',
+            async function () {
+
+                const file =
+                    this.files[0];
+
+                if (!file)
+                    return;
+
+
+                if (!file.type.startsWith('image/')) {
+
+                    alert('File harus berupa gambar.');
+
+                    this.value = '';
+
+                    return;
+
+                }
+
+
+                if (file.size > (2 * 1024 * 1024)) {
+
+                    alert('Ukuran foto maksimal 2 MB.');
+
+                    this.value = '';
+
+                    return;
+
+                }
+
+
+                const formData =
+                    new FormData();
+
+                formData.append('photo', file);
+
+
+                const token =
+                    userForm.querySelector(
+                        'input[name="__RequestVerificationToken"]'
+                    )?.value;
+
+
+                if (token) {
+
+                    formData.append(
+                        '__RequestVerificationToken',
+                        token
+                    );
+
+                }
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            '@Url.Action("UploadPhoto", "Users")',
+                            {
+                                method: 'POST',
+                                body: formData
+                            }
+                        );
+
+
+                    const text =
+                        await response.text();
+
+                    let result = null;
+
+                    try {
+                        result = JSON.parse(text);
+                    }
+                    catch { }
+
+
+                    if (!response.ok) {
+
+                        alert(
+                            'Upload foto gagal.\n\n' +
+                            'Status: ' +
+                            response.status +
+                            '\n\n' +
+                            (
+                                result?.message ||
+                                text ||
+                                'Tidak ada pesan error dari server.'
+                            )
+                        );
+
+                        this.value = '';
+
+                        return;
+
+                    }
+
+
+                    if (!result?.photo) {
+
+                        alert(
+                            'Upload berhasil tetapi path foto tidak diterima dari server.'
+                        );
+
+                        this.value = '';
+
+                        return;
+
+                    }
+
+
+                    document.getElementById('Photo').value =
+                        result.photo;
+
+                    showPhoto(result.photo);
+
+                }
+                catch (error) {
+
+                    console.error(
+                        'ERROR UPLOAD PHOTO:',
+                        error
+                    );
+
+                    alert(
+                        'Terjadi kesalahan saat mengupload foto:\n\n' +
+                        error.message
+                    );
+
+                    this.value = '';
+
+                }
+
+            }
+        );
+
+    function showPhoto(src) {
+        const preview = document.getElementById('photoPreview');
+        const defaultPhoto = document.getElementById('defaultPhoto');
+
+        if (!src) {
+            resetPhoto();
+            return;
+        }
+
+        const photoUrl = getPhotoUrl(src);
+
+        console.log('Path foto:', src);
+        console.log('URL foto:', photoUrl);
+
+        preview.onload = function () {
+            preview.style.display = 'block';
+            defaultPhoto.style.display = 'none';
+
+            console.log('Foto berhasil ditampilkan.');
+        };
+
+        preview.onerror = function () {
+            console.error('Gagal memuat foto:', photoUrl);
+
+            preview.style.display = 'none';
+            defaultPhoto.style.display = 'grid';
+        };
+
+        preview.src = photoUrl;
+    }
+
+        function resetPhoto() {
+
+            const preview =
+                document.getElementById('photoPreview');
+
+            const defaultPhoto =
+                document.getElementById('defaultPhoto');
+
+
+            preview.src = '';
+
+            preview.style.display = 'none';
+
+            defaultPhoto.style.display = 'grid';
+
+            photoFile.value = '';
+
+        }
+
+
+        // =====================================================
+        // SIGNATURE
+        // =====================================================
+
+        function initCanvas() {
+
+            ctx.clearRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+            ctx.fillStyle = '#ffffff';
+
+            ctx.fillRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+            ctx.lineWidth = 2;
+
+            ctx.lineCap = 'round';
+
+            ctx.lineJoin = 'round';
+
+            ctx.strokeStyle = '#172033';
+
+        }
+
+
+        function resetSignature() {
+
+            initCanvas();
+
+            document.getElementById('Signature').value = '';
+
+            document.getElementById('signatureStatus').innerText =
+                'Belum ada tanda tangan';
+
+        }
+
+
+        function clearSignature() {
+
+            resetSignature();
+
+            signatureChanged = true;
+
+        }
+
+
+        function getCanvasPoint(e) {
+
+            const rect =
+                canvas.getBoundingClientRect();
+
+            let clientX;
+            let clientY;
+
+
+            if (
+                e.touches &&
+                e.touches.length > 0
+            ) {
+
+                clientX =
+                    e.touches[0].clientX;
+
+                clientY =
+                    e.touches[0].clientY;
+
+            }
+            else {
+
+                clientX =
+                    e.clientX;
+
+                clientY =
+                    e.clientY;
+
+            }
+
+
+            return {
+
+                x:
+                    (clientX - rect.left) *
+                    (canvas.width / rect.width),
+
+                y:
+                    (clientY - rect.top) *
+                    (canvas.height / rect.height)
+
+            };
+
+        }
+
+
+        function startDraw(e) {
+
+            e.preventDefault();
+
+            drawing = true;
+
+            signatureChanged = true;
+
+            const point =
+                getCanvasPoint(e);
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                point.x,
+                point.y
+            );
+
+        }
+
+
+        function draw(e) {
+
+            if (!drawing)
+                return;
+
+            e.preventDefault();
+
+            const point =
+                getCanvasPoint(e);
+
+            ctx.lineTo(
+                point.x,
+                point.y
+            );
+
+            ctx.stroke();
+
+            document.getElementById('signatureStatus').innerText =
+                '✓ Ada tanda tangan';
+
+        }
+
+
+        function stopDraw(e) {
+
+            if (!drawing)
+                return;
+
+            drawing = false;
+
+            ctx.closePath();
+
+            document.getElementById('Signature').value =
+                canvas.toDataURL('image/png');
+
+            document.getElementById('signatureStatus').innerText =
+                '✓ Ada tanda tangan';
+
+        }
+
+
+        function loadSignature(dataUrl) {
+
+            const img =
+                new Image();
+
+            img.onload =
+                function () {
+
+                    initCanvas();
+
+                    ctx.drawImage(
+                        img,
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height
+                    );
+
+                    document.getElementById('Signature').value =
+                        dataUrl;
+
+                    document.getElementById('signatureStatus').innerText =
+                        '✓ Ada tanda tangan';
+
+                    signatureChanged = false;
+
+                };
+
+            img.src = dataUrl;
+
+        }
+
+
+        // MOUSE
+        canvas.addEventListener(
+            'mousedown',
+            startDraw
+        );
+
+        canvas.addEventListener(
+            'mousemove',
+            draw
+        );
+
+        canvas.addEventListener(
+            'mouseup',
+            stopDraw
+        );
+
+        canvas.addEventListener(
+            'mouseleave',
+            stopDraw
+        );
+
+
+        // TOUCH
+        canvas.addEventListener(
+            'touchstart',
+            startDraw,
+            {
+                passive: false
+            }
+        );
+
+        canvas.addEventListener(
+            'touchmove',
+            draw,
+            {
+                passive: false
+            }
+        );
+
+        canvas.addEventListener(
+            'touchend',
+            stopDraw,
+            {
+                passive: false
+            }
+        );
+
+
+        // =====================================================
+        // FORM SUBMIT
+        // =====================================================
+
+        userForm.addEventListener(
+            'submit',
+            function () {
+
+                if (signatureChanged) {
+
+                    document.getElementById('Signature').value =
+                        canvas.toDataURL('image/png');
+
+                }
+
+            }
+        );
+
+
+        // =====================================================
+        // TOOLBAR
+        // =====================================================
+
+        function refreshUsers() {
+
+            window.location.reload();
+
+        }
+
+
+        function toggleUsersTable() {
+
+            const content =
+                document.getElementById(
+                    'usersTableContent'
+                );
+
+            const icon =
+                document.getElementById(
+                    'tableToggleIcon'
+                );
+
+
+            if (content.style.display === 'none') {
+
+                content.style.display = '';
+
+                icon.classList.remove(
+                    'bi-chevron-down'
+                );
+
+                icon.classList.add(
+                    'bi-chevron-up'
+                );
+
+            }
+            else {
+
+                content.style.display = 'none';
+
+                icon.classList.remove(
+                    'bi-chevron-up'
+                );
+
+                icon.classList.add(
+                    'bi-chevron-down'
+                );
+
+            }
+
+        }
+
+
+
+    </script>
+}

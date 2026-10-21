@@ -1,0 +1,1203 @@
+@model CustomerViewModel
+
+@{
+    ViewData["Title"] = "Edit Customers";
+}
+
+<div class="page-header">
+    <h1>Edit Customers</h1>
+</div>
+
+<div class="customer-edit-wrapper">
+
+    <!-- DATA CUSTOMER -->
+    <div class="customer-form-card">
+
+        <div class="customer-form-header">
+            <h3>Edit Customers</h3>
+        </div>
+
+        <form asp-action="Edit"
+              asp-controller="Customers"
+              method="post"
+              enctype="multipart/form-data">
+
+            @Html.AntiForgeryToken()
+
+            <input asp-for="Id" type="hidden" />
+
+            <div class="customer-form-body">
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"></div>
+
+                <!-- FOTO -->
+                <div class="customer-photo-section">
+
+                    <div class="customer-photo-preview">
+
+                        @if (!string.IsNullOrWhiteSpace(Model.Image))
+                        {
+                            var imagePath = Model.Image.Trim().Replace("\\", "/");
+
+                            if (imagePath.StartsWith("/"))
+                            {
+                                imagePath = "https://localhost:7101" + imagePath;
+                            }
+                            else if (!imagePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                            {
+                                imagePath = "https://localhost:7101/" + imagePath;
+                            }
+
+                            <img id="photoPreview"
+                                 src="@imagePath"
+                                 alt="@Model.FullName"
+                                 class="customer-photo-image"
+                                 onerror="this.onerror=null;this.style.display='none';document.getElementById('photoPlaceholder').style.display='flex';" />
+
+                            <div id="photoPlaceholder"
+                                 class="photo-placeholder"
+                                 style="display:none;">
+                                👤
+                            </div>
+                        }
+                        else
+                        {
+                            <div id="photoPlaceholder" class="photo-placeholder">
+                                👤
+                            </div>
+
+                            <img id="photoPreview"
+                                 class="customer-photo-image"
+                                 style="display:none;"
+                                 alt="Preview Foto" />
+                        }
+
+                    </div>
+
+                    <label for="imageInput" class="btn btn-outline-secondary btn-sm">
+                        🖼 Pilih Foto/Logo
+                    </label>
+
+                    <input id="imageInput"
+                           name="imageFile"
+                           type="file"
+                           accept=".jpg,.jpeg,.png,.webp"
+                           style="display:none;" />
+
+                    <div class="photo-info">
+                        JPG/PNG/WEBP, maks 2 MB.
+                    </div>
+
+                </div>
+
+                <!-- FULL NAME -->
+                <div class="mb-3">
+                    <label asp-for="FullName" class="form-label">
+                        Full Name <span class="text-danger">*</span>
+                    </label>
+
+                    <input asp-for="FullName" class="form-control" />
+
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+
+                <!-- EMAIL + PHONE -->
+                <div class="row">
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Email" class="form-label">
+                            Email <span class="text-danger">*</span>
+                        </label>
+
+                        <input asp-for="Email" class="form-control" type="email" />
+
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Phone" class="form-label">
+                            Phone <span class="text-danger">*</span>
+                        </label>
+
+                        <input asp-for="Phone" class="form-control" />
+
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                    </div>
+
+                </div>
+
+                <!-- NIK + NPWP -->
+                <div class="row">
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Nik" class="form-label">
+                            NIK (No. KTP)
+                        </label>
+
+                        <input asp-for="Nik"
+                               class="form-control"
+                               placeholder="16 digit" />
+
+                        <span asp-validation-for="Nik" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Npwp" class="form-label">
+                            NPWP
+                        </label>
+
+                        <input asp-for="Npwp" class="form-control" />
+
+                        <span asp-validation-for="Npwp" class="text-danger"></span>
+                    </div>
+
+                </div>
+
+                <!-- CUSTOMER GROUP + SALES FORCE -->
+                <div class="row">
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="CustomerGroupId" class="form-label">
+                            Kelompok Customer
+                        </label>
+
+                        <select asp-for="CustomerGroupId" class="form-select">
+                            <option value="">— Tanpa kelompok —</option>
+
+                            @if (ViewBag.CustomerGroups != null)
+                            {
+                                foreach (var item in ViewBag.CustomerGroups)
+                                {
+                                    <option value="@item.Id">@item.Name</option>
+                                }
+                            }
+                        </select>
+
+                        <div class="form-help">
+                            Diskon default kelompok akan otomatis terisi saat membuat Sales Order.
+                        </div>
+
+                        <span asp-validation-for="CustomerGroupId" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="SalesForceId" class="form-label">
+                            Sales Force
+                        </label>
+
+                        <select asp-for="SalesForceId" class="form-select">
+                            <option value="">— Tanpa sales —</option>
+
+                            @if (ViewBag.SalesForces != null)
+                            {
+                                foreach (var item in ViewBag.SalesForces)
+                                {
+                                    <option value="@item.Id">@item.Name</option>
+                                }
+                            }
+                        </select>
+
+                        <div class="form-help">
+                            Penanggung jawab penjualan untuk customer ini.
+                        </div>
+
+                        <span asp-validation-for="SalesForceId" class="text-danger"></span>
+                    </div>
+
+                </div>
+
+                <!-- PRICE LIST -->
+                <div class="mb-3">
+                    <label asp-for="PriceListId" class="form-label">
+                        Price List (Harga Khusus)
+                    </label>
+
+                    <select asp-for="PriceListId" class="form-select">
+                        <option value="">— Ikut kelompok / harga default —</option>
+
+                        @if (ViewBag.PriceLists != null)
+                        {
+                            foreach (var item in ViewBag.PriceLists)
+                            {
+                                <option value="@item.Id">@item.Name</option>
+                            }
+                        }
+                    </select>
+
+                    <div class="form-help">
+                        Harga khusus customer ini (menang atas kelompok).
+                        Kosong = ikut kelompok / harga default.
+                        Diskon kelompok tetap ditumpuk di atasnya.
+                    </div>
+
+                    <span asp-validation-for="PriceListId" class="text-danger"></span>
+                </div>
+
+                <!-- ALAMAT UTAMA -->
+                <div class="mb-3">
+                    <label asp-for="Address" class="form-label">
+                        Alamat Utama (Penagihan)
+                        <span class="text-danger">*</span>
+                    </label>
+
+                    <textarea asp-for="Address"
+                              class="form-control"
+                              rows="3"></textarea>
+
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+
+                <!-- IS ACTIVE -->
+                <div class="form-check form-switch mt-3">
+                    <input asp-for="IsActive"
+                           class="form-check-input"
+                           type="checkbox" />
+
+                    <label asp-for="IsActive" class="form-check-label">
+                        Is Active
+                    </label>
+                </div>
+
+            </div>
+
+            <!-- FOOTER CUSTOMER -->
+            <div class="customer-form-footer">
+                <button type="submit" class="btn btn-primary">
+                    💾 Simpan
+                </button>
+
+                <a asp-action="Index" asp-controller="Customers" class="btn btn-secondary">
+                    Batal
+                </a>
+            </div>
+
+        </form>
+
+    </div>
+
+    <!-- AKUN TOKO ONLINE -->
+    <div class="customer-form-card customer-section-card">
+
+        <div class="customer-form-header">
+            <div class="section-header-row">
+
+                <h3>🏪 Akun Toko Online</h3>
+
+                <div class="section-status">
+                    @if (Model.RegisteredOnline == true)
+                    {
+                        <span class="badge bg-success">Aktif</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Nonaktif</span>
+                    }
+                </div>
+
+            </div>
+        </div>
+
+        <div class="customer-form-body">
+
+            <div class="online-account-info">
+                <strong>ⓘ Atur status akun & reset password login toko untuk customer ini.</strong>
+                <br />
+
+                Customer login di
+                <span class="login-url">https://erp-lite.mrdesk.net/shop/login</span>
+                memakai email di atas.
+
+                Akun hanya bisa login bila statusnya Aktif.
+            </div>
+
+            <div class="row">
+
+                <!-- STATUS AKUN -->
+                <div class="col-md-4 mb-3">
+                    <label asp-for="RegisteredOnline" class="form-label">
+                        Status Akun
+                    </label>
+
+                    <select asp-for="RegisteredOnline" class="form-select">
+                        <option value="true">Aktif (boleh login)</option>
+                        <option value="false">Nonaktif</option>
+                    </select>
+                </div>
+
+                <!-- PASSWORD -->
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Password" class="form-label">
+                        Password Baru
+                    </label>
+
+                    <div class="password-wrapper">
+                        <input asp-for="Password"
+                               id="passwordInput"
+                               class="form-control"
+                               type="password"
+                               placeholder="Kosongkan bila tidak diubah" />
+
+                        <button type="button"
+                                class="password-toggle"
+                                onclick="togglePassword('passwordInput', this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+
+                    <div class="form-help">Min. 6 karakter.</div>
+                </div>
+
+                <!-- KONFIRMASI PASSWORD -->
+                <div class="col-md-4 mb-3">
+                    <label for="confirmPassword" class="form-label">
+                        Ulangi Password
+                    </label>
+
+                    <input id="confirmPassword"
+                           name="confirmPassword"
+                           class="form-control"
+                           type="password"
+                           placeholder="Ulangi password baru" />
+
+                    <div id="passwordError" class="text-danger password-error"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="customer-form-footer">
+            <button type="button"
+                    class="btn btn-primary"
+                    onclick="saveOnlineAccount()">
+                💾 Simpan Akun Toko
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ALAMAT PENGIRIMAN -->
+    <div class="customer-form-card customer-section-card">
+
+        <div class="customer-form-header">
+            <div class="section-header-row">
+                <h3>🚚 Alamat Pengiriman</h3>
+
+                <span class="badge bg-secondary">
+                    @(ViewBag.ShippingAddressesCount ?? 0)
+                </span>
+            </div>
+        </div>
+
+        <div class="customer-form-body">
+
+            <!-- FORM TAMBAH ALAMAT -->
+            <div class="shipping-add-form">
+                <div class="row align-items-end">
+
+                    <div class="col-lg-3 col-md-6 mb-2">
+                        <label class="form-label">Nama Alamat</label>
+
+                        <input type="text"
+                               id="shippingName"
+                               class="form-control"
+                               placeholder="Mis. Rumah, Kantor" />
+                    </div>
+
+                    <div class="col-lg-4 col-md-6 mb-2">
+                        <label class="form-label">Alamat</label>
+
+                        <input type="text"
+                               id="shippingAddress"
+                               class="form-control"
+                               placeholder="Alamat lengkap tujuan" />
+                    </div>
+
+                    <div class="col-lg-3 col-md-6 mb-2">
+                        <label class="form-label">Area Pengiriman</label>
+
+                        <select id="shippingAreaId" class="form-select">
+                            <option value="">— Tanpa area —</option>
+
+                            @if (ViewBag.ShippingAreas != null)
+                            {
+                                foreach (var item in ViewBag.ShippingAreas)
+                                {
+                                    <option value="@item.Id">@item.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-lg-2 col-md-6 mb-2">
+                        <button type="button"
+                                class="btn btn-success w-100"
+                                onclick="addShippingAddress()">
+                            + Tambah
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- LIST ALAMAT -->
+            <div class="shipping-table-wrapper">
+                <div class="table-responsive">
+
+                    <table class="table table-hover align-middle shipping-table">
+                        <thead>
+                            <tr>
+                                <th>NAMA ALAMAT</th>
+                                <th>ALAMAT</th>
+                                <th>AREA PENGIRIMAN</th>
+                                <th class="text-center">AKSI</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="shippingAddressTable">
+
+                            @if (ViewBag.ShippingAddresses != null)
+                            {
+                                foreach (var address in ViewBag.ShippingAddresses)
+                                {
+                                    <tr>
+                                        <td><strong>@address.Name</strong></td>
+                                        <td>@address.Address</td>
+
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace((string?)address.ShippingAreaName))
+                                            {
+                                                <span class="shipping-area-badge">
+                                                    @address.ShippingAreaName
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-empty">-</span>
+                                            }
+                                        </td>
+
+                                        <td class="text-center">
+                                            <div class="d-flex justify-content-center gap-1">
+
+                                                <button type="button"
+                                                        class="btn btn-sm btn-warning"
+                                                        title="Edit"
+                                                        data-id="@address.Id"
+                                                        data-name="@address.Name"
+                                                        data-address="@address.Address"
+                                                        data-area-id="@address.ShippingAreaId"
+                                                        onclick="openEditShippingAddress(this)">
+                                                    <i class="bi bi-pencil-fill"></i>
+                                                </button>
+
+                                                <button type="button"
+                                                        class="btn btn-sm btn-danger"
+                                                        title="Delete"
+                                                        onclick="deleteShippingAddress(this, '@address.Id')">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </button>
+
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+
+                            <tr id="emptyShippingRow"
+                                style="@(ViewBag.ShippingAddressesCount != null && (int)ViewBag.ShippingAddressesCount > 0 ? "display:none;" : "")">
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    Belum ada alamat pengiriman.
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- MODAL EDIT ALAMAT PENGIRIMAN -->
+<div class="modal fade"
+     id="editShippingAddressModal"
+     tabindex="-1"
+     aria-labelledby="editShippingAddressModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="editShippingAddressModalLabel">
+                    <i class="bi bi-pencil"></i>
+                    Ubah Alamat Pengiriman
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <form asp-controller="Customers"
+                  asp-action="EditShippingAddress"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+
+                    <input type="hidden" id="editShippingAddressId" name="id" />
+                    <input type="hidden" name="customerId" value="@Model.Id" />
+
+                    <div class="mb-3">
+                        <label for="editShippingAddressName" class="form-label">
+                            Nama Alamat
+                        </label>
+
+                        <input type="text"
+                               id="editShippingAddressName"
+                               name="name"
+                               class="form-control"
+                               maxlength="100"
+                               required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editShippingAddressAddress" class="form-label">
+                            Alamat
+                        </label>
+
+                        <input type="text"
+                               id="editShippingAddressAddress"
+                               name="address"
+                               class="form-control"
+                               maxlength="255"
+                               required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editShippingAreaId" class="form-label">
+                            Area Pengiriman
+                        </label>
+
+                        <select id="editShippingAreaId"
+                                name="shippingAreaId"
+                                class="form-select">
+                            <option value="">— Tanpa area —</option>
+
+                            @if (ViewBag.ShippingAreas != null)
+                            {
+                                foreach (var item in ViewBag.ShippingAreas)
+                                {
+                                    <option value="@item.Id">@item.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i>
+                        Simpan Perubahan
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- JAVASCRIPT -->
+<script>
+    // PHOTO PREVIEW
+    document.getElementById("imageInput").addEventListener("change", function (event) {
+        const file = event.target.files[0];
+        const preview = document.getElementById("photoPreview");
+        const placeholder = document.getElementById("photoPlaceholder");
+
+        if (!file) return;
+
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+        if (!allowedTypes.includes(file.type)) {
+            alert("Format foto harus JPG, PNG, atau WEBP.");
+            event.target.value = "";
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) {
+            alert("Ukuran foto maksimal 2 MB.");
+            event.target.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = "block";
+
+            if (placeholder) {
+                placeholder.style.display = "none";
+            }
+        };
+
+        reader.readAsDataURL(file);
+    });
+
+    // PASSWORD
+    function togglePassword(inputId, button) {
+        const input = document.getElementById(inputId);
+        const icon = button.querySelector("i");
+
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove("bi-eye");
+            icon.classList.add("bi-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.remove("bi-eye-slash");
+            icon.classList.add("bi-eye");
+        }
+    }
+
+    // VALIDASI PASSWORD AKUN TOKO
+    function saveOnlineAccount() {
+        const password = document.getElementById("passwordInput").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+        const error = document.getElementById("passwordError");
+
+        error.textContent = "";
+
+        if (password !== "" && password.length < 6) {
+            error.textContent = "Password minimal 6 karakter.";
+            return;
+        }
+
+        if (password !== "" && password !== confirmPassword) {
+            error.textContent = "Password tidak sama.";
+            return;
+        }
+
+        alert("Bagian akun toko akan disimpan bersama data customer.");
+    }
+
+    // TAMBAH ALAMAT PENGIRIMAN
+    function addShippingAddress() {
+        const nameInput = document.getElementById("shippingName");
+        const addressInput = document.getElementById("shippingAddress");
+        const areaSelect = document.getElementById("shippingAreaId");
+
+        const name = nameInput.value.trim();
+        const address = addressInput.value.trim();
+        const areaId = areaSelect.value;
+
+        if (!name) {
+            alert("Nama alamat wajib diisi.");
+            nameInput.focus();
+            return;
+        }
+
+        if (!address) {
+            alert("Alamat wajib diisi.");
+            addressInput.focus();
+            return;
+        }
+
+        const button = document.querySelector(
+            '.shipping-add-form button[onclick="addShippingAddress()"]'
+        );
+
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = "Menyimpan...";
+        }
+
+        const form = document.createElement("form");
+        form.method = "post";
+        form.action = "@Url.Action("CreateShippingAddress", "Customers")";
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+
+        if (token) {
+            const tokenInput = document.createElement("input");
+            tokenInput.type = "hidden";
+            tokenInput.name = "__RequestVerificationToken";
+            tokenInput.value = token.value;
+            form.appendChild(tokenInput);
+        }
+
+        const fields = {
+            customerId: "@Model.Id",
+            name: name,
+            address: address,
+            shippingAreaId: areaId
+        };
+
+        Object.entries(fields).forEach(([key, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = key;
+            input.value = value;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // EDIT ALAMAT PENGIRIMAN
+    function openEditShippingAddress(button) {
+        document.getElementById("editShippingAddressId").value = button.dataset.id;
+        document.getElementById("editShippingAddressName").value = button.dataset.name;
+        document.getElementById("editShippingAddressAddress").value = button.dataset.address;
+        document.getElementById("editShippingAreaId").value = button.dataset.areaId || "";
+
+        const modalElement = document.getElementById("editShippingAddressModal");
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    }
+
+    // HAPUS ALAMAT PENGIRIMAN
+    function deleteShippingAddress(button, addressId) {
+        if (!confirm("Yakin ingin menghapus alamat pengiriman ini?")) {
+            return;
+        }
+
+        const form = document.createElement("form");
+        form.method = "post";
+        form.action = "@Url.Action("DeleteShippingAddress", "Customers")";
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+
+        if (token) {
+            const tokenInput = document.createElement("input");
+            tokenInput.type = "hidden";
+            tokenInput.name = "__RequestVerificationToken";
+            tokenInput.value = token.value;
+            form.appendChild(tokenInput);
+        }
+
+        const fields = {
+            id: addressId,
+            customerId: "@Model.Id"
+        };
+
+        Object.entries(fields).forEach(([key, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = key;
+            input.value = value;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // ESCAPE HTML
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
+
+<!-- CSS -->
+<style>
+    .customer-edit-wrapper {
+        width: 100%;
+    }
+
+    .customer-form-card {
+        width: 100%;
+        max-width: none;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    .customer-form-header {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--card-border);
+    }
+
+    .customer-form-header h3 {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-main);
+        font-weight: 600;
+    }
+
+    .section-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .section-header-row h3 {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-main);
+    }
+
+    .customer-form-body {
+        padding: 10px 8px 12px;
+    }
+
+    .customer-form-body .form-label {
+        color: var(--text-main);
+        margin-bottom: 4px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .customer-form-body .form-control,
+    .customer-form-body .form-select {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        color: var(--text-main);
+        min-height: 29px;
+        height: 29px;
+        padding: 3px 7px;
+        font-size: 11px;
+        border-radius: 4px;
+    }
+
+    .customer-form-body textarea.form-control {
+        height: auto;
+        min-height: 58px;
+    }
+
+    .customer-form-body .form-control:focus,
+    .customer-form-body .form-select:focus {
+        background: var(--card-bg);
+        color: var(--text-main);
+        border-color: var(--primary);
+        box-shadow: none;
+    }
+
+    .customer-photo-section {
+        text-align: center;
+        margin-bottom: 18px;
+    }
+
+    .customer-photo-preview {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto 4px;
+        background: #f5f5f5;
+        border: 1px solid var(--card-border);
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .customer-photo-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .photo-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+    }
+
+    .customer-photo-section .btn {
+        padding: 2px 6px;
+        font-size: 9px;
+        border-radius: 3px;
+    }
+
+    .photo-info {
+        margin-top: 2px;
+        font-size: 8px;
+        color: #8ea3c0;
+    }
+
+    .form-help {
+        margin-top: 2px;
+        font-size: 8px;
+        line-height: 1.2;
+        color: #8ea3c0;
+    }
+
+    .customer-form-footer {
+        padding: 6px 8px;
+        border-top: 1px solid var(--card-border);
+        background: rgba(255,255,255,.03);
+    }
+
+    .customer-form-footer .btn {
+        min-width: 58px;
+        margin-right: 3px;
+        padding: 3px 7px;
+        font-size: 10px;
+    }
+
+    .online-account-info {
+        padding: 7px 9px;
+        margin-bottom: 10px;
+        background: rgba(255,255,255,.12);
+        border-radius: 3px;
+        color: var(--text-main);
+        font-size: 8px;
+        line-height: 1.5;
+    }
+
+    .login-url {
+        color: #ff4d6d;
+        font-weight: 500;
+    }
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .password-wrapper .form-control {
+        padding-right: 32px;
+    }
+
+    .password-toggle {
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 29px;
+        width: 29px;
+        border: 0;
+        background: transparent;
+        color: #8ea3c0;
+        cursor: pointer;
+    }
+
+    .password-toggle:hover {
+        color: var(--text-main);
+    }
+
+    .password-error {
+        margin-top: 2px;
+        font-size: 8px;
+    }
+
+    .shipping-add-form {
+        padding: 8px;
+        border: 1px solid var(--card-border);
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+
+    .shipping-add-form .form-label {
+        margin-bottom: 3px;
+    }
+
+    .shipping-add-form .btn {
+        height: 29px;
+        padding: 3px 8px;
+        font-size: 10px;
+    }
+
+    .shipping-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .shipping-table {
+        width: 100%;
+        margin-bottom: 0;
+        font-size: 9px;
+        color: var(--text-main);
+    }
+
+    .shipping-table th {
+        white-space: nowrap;
+        font-size: 8px;
+        font-weight: 600;
+        padding: 6px 7px;
+        border-color: var(--card-border);
+    }
+
+    .shipping-table td {
+        padding: 6px 7px;
+        border-color: var(--card-border);
+        vertical-align: middle;
+    }
+
+    .shipping-area-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 6px;
+        background: #315b8e;
+        color: #f1f5f9;
+        border-radius: 3px;
+        font-size: 8px;
+        white-space: nowrap;
+    }
+
+    .text-empty {
+        color: #74839a;
+    }
+
+    .shipping-table .btn-sm {
+        width: 27px;
+        height: 27px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+    }
+
+    #editShippingAddressModal .modal-content {
+        background: var(--card-bg);
+        color: var(--text-main);
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    #editShippingAddressModal .modal-header {
+        padding: 10px 14px;
+        background: var(--card-bg);
+        border-bottom: 1px solid var(--card-border);
+    }
+
+    #editShippingAddressModal .modal-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    #editShippingAddressModal .modal-body {
+        padding: 18px;
+        background: var(--card-bg);
+    }
+
+    #editShippingAddressModal .modal-body .form-label {
+        font-size: 13px;
+        color: var(--text-main);
+        margin-bottom: 6px;
+        font-weight: 500;
+    }
+
+    #editShippingAddressModal .modal-body .form-control,
+    #editShippingAddressModal .modal-body .form-select {
+        height: 43px;
+        min-height: 43px;
+        padding: 7px 12px;
+        font-size: 14px;
+        background: var(--card-bg);
+        color: var(--text-main);
+        border: 1px solid var(--card-border);
+        border-radius: 6px;
+    }
+
+    #editShippingAddressModal .modal-body .form-control:focus,
+    #editShippingAddressModal .modal-body .form-select:focus {
+        background: var(--card-bg);
+        color: var(--text-main);
+        border-color: var(--primary);
+        box-shadow: none;
+    }
+
+    #editShippingAddressModal .modal-footer {
+        padding: 10px 14px;
+        border-top: 1px solid var(--card-border);
+        background: var(--card-bg);
+    }
+
+    #editShippingAddressModal .modal-footer .btn {
+        min-width: 90px;
+        padding: 7px 12px;
+        font-size: 13px;
+    }
+
+    .form-check {
+        font-size: 10px;
+    }
+
+    .form-check-input {
+        cursor: pointer;
+    }
+
+    .form-check-label {
+        color: var(--text-main);
+    }
+
+    @@media (max-width: 992px) {
+        .customer-form-body {
+            padding: 10px;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .customer-form-header {
+            padding: 9px 10px;
+        }
+
+        .customer-form-body {
+            padding: 10px;
+        }
+
+        .customer-photo-preview {
+            width: 70px;
+            height: 70px;
+        }
+
+        .shipping-table {
+            min-width: 650px;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .customer-form-card {
+            border-radius: 5px;
+        }
+
+        .customer-form-body {
+            padding: 9px;
+        }
+
+        .customer-form-footer {
+            display: flex;
+            gap: 4px;
+        }
+
+        .customer-form-footer .btn {
+            flex: 1;
+            margin-right: 0;
+        }
+
+        .shipping-add-form {
+            padding: 7px;
+        }
+    }
+</style>

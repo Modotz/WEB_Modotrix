@@ -1,0 +1,1213 @@
+﻿@using ERP.Web.Models
+@model PagedResult<ProductVariantViewModel>
+
+@{
+    ViewData["Title"] = "Variant";
+
+    long attributeId = ViewBag.AttributeId;
+    string? search = ViewBag.Search;
+    bool? isActive = ViewBag.IsActive;
+
+    var no = ((Model.Page - 1) * Model.PageSize);
+}
+
+<style>
+  
+
+    .variant-page {
+        color: #e2e8f0;
+    }
+
+    .variant-page .page-title {
+        font-size: 22px;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 12px;
+    }
+
+    .variant-page .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 9px;
+        font-size: 12px;
+        color: #94a3b8;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        background: transparent;
+        text-decoration: none;
+        transition: .2s;
+    }
+
+    .variant-page .btn-back:hover {
+        color: #fff;
+        background: #1e293b;
+        border-color: #64748b;
+    }
+
+    /* =========================================
+       ATTRIBUTE INFO
+    ========================================= */
+
+    .variant-page .attribute-info {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 9px;
+        padding: 12px 14px;
+        margin-bottom: 6px;
+    }
+
+    .variant-page .attribute-label {
+        color: #94a3b8;
+        font-size: 12px;
+        margin-bottom: 3px;
+    }
+
+    .variant-page .attribute-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 19px;
+        font-weight: 600;
+        color: #e2e8f0;
+    }
+
+    .variant-page .attribute-code {
+        display: inline-block;
+        background: #64748b;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 9px;
+        border-radius: 4px;
+    }
+
+    /* =========================================
+       CARD
+    ========================================= */
+
+    .variant-page .card {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 9px;
+        color: #e2e8f0;
+        overflow: hidden;
+    }
+
+    .variant-page .card-header {
+        background: #0f172a;
+        border-bottom: 1px solid #334155;
+        padding: 11px 13px;
+    }
+
+    .variant-page .card-header h5 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+        color: #e2e8f0;
+    }
+
+    .variant-page .card-body {
+        padding: 14px;
+    }
+
+    .variant-page .card-footer {
+        background: #172036;
+        border-top: 1px solid #1e293b;
+        padding: 8px 13px;
+    }
+
+    /* =========================================
+       FORM
+    ========================================= */
+
+    .variant-page .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: #e2e8f0;
+        margin-bottom: 6px;
+    }
+
+    .variant-page .form-control {
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #e2e8f0;
+        border-radius: 5px;
+        font-size: 13px;
+        padding: 7px 10px;
+        min-height: 36px;
+    }
+
+    .variant-page .form-control::placeholder {
+        color: #94a3b8;
+        opacity: 1;
+    }
+
+    .variant-page .form-control:focus {
+        background: #0f172a;
+        color: #fff;
+        border-color: #00bfa5;
+        box-shadow: 0 0 0 3px rgba(0, 191, 165, .15);
+    }
+
+    .variant-page textarea.form-control {
+        min-height: 52px;
+        resize: vertical;
+    }
+
+    .variant-page .form-control[readonly] {
+        background: #111c32;
+        color: #94a3b8;
+        cursor: not-allowed;
+    }
+
+    .variant-page .dimension-row {
+        display: flex;
+        gap: 8px;
+    }
+
+    .variant-page .dimension-row .form-control {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .variant-page .dimension-help {
+        color: #94a3b8;
+        font-size: 11px;
+        line-height: 1.5;
+        margin-top: 3px;
+    }
+
+    .variant-page .dimension-help code {
+        color: #f472b6;
+        font-size: 10px;
+    }
+
+    /* =========================================
+       ACTIVE SWITCH
+    ========================================= */
+
+    .variant-page .form-check {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding-left: 0;
+        min-height: auto;
+    }
+
+    .variant-page .form-check-input {
+        float: none;
+        margin: 0;
+        width: 27px;
+        height: 14px;
+        background-color: #334155;
+        border: none;
+        cursor: pointer;
+    }
+
+    .variant-page .form-check-input:checked {
+        background-color: #37699e;
+        border-color: #37699e;
+    }
+
+    .variant-page .form-check-input:focus {
+        box-shadow: 0 0 0 3px rgba(55, 105, 158, .2);
+    }
+
+    .variant-page .form-check-label {
+        font-size: 13px;
+        color: #e2e8f0;
+        cursor: pointer;
+    }
+
+    /* =========================================
+       BUTTONS
+    ========================================= */
+
+    .variant-page .btn-primary {
+        background: #37699e;
+        border-color: #37699e;
+        color: #fff;
+        font-size: 13px;
+        border-radius: 5px;
+        padding: 6px 11px;
+    }
+
+    .variant-page .btn-primary:hover {
+        background: #2d5988;
+        border-color: #2d5988;
+    }
+
+    .variant-page .action-btn {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 29px;
+        height: 29px;
+        border: 1px solid #334155;
+        background: #172036;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: .2s;
+    }
+
+    .variant-page .action-edit {
+        color: #60a5fa;
+    }
+
+    .variant-page .action-edit:hover {
+        background: #1e3a5f;
+        border-color: #3b82f6;
+    }
+
+    .variant-page .action-delete {
+        color: #f87171;
+    }
+
+    .variant-page .action-delete:hover {
+        background: #451a1a;
+        border-color: #ef4444;
+    }
+
+    /* =========================================
+       TABLE
+    ========================================= */
+
+    .variant-page .table-responsive {
+        overflow-x: auto;
+    }
+
+    .variant-page .table {
+        width: 100%;
+        margin-bottom: 0;
+        color: #e2e8f0;
+        border-color: #334155;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .variant-page .table thead th {
+        background: #172036;
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 500;
+        text-transform: uppercase;
+        padding: 8px 10px;
+        border-color: #334155;
+        vertical-align: middle;
+    }
+
+    .variant-page .table tbody td {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 8px 10px;
+        border-color: #334155;
+        vertical-align: middle;
+    }
+
+    .variant-page .table tbody tr:hover td {
+        background: #172036;
+    }
+
+    .variant-page .table .variant-code {
+        font-weight: 600;
+    }
+
+    .variant-page .table .variant-name {
+        font-weight: 500;
+    }
+
+    .variant-page .table .variant-description {
+        color: #94a3b8;
+    }
+
+    .variant-page .table .badge {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 4px 7px;
+        border-radius: 4px;
+    }
+
+    .variant-page .table .badge.bg-success {
+        background: #198754 !important;
+    }
+
+    .variant-page .table .badge.bg-secondary {
+        background: #64748b !important;
+    }
+
+    .variant-page .empty-state {
+        color: #94a3b8;
+        text-align: center;
+        padding: 25px 10px !important;
+    }
+
+    .variant-page .drag-handle {
+        color: #64748b;
+        cursor: grab;
+    }
+
+</style>
+
+<style>
+    /* ==========================================
+       DRAG & DROP VARIANT
+       ========================================== */
+
+    .variant-drag-row {
+        cursor: grab;
+    }
+
+    .variant-drag-row:active {
+        cursor: grabbing;
+    }
+
+    .variant-drag-row.dragging {
+        opacity: 0.5;
+    }
+
+    .variant-drag-row.drag-over {
+        border-top: 2px solid #00a89d;
+    }
+
+    .drag-handle {
+        cursor: grab;
+        color: #6c757d;
+        margin-right: 5px;
+    }
+
+    .drag-handle:hover {
+        color: #00a89d;
+    }
+</style>
+
+<div class="container-fluid variant-page">
+
+    <!-- HEADER -->
+    <div class="mb-2">
+
+        <h3 class="page-title">
+            Varian — @ViewBag.Name
+        </h3>
+
+        <a asp-controller="ProductAttributes"
+           asp-action="Index"
+           class="btn-back">
+
+            <i class="bi bi-arrow-left"></i>
+            Kembali ke Atribut
+
+        </a>
+
+    </div>
+
+    <!-- ATTRIBUTE INFO -->
+    <div class="attribute-info">
+
+        <div class="attribute-label">
+            Atribut
+        </div>
+
+        <div class="attribute-name">
+            @ViewBag.Name
+            <span class="attribute-code">
+                 @ViewBag.Code
+            </span>
+
+        </div>
+
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-4 form-column">
+
+            <div class="card h-100">
+
+                <div class="card-header">
+                    <h5 id="variantFormTitle">Tambah Varian</h5>
+                </div>
+
+                <form id="variantForm"
+                      asp-controller="AttributeVariants"
+                      asp-action="Create"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="AttributeId"
+                           value="@attributeId" />
+
+                    <input type="hidden"
+                           name="Id"
+                           id="editVariantId" />
+
+                    <div class="card-body">
+
+                        <!-- KODE -->
+                        <div class="mb-2">
+
+                            <label class="form-label">
+                                Kode
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Otomatis saat disimpan (VARxxx)"
+                                   readonly />
+
+                        </div>
+
+                        <!-- NAMA -->
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Nama Varian
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <input type="text"
+                                   name="Name"
+                                   class="form-control"
+                                   placeholder="mis. Merah, M, 200×120"
+                                   required />
+
+                        </div>
+
+                        <!-- DIMENSI -->
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Dimensi per satuan (cm)
+                            </label>
+
+                            <div class="dimension-row">
+
+                                <input type="number"
+                                       name="DefLength"
+                                       class="form-control"
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="Panjang" />
+
+                                <input type="number"
+                                       name="DefWidth"
+                                       class="form-control"
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="Lebar" />
+
+                                <input type="number"
+                                       name="DefHeight"
+                                       class="form-control"
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="Tinggi" />
+
+                            </div>
+
+                            <div class="dimension-help">
+                                Otomatis terisi dari Nama (mis.
+                                <code>200x100x10.5</code> → 200, 100, 10.5).
+                                Boleh diubah manual.
+                            </div>
+
+                        </div>
+
+                        <!-- KETERANGAN -->
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Keterangan
+                            </label>
+
+                            <textarea name="Description"
+                                      class="form-control"
+                                      rows="2"
+                                      placeholder="opsional"></textarea>
+
+                        </div>
+
+                        <!-- URUTAN -->
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Urutan
+                            </label>
+
+                            <input type="number"
+                                   name="SortOrder"
+                                   class="form-control"
+                                   value="0" />
+
+                        </div>
+
+                        <!-- STATUS -->
+                        <div class="mb-2">
+                            <div class="form-check form-switch">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="variantActive"
+                                       name="IsActive"
+                                       value="true"
+                                       checked />
+
+                                <input type="hidden"
+                                       name="IsActive"
+                                       value="false" />
+
+                                <label class="form-check-label ms-2"
+                                       for="variantActive">
+                                    Aktif
+                                </label>
+
+                            </div>
+                        </div>
+                        
+                    </div>
+
+                    <!-- BUTTON -->
+                    <div class="card-footer">
+
+                        <button type="submit"
+                                id="variantSubmitButton"
+                                class="btn btn-primary">
+
+                            <i class="bi bi-plus-circle"
+                               id="variantSubmitIcon"></i>
+
+                            <span id="variantSubmitText">Tambah</span>
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+        <!-- ================================= -->
+        <!-- TABEL VARIANT -->
+        <!-- ================================= -->
+
+        <div class="col-lg-8 table-column">
+
+            <div class="card">
+
+                <div class="card-header d-flex align-items-center justify-content-between">
+
+                    <h5>
+                        Daftar Varian (@Model.TotalData)
+                    </h5>
+
+                 <span class="menu-description small d-flex align-items-center gap-1">
+                   <i class="bi bi-grip-vertical"></i>
+                   Geser baris untuk mengubah urutan
+                </span>
+
+                </div>
+
+                <div class="table-responsive">
+
+                    <table class="table table-hover align-middle">
+
+                        <thead>
+
+                            <tr>
+
+                                <th class="text-center" style="width: 35px;">
+                                    Urut
+                                </th>
+
+                                <th style="width: 110px;">
+                                    Kode
+                                </th>
+
+                                <th>
+                                    Nama Varian
+                                </th>
+
+                                <th>
+                                    Dimensi P×L×T
+                                </th>
+
+                                <th>
+                                    Keterangan
+                                </th>
+
+                                <th class="text-center">
+                                    Status
+                                </th>
+
+                                <th class="text-center" style="width: 90px;">
+                                    Aksi
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="variantTableBody">
+
+                            @if (Model.Data.Any())
+                            {
+                                foreach (var item in Model.Data)
+                                {
+                                   
+                                    <tr class="variant-drag-row"
+                                        draggable="true"
+                                        data-id="@item.Id">
+                                        
+
+                                        <td class="text-center variant-order">
+                                            <i class="bi bi-grip-vertical drag-handle"></i>
+                                            @item.SortOrder
+                                         </td>
+
+                                        <td class="variant-code">
+                                            @item.Code
+                                        </td>
+
+                                        <td class="variant-name">
+                                            @item.Name
+                                        </td>
+
+                                        <td>
+                                            @(item.DefLength?.ToString("0.##") ?? "")  ×
+                                            @(item.DefWidth?.ToString("0.##") ?? "")  ×
+                                            @(item.DefHeight?.ToString("0.##") ?? "") 
+                                        </td>
+
+                                        <td class="variant-description">
+                                            @item.Description
+                                        </td>
+
+                                        <td class="text-center">
+
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="badge bg-success">
+                                                    Aktif
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">
+                                                    Tidak Aktif
+                                                </span>
+                                            }
+
+                                        </td>
+
+                                        <td class="text-center">
+
+                                            <div class="d-flex justify-content-center gap-2">
+
+                                                <button type="button"
+                                                        class="action-btn action-edit"
+                                                        title="Edit"
+                                                        onclick="openEditProductVariant(@item.Id, @attributeId)">
+
+                                                    <i class="bi bi-pencil-square"></i>
+
+                                                </button>
+
+                                                <form asp-action="Delete"
+                                                      method="post"
+                                                      class="d-inline">
+
+                                                    @Html.AntiForgeryToken()
+
+                                                    <input type="hidden"
+                                                           name="id"
+                                                           value="@item.Id" />
+
+                                                    <input type="hidden"
+                                                           name="attributeId"
+                                                           value="@attributeId" />
+
+                                                    <button type="submit"
+                                                            class="action-btn action-delete"
+                                                            title="Hapus"
+                                                            onclick="return confirm('Yakin ingin menghapus variant ini?')">
+
+                                                        <i class="bi bi-trash"></i>
+
+                                                    </button>
+
+                                                </form>
+
+                                            </div>
+
+                                        </td>
+
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+
+                                    <td colspan="7"
+                                        class="empty-state">
+
+                                        Belum ada varian.
+
+                                    </td>
+
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+@section Scripts {
+<script>
+
+    async function openEditProductVariant(id, attributeId) {
+
+        try {
+
+            const url =
+                '@Url.Action("GetById", "AttributeVariants")'
+                + '?attributeId=' + attributeId
+                + '&id=' + id;
+
+            console.log("URL:", url);
+
+            const response = await fetch(url);
+
+            console.log("URL:", url);
+            console.log("STATUS:", response.status);
+
+            const responseText = await response.text();
+
+            console.log("RESPONSE:", responseText);
+
+            if (!response.ok) {
+
+               throw new Error(
+                   "HTTP " +
+                   response.status +
+                   " - " +
+                   responseText
+                );
+
+            }
+
+            const variant = JSON.parse(responseText);
+
+            console.log("DATA VARIANT:", variant);
+
+
+            // ==========================
+            // ID
+            // ==========================
+
+            document.getElementById(
+                "editVariantId"
+            ).value = variant.id;
+
+
+            // ==========================
+            // NAMA
+            // ==========================
+
+            document.querySelector(
+                '#variantForm input[name="Name"]'
+            ).value = variant.name ?? "";
+
+
+            // ==========================
+            // TINGGI
+            // ==========================
+
+            document.querySelector(
+                '#variantForm input[name="DefHeight"]'
+            ).value = variant.defHeight ?? "";
+
+
+            // ==========================
+            // LEBAR
+            // ==========================
+
+            document.querySelector(
+                '#variantForm input[name="DefWidth"]'
+            ).value = variant.defWidth ?? "";
+
+
+            // ==========================
+            // PANJANG
+            // ==========================
+
+            document.querySelector(
+                '#variantForm input[name="DefLength"]'
+            ).value = variant.defLength ?? "";
+
+
+            // ==========================
+            // URUTAN
+            // ==========================
+
+            document.querySelector(
+                '#variantForm input[name="SortOrder"]'
+            ).value = variant.sortOrder ?? 0;
+
+
+            // ==========================
+            // KETERANGAN
+            // ==========================
+
+            document.querySelector(
+                '#variantForm textarea[name="Description"]'
+            ).value = variant.description ?? "";
+
+
+            // ==========================
+            // STATUS
+            // ==========================
+
+            document.querySelector(
+                '#variantForm input[name="IsActive"]'
+            ).checked = variant.isActive;
+
+
+            // ==========================
+            // UBAH JUDUL
+            // ==========================
+
+            document.getElementById(
+                "variantFormTitle"
+            ).innerText = "Edit Varian";
+
+
+            // ==========================
+            // UBAH ACTION FORM
+            // ==========================
+
+            document.getElementById(
+                "variantForm"
+            ).action =
+                '@Url.Action("Edit", "AttributeVariants")';
+
+
+            // ==========================
+            // UBAH TOMBOL
+            // ==========================
+
+            document.getElementById(
+                "variantSubmitText"
+            ).innerText = "Simpan Perubahan";
+
+            document.getElementById(
+                "variantSubmitIcon"
+            ).className = "bi bi-check-circle";
+
+
+        }
+        catch (error) {
+
+            console.error(
+                "ERROR EDIT VARIANT:",
+                error
+            );
+
+            alert(
+                "Error: " + error.message
+            );
+
+        }
+
+    }
+
+    // ==========================================
+// OTOMATIS ISI DIMENSI DARI NAMA VARIAN
+// ==========================================
+
+const variantNameInput =
+    document.querySelector('#variantForm input[name="Name"]');
+
+const lengthInput =
+    document.querySelector('#variantForm input[name="DefLength"]');
+
+const widthInput =
+    document.querySelector('#variantForm input[name="DefWidth"]');
+
+const heightInput =
+    document.querySelector('#variantForm input[name="DefHeight"]');
+
+
+if (variantNameInput) {
+
+    variantNameInput.addEventListener("input", function () {
+
+        const value = this.value.trim();
+
+        // Contoh:
+        // 2x2x4
+        // 2 x 2 x 4
+        // 2×2×4
+
+        const match = value.match(
+            /^(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)$/i
+        );
+
+        if (!match) {
+            return;
+        }
+
+        const panjang = match[1].replace(",", ".");
+        const lebar = match[2].replace(",", ".");
+        const tinggi = match[3].replace(",", ".");
+
+        lengthInput.value = panjang;
+        widthInput.value = lebar;
+        heightInput.value = tinggi;
+
+    });
+
+}
+
+   // ==========================================
+// DRAG & DROP VARIANT
+// ==========================================
+
+const variantTableBody =
+    document.getElementById("variantTableBody");
+
+let draggedRow = null;
+
+
+// ===============================
+// DRAG START
+// ===============================
+
+variantTableBody.addEventListener("dragstart", function (e) {
+
+    const row =
+        e.target.closest(".variant-drag-row");
+
+    if (!row) return;
+
+    draggedRow = row;
+
+    row.classList.add("dragging");
+
+    e.dataTransfer.effectAllowed = "move";
+});
+
+
+// ===============================
+// DRAG OVER
+// ===============================
+
+variantTableBody.addEventListener("dragover", function (e) {
+
+    e.preventDefault();
+
+    const targetRow =
+        e.target.closest(".variant-drag-row");
+
+    if (!targetRow ||
+        targetRow === draggedRow)
+        return;
+
+
+    document
+        .querySelectorAll(".variant-drag-row")
+        .forEach(row => {
+
+            row.classList.remove("drag-over");
+
+        });
+
+
+    targetRow.classList.add("drag-over");
+
+
+    const rect =
+        targetRow.getBoundingClientRect();
+
+    const middle =
+        rect.top + rect.height / 2;
+
+
+    if (e.clientY < middle) {
+
+        targetRow.before(draggedRow);
+
+    }
+    else {
+
+        targetRow.after(draggedRow);
+
+    }
+
+});
+
+
+// ===============================
+// DRAG END
+// ===============================
+
+variantTableBody.addEventListener("dragend", async function () {
+
+    if (draggedRow) {
+
+        draggedRow.classList.remove("dragging");
+
+    }
+
+
+    document
+        .querySelectorAll(".variant-drag-row")
+        .forEach(row => {
+
+            row.classList.remove("drag-over");
+
+        });
+
+
+    // ===============================
+    // AMBIL URUTAN BARU
+    // ===============================
+
+    const rows =
+        document.querySelectorAll(
+            "#variantTableBody .variant-drag-row"
+        );
+
+
+    const items = [];
+
+
+    rows.forEach((row, index) => {
+
+        const id =
+            row.getAttribute("data-id");
+
+        const sortOrder =
+            index + 1;
+
+
+        items.push({
+            id: Number(id),
+            sortOrder: sortOrder
+        });
+
+
+        // ===============================
+        // UPDATE NOMOR URUT DI TABEL
+        // ===============================
+
+        const orderCell =
+            row.querySelector(".variant-order");
+
+
+        if (orderCell) {
+
+            orderCell.innerHTML =
+                '<i class="bi bi-grip-vertical drag-handle"></i> '
+                + sortOrder;
+
+        }
+
+    });
+
+
+    draggedRow = null;
+
+
+    // ===============================
+    // SIMPAN KE SERVER
+    // ===============================
+
+    try {
+
+        const response =
+            await fetch(
+                '@Url.Action("Reorder", "AttributeVariants")'
+                + '?attributeId=@attributeId',
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+
+                        "RequestVerificationToken":
+                            document.querySelector(
+                                'input[name="__RequestVerificationToken"]'
+                            ).value
+                    },
+
+                    body:
+                        JSON.stringify(items)
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (!response.ok ||
+            !result.success) {
+
+            throw new Error(
+                result.message ||
+                "Gagal menyimpan urutan variant."
+            );
+
+        }
+
+
+        // ===============================
+        // NOTIFIKASI
+        // ===============================
+
+        alert(
+            "Urutan variant berhasil disimpan."
+        );
+
+
+       
+
+
+    }
+    catch (error) {
+
+        console.error(
+            "ERROR SIMPAN URUTAN:",
+            error
+        );
+
+
+        alert(
+            "Gagal menyimpan urutan variant."
+        );
+
+    }
+
+});
+</script>
+}

@@ -1,0 +1,979 @@
+@using ERP.Web.Models
+@model PagedResult<WarehouseViewModel>
+
+@{
+    ViewData["Title"] = "Gudang";
+
+    var no = ((Model.Page - 1) * Model.PageSize);
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">Gudang</h3>
+
+    <!-- ========================================== -->
+    <!-- FILTER CARD -->
+    <!-- ========================================== -->
+
+    <div class="card supplier-card supplier-filter">
+
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">Filter</span>
+            </div>
+
+            <button class="btn btn-sm text-muted p-0"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#filterCollapse"
+                    aria-expanded="true"
+                    aria-controls="filterCollapse">
+
+                <i class="bi bi-chevron-down"></i>
+
+            </button>
+
+        </div>
+
+        <div class="collapse show" id="filterCollapse">
+
+            <div class="card-body">
+
+                <form method="get"
+                      asp-action="Index"
+                      asp-controller="Warehouse"
+                      class="row g-2 align-items-end">
+
+                    <!-- SEARCH -->
+                    <div class="col-md-3">
+
+                        <label for="search" class="form-label">
+                            Cari
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="search"
+                               name="search"
+                               value="@Context.Request.Query["search"]" />
+
+                    </div>
+
+                    <!-- IS DEFAULT -->
+                    <div class="col-md-2">
+
+                        <label for="isDefault" class="form-label">
+                            Is Default
+                        </label>
+
+                        <select class="form-select"
+                                id="isDefault"
+                                name="isDefault">
+
+                            <option value=""
+                                    selected="@(Context.Request.Query["isDefault"] == "")">
+                                -- Semua --
+                            </option>
+
+                            <option value="true"
+                                    selected="@(Context.Request.Query["isDefault"] == "true")">
+                                Ya
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["isDefault"] == "false")">
+                                Tidak
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- IS ACTIVE -->
+                    <div class="col-md-2">
+
+                        <label for="isActive" class="form-label">
+                            Is Active
+                        </label>
+
+                        <select class="form-select"
+                                id="isActive"
+                                name="isActive">
+
+                            <option value=""
+                                    selected="@(Context.Request.Query["isActive"] == "")">
+                                -- Semua --
+                            </option>
+
+                            <option value="true"
+                                    selected="@(Context.Request.Query["isActive"] == "true")">
+                                Aktif
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["isActive"] == "false")">
+                                Nonaktif
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- PAGE SIZE -->
+                    <div class="col-md-2">
+
+                        <label for="pageSize" class="form-label">
+                            Per Halaman
+                        </label>
+
+                        <select class="form-select"
+                                id="pageSize"
+                                name="pageSize">
+
+                            <option value="10" selected="@(Model.PageSize == 10)">
+                                10
+                            </option>
+
+                            <option value="25" selected="@(Model.PageSize == 25)">
+                                25
+                            </option>
+
+                            <option value="50" selected="@(Model.PageSize == 50)">
+                                50
+                            </option>
+
+                            <option value="100" selected="@(Model.PageSize == 100)">
+                                100
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- BUTTON -->
+                    <div class="col-md-3 d-flex gap-2">
+
+                        <button type="submit"
+                                class="btn btn-primary d-flex align-items-center gap-2">
+
+                            <i class="bi bi-search"></i>
+                            Terapkan
+
+                        </button>
+
+                        <a asp-action="Index"
+                           asp-controller="Warehouse"
+                           class="btn btn-outline-secondary"
+                           title="Reset Filter">
+
+                            <i class="bi bi-arrow-counterclockwise"></i>
+
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- DATA TABLE CARD -->
+    <!-- ========================================== -->
+
+    <div class="card supplier-card supplier-table-card">
+
+        <!-- HEADER -->
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+            <div class="d-flex align-items-center gap-2">
+
+                <span class="fw-bold fs-5">
+                    Gudang
+                </span>
+
+                <span class="badge badge-count">
+                    @Model.TotalCount
+                </span>
+
+                <span class="menu-description small ms-1">
+                    Kelola data gudang / lokasi penyimpanan
+                </span>
+
+            </div>
+
+            <!-- TOOLBAR -->
+            <div class="d-flex align-items-center gap-2">
+
+                <!-- EXPORT PDF -->
+                <a asp-action="ExportPdf"
+                   asp-controller="Warehouse"
+                   class="btn btn-light btn-custom-square text-danger"
+                   title="Export PDF">
+
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+
+                </a>
+
+                <!-- EXPORT EXCEL -->
+                <a asp-action="ExportExcel"
+                   asp-controller="Warehouse"
+                   class="btn btn-light btn-custom-square text-success"
+                   title="Export Excel">
+
+                    <i class="bi bi-file-earmark-excel-fill"></i>
+
+                </a>
+
+                <!-- PRINT -->
+                <a asp-action="Print"
+                   asp-controller="Warehouse"
+                   class="btn btn-light btn-custom-square text-secondary"
+                   title="Cetak"
+                   target="_blank">
+
+                    <i class="bi bi-printer-fill"></i>
+
+                </a>
+
+                <!-- REFRESH -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Refresh Data"
+                        onclick="loadWarehouses()">
+
+                    <i class="bi bi-arrow-clockwise"></i>
+
+                </button>
+
+                <!-- TOGGLE -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Toggle">
+
+                    <i class="bi bi-chevron-up"></i>
+
+                </button>
+
+                <!-- ADD -->
+                <button type="button"
+                        class="btn btn-teal btn-custom-action"
+                        id="btnAddWarehouse"
+                        onclick="openCreateModal()">
+
+                    <i class="bi bi-plus-circle"></i>
+
+                    <span>
+                        Tambah Gudang
+                    </span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- TABLE -->
+        <!-- ========================================== -->
+
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0 supplier-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th class="ps-4" style="width: 50px;">
+                                #
+                            </th>
+
+                            <th style="width: 130px;">
+                                CODE
+                            </th>
+
+                            <th>
+                                NAME
+                            </th>
+
+                            <th style="width: 150px;">
+                                PHONE
+                            </th>
+
+                            <th style="width: 180px;">
+                                PIC NAME
+                            </th>
+
+                            <th class="text-center" style="width: 120px;">
+                                IS DEFAULT
+                            </th>
+
+                            <th class="text-center" style="width: 120px;">
+                                IS ACTIVE
+                            </th>
+
+                            <th class="text-center" style="width: 120px;">
+                                AKSI
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        @if (Model.Data != null && Model.Data.Any())
+                        {
+
+                            foreach (var item in Model.Data)
+                            {
+
+                                <tr>
+
+                                    <!-- NO -->
+                                    <td class="ps-4">
+                                        @(++no)
+                                    </td>
+
+                                    <!-- CODE -->
+                                    <td>
+                                        @item.Code
+                                    </td>
+
+                                    <!-- NAME -->
+                                    <td>
+                                        @item.Name
+                                    </td>
+
+                                    <!-- PHONE -->
+                                    <td>
+                                        @item.Phone
+                                    </td>
+
+                                    <!-- PIC -->
+                                    <td>
+                                        @item.PicName
+                                    </td>
+
+                                    <!-- IS DEFAULT -->
+                                    <td class="text-center">
+
+                                        @if (item.IsDefault)
+                                        {
+                                            <span class="badge bg-success">
+                                                Ya
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">
+                                                Tidak
+                                            </span>
+                                        }
+
+                                    </td>
+
+                                    <!-- IS ACTIVE -->
+                                    <td class="text-center">
+
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge bg-success">
+                                                Aktif
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">
+                                                Tidak Aktif
+                                            </span>
+                                        }
+
+                                    </td>
+
+                                    <!-- ACTION -->
+                                    <td class="text-center">
+
+                                        <div class="d-flex justify-content-center gap-1">
+
+                                            <!-- EDIT -->
+                                            <button type="button"
+                                                    class="btn btn-sm menu-action-edit"
+                                                    title="Edit"
+                                                    data-id="@item.Id"
+                                                    data-code="@item.Code"
+                                                    data-name="@item.Name"
+                                                    data-address="@item.Address"
+                                                    data-phone="@item.Phone"
+                                                    data-pic-name="@item.PicName"
+                                                    data-is-default="@item.IsDefault.ToString().ToLowerInvariant()"
+                                                    data-is-active="@item.IsActive.ToString().ToLowerInvariant()"
+                                                    onclick="openEditModal(this)">
+
+                                                <i class="bi bi-pencil"></i>
+
+                                            </button>
+
+                                            <!-- DELETE -->
+                                            <form method="post"
+                                                  asp-action="Delete"
+                                                  asp-controller="Warehouse"
+                                                  class="d-inline"
+                                                  onsubmit="return confirmDeleteWarehouse();">
+
+                                                @Html.AntiForgeryToken()
+
+                                                <input type="hidden"
+                                                       name="id"
+                                                       value="@item.Id" />
+
+                                                <button type="submit"
+                                                        class="btn btn-sm menu-action-delete"
+                                                        title="Hapus">
+
+                                                    <i class="bi bi-trash"></i>
+
+                                                </button>
+
+                                            </form>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+
+                            }
+
+                        }
+                        else
+                        {
+
+                            <tr>
+
+                                <td colspan="8"
+                                    class="text-center py-4 form-label">
+
+                                    <p class="menu-description">
+                                        Belum ada data gudang.
+                                    </p>
+
+                                </td>
+
+                            </tr>
+
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- FOOTER / PAGINATION -->
+            <!-- ========================================== -->
+
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+
+                @{
+
+                    var startItem = Model.TotalCount == 0
+                        ? 0
+                        : ((Model.Page - 1) * Model.PageSize) + 1;
+
+                    var endItem = Math.Min(
+                        Model.Page * Model.PageSize,
+                        Model.TotalCount
+                    );
+
+                }
+
+                <span class="menu-description small">
+
+                    Menampilkan
+
+                    <strong>
+                        @startItem – @endItem
+                    </strong>
+
+                    dari
+
+                    <strong>
+                        @Model.TotalCount
+                    </strong>
+
+                    data
+
+                </span>
+
+                @{
+
+                    var currentPage = Model.Page;
+                    var totalPages = Model.TotalPage;
+
+                }
+
+                <nav aria-label="Pagination">
+
+                    <ul class="pagination mb-0">
+
+                        <!-- PREVIOUS -->
+                        <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", "Warehouse", new
+                               {
+                                   search = Context.Request.Query["search"],
+                                   isDefault = Context.Request.Query["isDefault"],
+                                   isActive = Context.Request.Query["isActive"],
+                                   page = currentPage - 1,
+                                   pageSize = Model.PageSize
+                               })">
+
+                                Sebelumnya
+
+                            </a>
+
+                        </li>
+
+                        <!-- PAGE NUMBERS -->
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+
+                                <a class="page-link"
+                                   href="@Url.Action("Index", "Warehouse", new
+                                   {
+                                       search = Context.Request.Query["search"],
+                                       isDefault = Context.Request.Query["isDefault"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = i,
+                                       pageSize = Model.PageSize
+                                   })">
+
+                                    @i
+
+                                </a>
+
+                            </li>
+
+                        }
+
+                        <!-- NEXT -->
+                        <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", "Warehouse", new
+                               {
+                                   search = Context.Request.Query["search"],
+                                   isDefault = Context.Request.Query["isDefault"],
+                                   isActive = Context.Request.Query["isActive"],
+                                   page = currentPage + 1,
+                                   pageSize = Model.PageSize
+                               })">
+
+                                Berikutnya
+
+                            </a>
+
+                        </li>
+
+                    </ul>
+
+                </nav>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================== -->
+<!-- MODAL CREATE / EDIT -->
+<!-- ========================================== -->
+
+<div class="modal fade"
+     id="warehouseModal"
+     tabindex="-1"
+     aria-labelledby="modalTitle"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <div class="modal-content menu-modal-content">
+
+            <form method="post"
+                  id="warehouseForm"
+                  asp-controller="Warehouse"
+                  asp-action="Create">
+
+                @Html.AntiForgeryToken()
+
+                <!-- HEADER -->
+                <div class="modal-header menu-modal-header">
+
+                    <h5 class="modal-title fw-semibold menu-modal-title"
+                        id="modalTitle">
+
+                        Tambah Gudang
+
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+
+                    </button>
+
+                </div>
+
+
+                <!-- BODY -->
+                <div class="modal-body py-3">
+
+                    <input type="hidden"
+                           id="Id"
+                           name="Id"
+                           value="" />
+
+                    <div class="row g-3">
+
+                        <!-- CODE -->
+                        <div class="col-md-6">
+
+                            <label for="Code"
+                                   class="form-label fw-medium">
+
+                                Kode Gudang
+                                <span class="text-danger">*</span>
+
+                            </label>
+
+                            <input type="text"
+                                   class="form-control bg-transparent text-white border-secondary"
+                                   id="Code"
+                                   name="Code"
+                                   maxlength="20"
+                                   required />
+
+                        </div>
+
+
+                        <!-- NAME -->
+                        <div class="col-md-6">
+
+                            <label for="Name"
+                                   class="form-label fw-medium">
+
+                                Nama Gudang
+                                <span class="text-danger">*</span>
+
+                            </label>
+
+                            <input type="text"
+                                   class="form-control bg-transparent text-white border-secondary"
+                                   id="Name"
+                                   name="Name"
+                                   maxlength="100"
+                                   required />
+
+                        </div>
+
+
+                        <!-- PHONE -->
+                        <div class="col-md-6">
+
+                            <label for="Phone"
+                                   class="form-label fw-medium">
+
+                                Nomor Telepon
+
+                            </label>
+
+                            <input type="text"
+                                   class="form-control bg-transparent text-white border-secondary"
+                                   id="Phone"
+                                   name="Phone"
+                                   maxlength="30" />
+
+                        </div>
+
+
+                        <!-- PIC -->
+                        <div class="col-md-6">
+
+                            <label for="PicName"
+                                   class="form-label fw-medium">
+
+                                PIC Name
+
+                            </label>
+
+                            <input type="text"
+                                   class="form-control bg-transparent text-white border-secondary"
+                                   id="PicName"
+                                   name="PicName"
+                                   maxlength="100" />
+
+                        </div>
+
+
+                        <!-- ADDRESS -->
+                        <div class="col-12">
+
+                            <label for="Address"
+                                   class="form-label fw-medium">
+
+                                Alamat
+
+                            </label>
+
+                            <textarea class="form-control bg-transparent text-white border-secondary"
+                                      id="Address"
+                                      name="Address"
+                                      rows="3"></textarea>
+
+                        </div>
+
+
+                        <!-- DEFAULT -->
+                        <div class="col-md-6 mt-3">
+
+                            <div class="form-check form-switch">
+
+<input class="form-check-input"
+       type="checkbox"
+       role="switch"
+       id="IsDefault"
+       name="IsDefault"
+       value="true" />
+
+<input type="hidden"
+       name="IsDefault"
+       value="false" />
+
+                                <label class="form-check-label ms-2"
+                                       for="IsDefault">
+
+                                    Is Default
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ACTIVE -->
+                        <div class="col-md-6 mt-3">
+
+                            <div class="form-check form-switch">
+
+ <input class="form-check-input"
+       type="checkbox"
+       role="switch"
+       id="IsActive"
+       name="IsActive"
+       value="true" />
+
+<input type="hidden"
+       name="IsActive"
+       value="false" />
+
+                                <label class="form-check-label ms-2"
+                                       for="IsActive">
+
+                                    Aktif
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOOTER -->
+                <div class="modal-footer menu-modal-footer">
+
+                    <button type="submit"
+                            class="btn btn-primary px-3">
+
+                        <i class="bi bi-box-arrow-down me-2"></i>
+
+                        Simpan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary px-3"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section Scripts {
+
+<script>
+
+    // ==========================================
+    // MODAL
+    // ==========================================
+
+    const warehouseModalElement =
+        document.getElementById('warehouseModal');
+
+    const warehouseModal =
+        new bootstrap.Modal(warehouseModalElement);
+
+
+    // ==========================================
+    // REFRESH
+    // ==========================================
+
+    function loadWarehouses() {
+
+        location.reload();
+
+    }
+
+
+    // ==========================================
+    // CREATE
+    // ==========================================
+
+    function openCreateModal() {
+
+        document.getElementById('modalTitle').innerText =
+            'Tambah Gudang';
+
+        document.getElementById('warehouseForm').action =
+            '@Url.Action("Create", "Warehouse")';
+
+        document.getElementById('Id').value = '';
+
+        document.getElementById('Code').value = '';
+
+        document.getElementById('Name').value = '';
+
+        document.getElementById('Address').value = '';
+
+        document.getElementById('Phone').value = '';
+
+        document.getElementById('PicName').value = '';
+
+        document.getElementById('IsDefault').checked = false;
+
+        document.getElementById('IsActive').checked = true;
+
+        warehouseModal.show();
+
+    }
+
+
+    // ==========================================
+    // EDIT
+    // ==========================================
+
+    function openEditModal(button) {
+
+        const id = button.getAttribute('data-id'); 
+        const code = button.getAttribute('data-code'); 
+        const name = button.getAttribute('data-name'); 
+        const address = button.getAttribute('data-address'); 
+        const phone = button.getAttribute('data-phone'); 
+        const picName =  button.getAttribute('data-pic-name'); 
+        const isDefault = button.getAttribute('data-is-default'); 
+        const isActive = button.getAttribute('data-is-active');
+
+
+        if (!id || id === '0') {
+
+            alert('ID gudang tidak ditemukan.');
+
+            return;
+
+        }
+
+
+        document.getElementById('modalTitle').innerText = 'Edit Gudang';
+
+
+        // ==========================================
+        // FORM ACTION
+        // ==========================================
+
+        document.getElementById('warehouseForm').action =
+            '@Url.Action("Edit", "Warehouse")';
+
+
+        // ==========================================
+        // SET DATA
+        // ==========================================
+
+        document.getElementById('Id').value =
+            id;
+
+        document.getElementById('Code').value =
+            code || '';
+
+        document.getElementById('Name').value =
+            name || '';
+
+        document.getElementById('Address').value =
+            address || '';
+
+        document.getElementById('Phone').value =
+            phone || '';
+
+        document.getElementById('PicName').value = picName || ''; 
+        document.getElementById('IsDefault').checked = isDefault === 'true'; 
+        document.getElementById('IsActive').checked =  isActive === 'true';
+             
+        warehouseModal.show();
+
+    }
+
+    function confirmDeleteWarehouse() {
+
+        return confirm(
+            "Hapus data gudang ini?"
+        );
+
+    }
+
+</script>
+
+}

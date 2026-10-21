@@ -1,0 +1,510 @@
+@model CustomerViewModel
+
+@{
+    ViewData["Title"] = "Tambah Customers";
+}
+
+<div class="page-header">
+    <h1>Tambah Customers</h1>
+</div>
+
+<div class="customer-form-card">
+
+    <div class="customer-form-header">
+        <h3>Tambah Customers</h3>
+    </div>
+
+    <form asp-action="Create"
+          method="post"
+          enctype="multipart/form-data">
+
+        @Html.AntiForgeryToken()
+
+        <div class="customer-form-body">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger mb-3"></div>
+
+
+            <!-- FOTO -->
+            <div class="customer-photo-section">
+
+                <div class="customer-photo-preview">
+
+                    <div id="photoPlaceholder"
+                         class="customer-photo-placeholder">
+
+                        📦
+
+                    </div>
+
+                    <img id="photoPreview"
+                         class="customer-photo-image"
+                         style="display:none;"
+                         alt="Preview Foto" />
+
+                </div>
+
+
+                <label for="imageInput"
+                       class="btn btn-outline-secondary btn-sm">
+
+                    🖼 Pilih Foto/Logo
+
+                </label>
+
+                <input id="imageInput"
+                       name="file"
+                       type="file"
+                       accept=".jpg,.jpeg,.png,.webp"
+                       style="display:none;" />
+
+                <div class="photo-info">
+                    JPG/PNG/WEBP, maks 2 MB.
+                </div>
+
+            </div>
+
+
+            <!-- FULL NAME -->
+            <div class="mb-3">
+
+                <label asp-for="FullName"
+                       class="form-label">
+                    Full Name <span class="text-danger">*</span>
+                </label>
+
+                <input asp-for="FullName"
+                       class="form-control" />
+
+                <span asp-validation-for="FullName"
+                      class="text-danger"></span>
+
+            </div>
+
+
+            <!-- EMAIL + PHONE -->
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+
+                    <label asp-for="Email"
+                           class="form-label">
+                        Email <span class="text-danger">*</span>
+                    </label>
+
+                    <input asp-for="Email"
+                           class="form-control"
+                           type="email" />
+
+                    <span asp-validation-for="Email"
+                          class="text-danger"></span>
+
+                </div>
+
+                <div class="col-md-6 mb-3">
+
+                    <label asp-for="Phone"
+                           class="form-label">
+                        Phone <span class="text-danger">*</span>
+                    </label>
+
+                    <input asp-for="Phone"
+                           class="form-control" />
+
+                    <span asp-validation-for="Phone"
+                          class="text-danger"></span>
+
+                </div>
+
+            </div>
+
+
+            <!-- NIK + NPWP -->
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+
+                    <label asp-for="Nik"
+                           class="form-label">
+                        NIK (No. KTP)
+                    </label>
+
+                    <input asp-for="Nik"
+                           class="form-control"
+                           placeholder="16 digit" />
+
+                    <span asp-validation-for="Nik"
+                          class="text-danger"></span>
+
+                </div>
+
+                <div class="col-md-6 mb-3">
+
+                    <label asp-for="Npwp"
+                           class="form-label">
+                        NPWP
+                    </label>
+
+                    <input asp-for="Npwp"
+                           class="form-control" />
+
+                    <span asp-validation-for="Npwp"
+                          class="text-danger"></span>
+
+                </div>
+
+            </div>
+
+
+            <!-- CUSTOMER GROUP + SALES FORCE -->
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+
+                    <label asp-for="CustomerGroupId"
+                           class="form-label">
+                        Kelompok Customer
+                    </label>
+
+                    <select asp-for="CustomerGroupId"
+                            class="form-select">
+
+                        <option value="">
+                            — Tanpa kelompok —
+                        </option>
+
+                        @if (ViewBag.CustomerGroups != null)
+                        {
+                            foreach (var item in ViewBag.CustomerGroups)
+                            {
+                                <option value="@item.Id">
+                                    @item.Name
+                                </option>
+                            }
+                        }
+
+                    </select>
+
+                    <div class="form-help">
+                        Diskon default kelompok akan otomatis terisi saat membuat Sales Order.
+                    </div>
+
+                    <span asp-validation-for="CustomerGroupId"
+                          class="text-danger"></span>
+
+                </div>
+
+
+                <div class="col-md-6 mb-3">
+
+                    <label asp-for="SalesForceId"
+                           class="form-label">
+                        Sales Force
+                    </label>
+
+                    <select asp-for="SalesForceId"
+                            class="form-select">
+
+                        <option value="">
+                            — Tanpa sales —
+                        </option>
+
+                        @if (ViewBag.SalesForces != null)
+                        {
+                            foreach (var item in ViewBag.SalesForces)
+                            {
+                                <option value="@item.Id">
+                                    @item.Name
+                                </option>
+                            }
+                        }
+
+                    </select>
+
+                    <div class="form-help">
+                        Penanggung jawab penjualan untuk customer ini.
+                    </div>
+
+                    <span asp-validation-for="SalesForceId"
+                          class="text-danger"></span>
+
+                </div>
+
+            </div>
+
+
+            <!-- PRICE LIST -->
+            <div class="mb-3">
+
+                <label asp-for="PriceListId"
+                       class="form-label">
+                    Price List (Harga Khusus)
+                </label>
+
+                <select asp-for="PriceListId"
+                        class="form-select">
+
+                    <option value="">
+                        — Ikut kelompok / harga default —
+                    </option>
+
+                    @if (ViewBag.PriceLists != null)
+                    {
+                        foreach (var item in ViewBag.PriceLists)
+                        {
+                            <option value="@item.Id">
+                                @item.Name
+                            </option>
+                        }
+                    }
+
+                </select>
+
+                <div class="form-help">
+                    Harga khusus customer ini (menang atas kelompok).
+                    Kosong = ikut kelompok / harga default.
+                    Diskon kelompok tetap ditumpuk di atasnya.
+                </div>
+
+                <span asp-validation-for="PriceListId"
+                      class="text-danger"></span>
+
+            </div>
+
+
+            <!-- ALAMAT -->
+            <div class="mb-3">
+
+                <label asp-for="Address"
+                       class="form-label">
+                    Alamat Utama (Penagihan)
+                    <span class="text-danger">*</span>
+                </label>
+
+                <textarea asp-for="Address"
+                          class="form-control"
+                          rows="3"></textarea>
+
+                <span asp-validation-for="Address"
+                      class="text-danger"></span>
+
+            </div>
+
+
+            <!-- SHIPPING ADDRESS INFO -->
+            <div class="shipping-info">
+
+                🚚 Alamat pengiriman (bisa lebih dari satu)
+                dapat ditambahkan setelah customer disimpan,
+                lewat halaman Edit.
+
+            </div>
+
+
+            <!-- IS ACTIVE -->
+            <div class="form-check form-switch mt-3">
+
+                <input type="hidden"
+                       name="IsActive"
+                       value="false" />
+
+                <input asp-for="IsActive"
+                       class="form-check-input"
+                       type="checkbox"
+                       value="true"
+                       checked />
+
+                <label asp-for="IsActive"
+                       class="form-check-label">
+                    Is Active
+                </label>
+
+            </div>
+
+        </div>
+
+
+        <!-- FOOTER -->
+        <div class="customer-form-footer">
+
+            <button type="submit"
+                    class="btn btn-primary">
+                💾 Simpan
+            </button>
+
+            <a asp-action="Index"
+               class="btn btn-secondary">
+                Batal
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<script>
+
+    // =========================================================
+    // PHOTO PREVIEW
+    // =========================================================
+
+    document
+        .getElementById("imageInput")
+        .addEventListener("change", function (event) {
+
+            const file = event.target.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            const preview =
+                document.getElementById("photoPreview");
+
+            const placeholder =
+                document.getElementById("photoPlaceholder");
+
+            const reader =
+                new FileReader();
+
+            reader.onload = function (e) {
+
+                preview.src = e.target.result;
+
+                preview.style.display = "block";
+
+                if (placeholder) {
+                    placeholder.style.display = "none";
+                }
+
+            };
+
+            reader.readAsDataURL(file);
+
+        });
+
+</script>
+
+
+<style>
+
+    .customer-form-card {
+        width: 100%;
+        max-width: none;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .customer-form-header {
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--card-border);
+    }
+
+        .customer-form-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: var(--text-main);
+        }
+
+    .customer-form-body {
+        padding: 14px 12px 18px;
+    }
+
+        .customer-form-body .form-label {
+            color: var(--text-main);
+            margin-bottom: 7px;
+            font-size: 13px;
+        }
+
+        .customer-form-body .form-control,
+        .customer-form-body .form-select {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            min-height: 30px;
+            font-size: 13px;
+        }
+
+            .customer-form-body .form-control:focus,
+            .customer-form-body .form-select:focus {
+                background: var(--card-bg);
+                color: var(--text-main);
+                border-color: var(--primary);
+                box-shadow: none;
+            }
+
+        .customer-form-body textarea.form-control {
+            min-height: 65px;
+        }
+
+    .customer-photo-section {
+        text-align: center;
+        margin-bottom: 28px;
+    }
+
+    .customer-photo-preview {
+        width: 90px;
+        height: 90px;
+        margin: 0 auto 7px;
+        background: #f5f5f5;
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .customer-photo-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .customer-photo-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 38px;
+    }
+
+    .photo-info {
+        margin-top: 4px;
+        font-size: 11px;
+        color: #8ea3c0;
+    }
+
+    .form-help {
+        margin-top: 4px;
+        font-size: 11px;
+        color: #8ea3c0;
+    }
+
+    .shipping-info {
+        padding: 12px;
+        margin-top: 8px;
+        background: rgba(255,255,255,.12);
+        border-radius: 4px;
+        color: var(--text-main);
+        font-size: 12px;
+    }
+
+    .customer-form-footer {
+        padding: 10px 12px;
+        border-top: 1px solid var(--card-border);
+        background: rgba(255,255,255,.03);
+    }
+
+        .customer-form-footer .btn {
+            min-width: 70px;
+            margin-right: 5px;
+        }
+
+</style>

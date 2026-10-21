@@ -1,0 +1,749 @@
+
+@using ERP.Web.Models
+@model PagedResult<MenuViewModel>
+
+@{
+    ViewData["Title"] = "Master Menu";
+}
+
+<style>
+
+
+</style>
+
+<div class="menu-page">
+
+    <div class="page-heading mb-4">
+        <h1>Master Menu</h1>
+    </div>
+
+    <div class="card menu-card shadow-sm">
+
+        <div class="menu-card-body">
+
+            <!-- HEADER -->
+            <div class="menu-card-header">
+
+                <h5 class="menu-section-title m-0">
+                    Struktur Menu
+                </h5>
+
+                <div class="menu-header-actions">
+
+                    <button type="button"
+                            id="btnSaveOrder"
+                            data-allow-unsaved="true"
+                            class="btn btn-save-order d-flex align-items-center gap-1"
+                            onclick="saveOrder()">
+
+                        <i class="bi bi-box-arrow-down"></i>
+                        Simpan Urutan
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-teal btn-custom-action"
+                            id="btnAddMenu"
+                            onclick="openCreateModal()">
+
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Tambah Menu</span>
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- DESKRIPSI -->
+            <p class="menu-description">
+                <i class="bi bi-info-circle me-1"></i>
+                Seret ikon
+                <i class="bi bi-three-dots-vertical"></i>
+                untuk mengubah urutan. Tarik sebuah item ke dalam area sub-menu item lain
+                untuk menjadikannya anak menu (maksimal 2 tingkat).
+            </p>
+
+            @* MENU DRAG & DROP *@
+
+            <div class="dd" id="menuNestable">
+
+                <ol class="dd-list list-unstyled">
+
+                    @foreach (var parent in Model.Data.Where(m => m.ParentId == null)
+                        .OrderBy(m => m.SortOrder))
+                    {
+                        <li class="dd-item" data-id="@parent.Id">
+
+                            <!-- PARENT MENU -->
+                            <div class="menu-item-card p-3 d-flex justify-content-between align-items-center">
+
+                                <div class="d-flex align-items-center gap-2">
+
+                                    <span class="drag-handle" title="Geser menu">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </span>
+
+                                    <i class="@parent.Icon menu-icon"></i>
+
+                                    <span class="menu-item-title">
+                                        @parent.Title
+                                    </span>
+
+                                    <small class="menu-item-UrlSlug ms-1">
+                                        @parent.UrlSlug
+                                    </small>
+
+                                    @if (!parent.IsActive)
+                                    {
+                                        <span class="badge bg-danger ms-2">
+                                            Nonaktif
+                                        </span>
+                                    }
+
+                                </div>
+
+                                <div class="d-flex gap-1">
+
+                                    <button type="button"
+                                            class="btn btn-sm menu-action-edit"
+                                            title="Edit"
+                                            onclick="openEditModal(
+                                                '@parent.Id',
+                                                '@parent.Title',
+                                                '@parent.UrlSlug',
+                                                '@parent.Icon',
+                                                '@parent.ParentId',
+                                                '@parent.SortOrder',
+                                                '@parent.IsActive'
+                                            )">
+
+                                        <i class="bi bi-pencil"></i>
+
+                                    </button>
+
+                                    <form method="post"
+                                          asp-action="Delete"
+                                          class="d-inline"
+                                          onsubmit="return confirmDeleteMenu(this);">
+
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden"
+                                               name="id"
+                                               value="@parent.Id" />
+
+                                        <input type="hidden"
+                                               name="hasChildren"
+                                               value="@(Model.Data.Any(x => x.ParentId == parent.Id) ? "true" : "false")" />
+
+                                        <button type="submit"
+                                                class="btn btn-sm menu-action-delete"
+                                                title="Hapus">
+
+                                            <i class="bi bi-trash"></i>
+
+                                        </button>
+
+                                    </form>
+
+                                </div>
+
+                            </div>
+
+                            @if (Model.Data.Any(m => m.ParentId == parent.Id))
+                            {
+                                <ol class="dd-list list-unstyled">
+
+                                    @foreach (var child in Model.Data
+                                        .Where(m => m.ParentId == parent.Id)
+                                        .OrderBy(m => m.SortOrder))
+                                    {
+                                        <li class="dd-item" data-id="@child.Id">
+
+                                            <div class="menu-item-card p-3 d-flex justify-content-between align-items-center">
+
+                                                <div class="d-flex align-items-center gap-2">
+
+                                                    <span class="drag-handle" title="Geser menu">
+                                                        <i class="bi bi-three-dots-vertical"></i>
+                                                    </span>
+
+                                                    <i class="@child.Icon menu-icon"></i>
+
+                                                    <span class="menu-item-title">
+                                                        @child.Title
+                                                    </span>
+
+                                                    <small class="menu-item-UrlSlug ms-1">
+                                                        @child.UrlSlug
+                                                    </small>
+
+                                                    @if (!child.IsActive)
+                                                    {
+                                                        <span class="badge bg-danger ms-2">
+                                                            Nonaktif
+                                                        </span>
+                                                    }
+
+                                                </div>
+
+                                                <div class="d-flex gap-1">
+
+                                                    <button type="button"
+                                                            class="btn btn-sm menu-action-edit"
+                                                            title="Edit"
+                                                            onclick="openEditModal(
+                                                                '@child.Id',
+                                                                '@child.Title',
+                                                                '@child.UrlSlug',
+                                                                '@child.Icon',
+                                                                '@child.ParentId',
+                                                                '@child.SortOrder',
+                                                                '@child.IsActive'
+                                                            )">
+
+                                                        <i class="bi bi-pencil"></i>
+
+                                                    </button>
+
+                                                    <form method="post"
+                                                          asp-action="Delete"
+                                                          asp-route-id="@child.Id"
+                                                          class="d-inline"
+                                                          onsubmit="return confirm('Hapus menu ini?')">
+
+                                                        @Html.AntiForgeryToken()
+
+                                                        <button type="submit"
+                                                                class="btn btn-sm menu-action-delete"
+                                                                title="Hapus">
+
+                                                            <i class="bi bi-trash"></i>
+
+                                                        </button>
+
+                                                    </form>
+
+                                                </div>
+
+                                            </div>
+
+                                        </li>
+                                    }
+
+                                </ol>
+                            }
+
+                        </li>
+                    }
+
+                </ol>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+@* MODAL *@
+
+<div class="modal fade"
+     id="menuModal"
+     tabindex="-1"
+     aria-labelledby="modalTitle"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <div class="modal-content menu-modal-content">
+
+            <form method="post" id="menuForm">
+
+                @Html.AntiForgeryToken()
+
+                <div class="modal-header menu-modal-header">
+
+                    <h5 class="modal-title menu-modal-title" id="modalTitle">
+                        Tambah Menu
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+
+                </div>
+
+                <div class="modal-body menu-modal-body">
+
+                    <input type="hidden" id="Id" name="Id" />
+
+                    <div class="row g-4">
+
+                        <div class="col-md-6">
+
+                            <label for="Title" class="menu-form-label">
+                                Judul Menu <span class="required-mark">*</span>
+                            </label>
+
+                            <input type="text"
+                                   class="form-control menu-form-control"
+                                   id="Title"
+                                   name="Title"
+                                   required />
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <label for="ParentId" class="menu-form-label">
+                                Menu Induk
+                            </label>
+
+                            <select class="form-select menu-form-control"
+                                    id="ParentId"
+                                    name="ParentId">
+
+                                <option value="">
+                                    -- Root / Tanpa Induk --
+                                </option>
+
+                                @foreach (var parent in Model.Data.Where(m => m.ParentId == null))
+                                {
+                                    <option value="@parent.Id">
+                                        @parent.Title
+                                    </option>
+                                }
+
+                            </select>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <label for="UrlSlug" class="menu-form-label">
+                                Url / Slug
+                            </label>
+
+                            <input type="text"
+                                   class="form-control menu-form-control"
+                                   id="UrlSlug"
+                                   name="UrlSlug"
+                                   placeholder="contoh: users atau # untuk parent" />
+
+                            <div class="menu-form-help">
+                                Slug relatif tanpa base UrlSlug.
+                                Gunakan <strong>#</strong> untuk menu induk.
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <label for="Icon" class="menu-form-label">
+                                Ikon (Bootstrap Icons)
+                            </label>
+
+                            <div class="icon-input-wrapper">
+
+                                <span class="icon-preview">
+                                    <i id="iconPreview" class="bi bi-circle"></i>
+                                </span>
+
+                                <input type="text"
+                                       class="form-control menu-form-control icon-input"
+                                       id="Icon"
+                                       name="Icon"
+                                       placeholder="bi bi-circle" />
+
+                            </div>
+
+                            <div class="menu-form-help">
+                                Lihat ikon di
+                                <a href="https://icons.getbootstrap.com/"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    icons.getbootstrap.com
+                                </a>
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <label for="SortOrder" class="menu-form-label">
+                                Urutan
+                            </label>
+
+                            <input type="number"
+                                   class="form-control menu-form-control"
+                                   id="SortOrder"
+                                   name="SortOrder"
+                                   value="0"
+                                   min="0" />
+
+                        </div>
+
+                        <div class="col-md-6 menu-active-column">
+
+                            <div class="form-check form-switch menu-active-switch">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="IsActive"
+                                       name="IsActive"
+                                       value="true"
+                                       checked />
+
+                                <input type="hidden"
+                                       name="IsActive"
+                                       value="false" />
+
+                                <label class="form-check-label" for="IsActive">
+                                    Menu Aktif
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer menu-modal-footer">
+
+                    <button type="submit" class="btn menu-btn-save">
+                        <i class="bi bi-box-arrow-down me-1"></i>
+                        Simpan
+                    </button>
+
+                    <button type="button"
+                            class="btn menu-btn-cancel"
+                            data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/Nestable2/1.6.0/jquery.nestable.min.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/nestable2@1.6.0/jquery.nestable.min.js"></script>
+
+    <script>
+
+        const menuModal = new bootstrap.Modal(
+            document.getElementById('menuModal')
+        );
+
+        let hasUnsavedChanges = false;
+
+        $(document).ready(function() {
+
+            const menuNestable = $('#menuNestable');
+
+            menuNestable.nestable({
+                maxDepth: 2,
+                handleClass: 'drag-handle',
+                threshold: 15,
+                scroll: true,
+                scrollSensitivity: 30,
+                scrollSpeed: 10
+            });
+
+            menuNestable.on('change', function() {
+
+                hasUnsavedChanges = true;
+
+                $('#btnSaveOrder')
+                    .prop('disabled', false);
+
+                $('#unsavedChangesAlert')
+                    .removeClass('d-none');
+
+            });
+
+            /* Icon Preview */
+
+            $('#Icon').on('input', function() {
+
+                const icon = $(this).val().trim();
+
+                if (icon) {
+                    $('#iconPreview').attr('class', icon);
+                } else {
+                    $('#iconPreview').attr('class', '');
+                }
+
+            });
+
+        });
+
+        function getMenuOrder() {
+
+            const result = [];
+
+            function processItems(items, parentId = null) {
+
+                items.forEach(function(item, index) {
+
+                    const currentId = Number(item.id);
+
+                    if (!currentId || currentId <= 0) {
+                        return;
+                    }
+
+                    result.push({
+                        id: currentId,
+                        parentId: parentId,
+                        sortOrder: index + 1
+                    });
+
+                    if (item.children && item.children.length > 0) {
+                        processItems(item.children, currentId);
+                    }
+
+                });
+
+            }
+
+            const serializedData = $('#menuNestable').nestable('serialize');
+
+            processItems(serializedData);
+
+            return result;
+        }
+
+        function updateIconPreview(iconClass) {
+
+            const preview = $('#iconPreview');
+            const cleanClass = iconClass.trim();
+
+            if (cleanClass) {
+                preview.attr('class', cleanClass);
+            } else {
+                preview.attr('class', 'bi bi-circle');
+            }
+
+        }
+
+        $(document).ready(function() {
+
+            $('#Icon').on('input change propertychange paste', function() {
+                updateIconPreview($(this).val());
+            });
+
+        });
+
+        /* Create */
+
+        function openCreateModal() {
+
+            document.getElementById('modalTitle').innerText = 'Tambah Menu';
+            document.getElementById('menuForm').action = '@Url.Action("Create", "Menus")';
+            document.getElementById('Id').value = '';
+            document.getElementById('ParentId').value = '';
+            document.getElementById('Title').value = '';
+            document.getElementById('UrlSlug').value = '';
+            document.getElementById('Icon').value = '';
+            document.getElementById('SortOrder').value = 0;
+            document.getElementById('IsActive').checked = true;
+            document.getElementById('iconPreview').className = '';
+
+            updateIconPreview('');
+
+            menuModal.show();
+        }
+
+        /* Edit */
+
+        function openEditModal(
+            id,
+            title,
+            urlSlug,
+            icon,
+            parentId,
+            sortOrder,
+            isActive
+        ) {
+
+            document.getElementById('modalTitle').innerText = 'Edit Menu';
+            document.getElementById('menuForm').action = '@Url.Action("Edit", "Menus")';
+            document.getElementById('Id').value = id;
+            document.getElementById('ParentId').value = parentId || '';
+            document.getElementById('Title').value = title || '';
+            document.getElementById('UrlSlug').value = urlSlug || '';
+            document.getElementById('Icon').value = icon || '';
+            document.getElementById('iconPreview').className = icon || '';
+            document.getElementById('SortOrder').value = sortOrder ?? 0;
+            document.getElementById('IsActive').checked =
+                isActive === true || isActive === 'True';
+
+            updateIconPreview(icon || '');
+
+            menuModal.show();
+        }
+
+        /* Save Urutan Menu */
+
+        async function saveOrder() {
+
+            const orderData = getMenuOrder();
+
+            if (orderData.length === 0) {
+                alert('Data urutan menu kosong.');
+                return;
+            }
+
+            const token = document.querySelector(
+                'input[name="__RequestVerificationToken"]'
+            )?.value;
+
+            try {
+
+                hasUnsavedChanges = false;
+
+                $('#btnSaveOrder')
+                    .prop('disabled', true)
+                    .text('Menyimpan...');
+
+                const response = await fetch(
+                    '@Url.Action("SaveOrder", "Menus")',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': token
+                        },
+                        body: JSON.stringify(orderData)
+                    }
+                );
+
+                const responseText = await response.text();
+
+                let result = {};
+
+                try {
+                    result = responseText
+                        ? JSON.parse(responseText)
+                        : {};
+                } catch {
+                    result = {
+                        message: responseText
+                    };
+                }
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.message ||
+                        'Gagal menyimpan perubahan urutan menu.'
+                    );
+                }
+
+                hasUnsavedChanges = false;
+
+                $('#unsavedChangesAlert')
+                    .addClass('d-none');
+
+                location.reload();
+
+            } catch (error) {
+
+                console.error('Error:', error);
+
+                alert(error.message);
+
+                $('#btnSaveOrder')
+                    .prop('disabled', false)
+                    .html(
+                        '<i class="bi bi-save"></i> Simpan Perubahan'
+                    );
+
+            }
+
+        }
+
+        window.addEventListener('beforeunload', function(event) {
+
+            if (!hasUnsavedChanges) {
+                return;
+            }
+
+            event.preventDefault();
+            event.returnValue = '';
+
+        });
+
+        document.addEventListener('click', function(event) {
+
+            if (!hasUnsavedChanges) {
+                return;
+            }
+
+            const action = event.target.closest('#btnSaveOrder');
+
+            if (action) {
+                return;
+            }
+
+            const confirmLeave = confirm(
+                'Perubahan urutan menu belum disimpan.\n\n' +
+                'Apakah Anda yakin ingin meninggalkan halaman?\n' +
+                'Perubahan yang belum disimpan akan dibatalkan.'
+            );
+
+            if (!confirmLeave) {
+
+                event.preventDefault();
+                event.stopImmediatePropagation();
+
+                return;
+            }
+
+            hasUnsavedChanges = false;
+
+        }, true);
+
+        function confirmDeleteMenu(form) {
+
+            const hasChildrenInput = form.querySelector(
+                'input[name="hasChildren"]'
+            );
+
+            const hasChildren =
+                hasChildrenInput &&
+                hasChildrenInput.value.toLowerCase() === "true";
+
+            if (hasChildren) {
+
+                return confirm(
+                    "Menu induk ini memiliki anak menu.\n\n" +
+                    "Jika menu induk dihapus:\n" +
+                    "- Anak menu pertama akan menjadi menu induk baru.\n" +
+                    "- Anak menu berikutnya akan menjadi anak dari menu tersebut.\n\n" +
+                    "Apakah Anda yakin ingin melanjutkan?"
+                );
+
+            }
+
+            return confirm(
+                "Apakah Anda yakin ingin menghapus menu ini?"
+            );
+
+        }
+
+    </script>
+}

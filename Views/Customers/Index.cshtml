@@ -1,0 +1,784 @@
+@model ERP.Web.Models.PagedResult<ERP.Web.Models.CustomerViewModel>
+
+@{
+    ViewData["Title"] = "Customers";
+
+    var search = ViewBag.Search as string ?? "";
+    var selectedIsActive = ViewBag.IsActive as bool?;
+
+    int currentPage = Model?.Page ?? 1;
+    int currentPageSize = Model?.PageSize ?? 10;
+    int total = Model?.TotalCount ?? 0;
+
+    int totalPages = currentPageSize > 0
+        ? (int)Math.Ceiling((double)total / currentPageSize)
+        : 0;
+
+    var no = (currentPage - 1) * currentPageSize;
+
+    var startItem = total == 0
+        ? 0
+        : ((currentPage - 1) * currentPageSize) + 1;
+
+    var endItem = Math.Min(currentPage * currentPageSize, total);
+}
+
+<!-- ========================================================= -->
+<!-- ===================== CUSTOMER PAGE ====================== -->
+<!-- ========================================================= -->
+
+<div class="page-heading supplier-page">
+
+    <!-- TITLE -->
+    <h3 class="fw-bold mb-3">
+        Customers
+    </h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">Filter</span>
+            </div>
+
+            <button class="btn btn-sm text-muted p-0"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#customerFilterCollapse"
+                    aria-expanded="true"
+                    aria-controls="customerFilterCollapse">
+
+                <i class="bi bi-chevron-down"></i>
+
+            </button>
+
+        </div>
+
+        <div class="collapse show" id="customerFilterCollapse">
+
+            <div class="card-body">
+
+                <form method="get"
+                      asp-action="Index"
+                      asp-controller="Customers"
+                      class="row g-2 align-items-end">
+
+                    <!-- CARI -->
+                    <div class="col-md-4">
+
+                        <label for="search" class="form-label">
+                            Cari
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="search"
+                               name="search"
+                               value="@search"
+                               placeholder="Cari customer..." />
+
+                    </div>
+
+                    <!-- IS ACTIVE -->
+                    <div class="col-md-3">
+
+                        <label for="isActive" class="form-label">
+                            Is Active
+                        </label>
+
+                        <select class="form-select" id="isActive" name="isActive">
+
+                            <option value="" selected="@(selectedIsActive == null)">
+                                -- Semua --
+                            </option>
+
+                            <option value="true" selected="@(selectedIsActive == true)">
+                                Aktif
+                            </option>
+
+                            <option value="false" selected="@(selectedIsActive == false)">
+                                Non-Aktif
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- PER HALAMAN -->
+                    <div class="col-md-2">
+
+                        <label for="pageSize" class="form-label">
+                            Per Halaman
+                        </label>
+
+                        <select class="form-select" id="pageSize" name="pageSize">
+
+                            <option value="10" selected="@(currentPageSize == 10)">10</option>
+                            <option value="25" selected="@(currentPageSize == 25)">25</option>
+                            <option value="50" selected="@(currentPageSize == 50)">50</option>
+                            <option value="100" selected="@(currentPageSize == 100)">100</option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- BUTTON -->
+                    <div class="col-md-3 d-flex gap-2">
+
+                        <button type="submit"
+                                class="btn btn-primary d-flex align-items-center gap-2">
+
+                            <i class="bi bi-search"></i>
+                            Terapkan
+
+                        </button>
+
+                        <a asp-action="Index"
+                           asp-controller="Customers"
+                           class="btn btn-outline-secondary"
+                           title="Reset Filter">
+
+                            <i class="bi bi-arrow-counterclockwise"></i>
+
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+
+        <!-- HEADER -->
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+            <!-- LEFT -->
+            <div class="d-flex align-items-center gap-2">
+
+                <span class="fw-bold fs-5">Customers</span>
+
+                <span class="badge badge-count">
+                    @total
+                </span>
+
+                <span class="menu-description small ms-1">
+                    Kelola data customers
+                </span>
+
+            </div>
+
+            <!-- RIGHT -->
+            <div class="d-flex align-items-center gap-2">
+
+                <!-- EXPORT PDF -->
+                <a asp-action="ExportPdf"
+                   asp-controller="Customers"
+                   asp-route-search="@search"
+                   asp-route-isActive="@selectedIsActive"
+                   class="btn btn-light btn-custom-square text-danger"
+                   title="Export PDF">
+
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+
+                </a>
+
+                <!-- EXPORT EXCEL -->
+                <a asp-action="ExportExcel"
+                   asp-controller="Customers"
+                   asp-route-search="@search"
+                   asp-route-isActive="@selectedIsActive"
+                   class="btn btn-light btn-custom-square text-success"
+                   title="Export Excel">
+
+                    <i class="bi bi-file-earmark-excel-fill"></i>
+
+                </a>
+
+                <!-- PRINT -->
+                <a asp-action="Print"
+                   asp-controller="Customers"
+                   asp-route-search="@search"
+                   asp-route-isActive="@selectedIsActive"
+                   class="btn btn-light btn-custom-square text-secondary"
+                   title="Print">
+
+                    <i class="bi bi-printer-fill"></i>
+
+                </a>
+
+                <!-- REFRESH -->
+                <a asp-action="Index"
+                   asp-controller="Customers"
+                   asp-route-search="@search"
+                   asp-route-isActive="@selectedIsActive"
+                   asp-route-page="@currentPage"
+                   asp-route-pageSize="@currentPageSize"
+                   class="btn btn-light btn-custom-square text-secondary"
+                   title="Refresh">
+
+                    <i class="bi bi-arrow-clockwise"></i>
+
+                </a>
+
+                <!-- COLLAPSE -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square text-secondary"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#customerTableCollapse"
+                        title="Toggle">
+
+                    <i class="bi bi-chevron-up"></i>
+
+                </button>
+
+                <!-- TAMBAH -->
+                <a asp-action="Create"
+                   asp-controller="Customers"
+                   class="btn btn-teal btn-custom-action">
+
+                    <i class="bi bi-plus-circle"></i>
+
+                    <span>Tambah Customer</span>
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- TABLE BODY -->
+        <div class="collapse show" id="customerTableCollapse">
+
+            <div class="card-body p-0">
+
+                <div class="table-responsive">
+
+                    <table class="table table-hover align-middle mb-0 supplier-table customers-table">
+
+                        <!-- TABLE HEADER -->
+                        <thead>
+                            <tr>
+                                <th class="ps-4" style="width: 50px;">#</th>
+                                <th style="width: 70px;">FOTO</th>
+                                <th>FULL NAME</th>
+                                <th>EMAIL</th>
+                                <th>PHONE</th>
+                                <th>NPWP</th>
+                                <th>KELOMPOK</th>
+                                <th>SALES</th>
+                                <th class="text-center">STATUS</th>
+                                <th class="text-center" style="width: 120px;">AKSI</th>
+                            </tr>
+                        </thead>
+
+                        <!-- TABLE DATA -->
+                        <tbody>
+
+                            @if (Model?.Data != null && Model.Data.Any())
+                            {
+                                foreach (var customer in Model.Data)
+                                {
+                                    no++;
+
+                                    <tr>
+
+                                        <!-- NO -->
+                                        <td class="ps-4">
+                                            @no
+                                        </td>
+
+                                        <!-- FOTO -->
+                                        <td>
+
+                                            @if (!string.IsNullOrWhiteSpace(customer.Image))
+                                            {
+                                                var imagePath = customer.Image
+                                                    .Trim()
+                                                    .Replace("\\", "/");
+
+                                                if (imagePath.StartsWith("/"))
+                                                {
+                                                    imagePath = "https://localhost:7101" + imagePath;
+                                                }
+                                                else if (!imagePath.StartsWith(
+                                                    "http",
+                                                    StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    imagePath = "https://localhost:7101/" + imagePath;
+                                                }
+
+                                                <img src="@imagePath"
+                                                     alt="@customer.FullName"
+                                                     class="customer-image"
+                                                     onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='grid';" />
+
+                                                <div class="customer-avatar" style="display:none;">
+                                                    <i class="bi bi-person-fill"></i>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="customer-avatar">
+                                                    <i class="bi bi-person-fill"></i>
+                                                </div>
+                                            }
+
+                                        </td>
+
+                                        <!-- FULL NAME -->
+                                        <td>
+                                            <span class="fw-bold">
+                                                @(string.IsNullOrWhiteSpace(customer.FullName)
+                                                    ? "-"
+                                                    : customer.FullName)
+                                            </span>
+                                        </td>
+
+                                        <!-- EMAIL -->
+                                        <td>
+                                            @(string.IsNullOrWhiteSpace(customer.Email)
+                                                ? "-"
+                                                : customer.Email)
+                                        </td>
+
+                                        <!-- PHONE -->
+                                        <td>
+                                            @(string.IsNullOrWhiteSpace(customer.Phone)
+                                                ? "-"
+                                                : customer.Phone)
+                                        </td>
+
+                                        <!-- NPWP -->
+                                        <td>
+                                            @(string.IsNullOrWhiteSpace(customer.Npwp)
+                                                ? "-"
+                                                : customer.Npwp)
+                                        </td>
+
+                                        <!-- KELOMPOK -->
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(customer.CustomerGroupName))
+                                            {
+                                                <span class="badge-group">
+                                                    @customer.CustomerGroupName
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-empty">-</span>
+                                            }
+                                        </td>
+
+                                        <!-- SALES -->
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(customer.SalesForceName))
+                                            {
+                                                <span class="badge-sales">
+                                                    <i class="bi bi-person-badge"></i>
+                                                    @customer.SalesForceName
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-empty">-</span>
+                                            }
+                                        </td>
+
+                                        <!-- STATUS -->
+                                        <td class="text-center">
+                                            @if (customer.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Nonaktif</span>
+                                            }
+                                        </td>
+
+                                        <!-- AKSI -->
+                                        <td class="text-center">
+
+                                            <div class="d-flex justify-content-center gap-1">
+
+                                                <!-- EDIT -->
+                                                <a asp-action="Edit"
+                                                   asp-controller="Customers"
+                                                   asp-route-id="@customer.Id"
+                                                   class="btn btn-sm menu-action-edit"
+                                                   title="Edit">
+
+                                                    <i class="bi bi-pencil"></i>
+
+                                                </a>
+
+                                                <!-- DELETE / NONAKTIFKAN -->
+                                                <form asp-action="Delete"
+                                                      asp-controller="Customers"
+                                                      method="post"
+                                                      class="d-inline"
+                                                      onsubmit="return confirmDelete('@customer.FullName');">
+
+                                                    @Html.AntiForgeryToken()
+
+                                                    <input type="hidden"
+                                                           name="id"
+                                                           value="@customer.Id" />
+
+                                                    <button type="submit"
+                                                            class="btn btn-sm menu-action-delete"
+                                                            title="Hapus / Nonaktifkan">
+
+                                                        <i class="bi bi-trash"></i>
+
+                                                    </button>
+
+                                                </form>
+
+                                            </div>
+
+                                        </td>
+
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="10" class="text-center py-4">
+                                        Tidak ada data customer.
+                                    </td>
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <!-- FOOTER / PAGINATION -->
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-2">
+
+                <!-- INFO -->
+                <small class="menu-description">
+
+                    Menampilkan
+
+                    <strong>
+                        @startItem – @endItem
+                    </strong>
+
+                    dari
+
+                    <strong>
+                        @total
+                    </strong>
+
+                    data
+
+                </small>
+
+                <!-- PAGINATION -->
+                @if (totalPages > 0)
+                {
+                    <nav aria-label="Pagination">
+
+                        <ul class="pagination pagination-sm mb-0">
+
+                            <!-- SEBELUMNYA -->
+                            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+
+                                @if (currentPage > 1)
+                                {
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new
+                                       {
+                                           search = search,
+                                           isActive = selectedIsActive,
+                                           page = currentPage - 1,
+                                           pageSize = currentPageSize
+                                       })">
+                                        Sebelumnya
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="page-link">Sebelumnya</span>
+                                }
+
+                            </li>
+
+                            <!-- NOMOR HALAMAN -->
+                            @for (int i = 1; i <= totalPages; i++)
+                            {
+                                <li class="page-item @(i == currentPage ? "active" : "")">
+
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new
+                                       {
+                                           search = search,
+                                           isActive = selectedIsActive,
+                                           page = i,
+                                           pageSize = currentPageSize
+                                       })">
+                                        @i
+                                    </a>
+
+                                </li>
+                            }
+
+                            <!-- BERIKUTNYA -->
+                            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                                @if (currentPage < totalPages)
+                                {
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new
+                                       {
+                                           search = search,
+                                           isActive = selectedIsActive,
+                                           page = currentPage + 1,
+                                           pageSize = currentPageSize
+                                       })">
+                                        Berikutnya
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="page-link">Berikutnya</span>
+                                }
+
+                            </li>
+
+                        </ul>
+
+                    </nav>
+                }
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ========================================================= -->
+<!-- =========================== CSS ========================== -->
+<!-- ========================================================= -->
+
+<style>
+
+    /* CUSTOMER IMAGE */
+    .customer-image,
+    .customer-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+    }
+
+    .customer-image {
+        object-fit: cover;
+        border: none;
+    }
+
+    .customer-avatar {
+        display: grid;
+        place-items: center;
+        background: #e9ecef;
+        color: #6c757d;
+        font-size: 18px;
+    }
+
+    /* CUSTOMER TABLE */
+    .customers-table {
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+        .customers-table th {
+            white-space: nowrap;
+        }
+
+        .customers-table td {
+            vertical-align: middle;
+        }
+
+            /* CUSTOMER NAME */
+            .customers-table td:nth-child(3) {
+                min-width: 170px;
+            }
+
+            /* EMAIL */
+            .customers-table td:nth-child(4) {
+                min-width: 190px;
+            }
+
+            /* PHONE */
+            .customers-table td:nth-child(5) {
+                white-space: nowrap;
+            }
+
+            /* NPWP */
+            .customers-table td:nth-child(6) {
+                white-space: nowrap;
+            }
+
+    /* GROUP BADGE */
+    .badge-group {
+        display: inline-flex;
+        align-items: center;
+        max-width: 100%;
+        padding: 4px 9px;
+        background: #12c2d6;
+        color: #07151c;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* SALES BADGE */
+    .badge-sales {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        max-width: 100%;
+        padding: 4px 8px;
+        background: #315b8e;
+        color: #f1f5f9;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* EMPTY DATA */
+    .text-empty {
+        color: #74839a;
+    }
+
+    /* COUNT BADGE */
+    .badge-count {
+        padding: 4px 8px;
+        border-radius: 5px;
+        font-size: 12px;
+    }
+
+    /* CUSTOM SQUARE BUTTON */
+    .btn-custom-square {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* CUSTOM ACTION BUTTON */
+    .btn-custom-action {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px 12px;
+    }
+
+    /* CUSTOMER ACTION BUTTON */
+    .customers-table .btn-sm {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* FILTER */
+    .supplier-filter .form-label {
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    /* TABLE COLUMN ALIGNMENT */
+    .customers-table th:nth-child(1),
+    .customers-table td:nth-child(1) {
+        white-space: nowrap;
+    }
+
+    .customers-table th:nth-child(2),
+    .customers-table td:nth-child(2) {
+        text-align: center;
+    }
+
+    .customers-table th:nth-child(9),
+    .customers-table td:nth-child(9) {
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .customers-table th:nth-child(10),
+    .customers-table td:nth-child(10) {
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* RESPONSIVE */
+    @@media (max-width: 1200px) {
+        .customers-table {
+            min-width: 1100px;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .customers-table {
+            min-width: 1100px;
+        }
+    }
+
+</style>
+
+<!-- ========================================================= -->
+<!-- ======================= JAVASCRIPT ======================= -->
+<!-- ========================================================= -->
+
+<script>
+
+    function confirmDelete(name) {
+
+        return confirm(
+            'Apakah kamu yakin ingin menghapus customer "' +
+            name +
+            '"?'
+        );
+
+    }
+
+    function confirmActivate(name) {
+
+        return confirm(
+            'Aktifkan kembali customer "' +
+            name +
+            '"?'
+        );
+
+    }
+
+</script>

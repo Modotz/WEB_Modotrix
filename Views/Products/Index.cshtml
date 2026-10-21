@@ -1,0 +1,1180 @@
+@using ERP.Web.Models
+@model PagedResult<ProductViewModel> 
+
+@{
+    ViewData["Title"] = "Produk";
+
+    var no = ((Model.Page - 1) * Model.PageSize);
+
+    var showVariantValue = Context.Request.Query["showVariant"].ToString();
+    var isShowVariant = showVariantValue.Equals("true", StringComparison.OrdinalIgnoreCase);
+
+    var brands = ViewBag.Brands as IEnumerable<DropdownItemViewModel> ?? Enumerable.Empty<DropdownItemViewModel>();
+    var categories = ViewBag.Categories as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var subCategories = ViewBag.SubCategories as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var units = ViewBag.Units as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    
+}
+
+<div class="product-page-title">
+    Produk
+</div>
+
+
+<div class="product-info-card">
+    <div class="product-info-header"
+         data-bs-toggle="collapse"
+         data-bs-target="#productInfo">
+        <div>
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <strong>Tentang Halaman Produk</strong>
+        </div>
+        <i class="bi bi-chevron-down"></i>
+    </div>
+
+    <div id="productInfo"
+         class="collapse show">
+
+        <div class="product-info-body">
+            <ul>
+                <li>
+                    Halaman ini menampilkan <strong>daftar seluruh produk/barang.</strong> Gunakan kartu <strong>Filter</strong> 
+                    di bawah (cari nama/SKU, kategori, brand, jenis, unit, status) lalu klik <strong>Terapkan; Reset</strong> menghapus filter.
+                </li>
+
+                <li>
+                    Aktifkan
+                    <strong>Tampilkan Varian</strong>
+                    untuk menampilkan produk varian
+                    (anak) di bawah induknya.
+                </li>
+
+                <li>
+                    Klik
+                    <strong>Tambah Produk</strong> (kanan atas)
+                    untuk membuat produk baru.
+                    Tersedia juga fitur
+                    <strong>Export Excel/PDF</strong>
+                    dan <strong>Print</strong> (mengikuti filter aktif).
+                </li>
+
+                <li>
+                    Aksi setiap baris:
+                    <i class="bi bi-diagram-3"></i> <strong>Varian</strong>(kelola varian),
+                    <i class="bi bi-copy"></i> <strong>Copy</strong> (duplikat produk),
+                    <i class="bi bi-pencil"></i> <strong>Edit</strong>,
+                    dan <i class="bi bi-trash"></i> <strong>Hapus</strong>.
+                </li>
+
+            </ul>
+
+            <div class="product-info-tip">
+                <i class="bi bi-lightbulb"></i>
+                Tips: panel ini bisa ditutup dengan mengklik judulnya.
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="product-filter-card">
+
+    <div class="product-filter-header"
+         data-bs-toggle="collapse"
+         data-bs-target="#productFilter">
+
+        <div class="product-filter-title">
+            <i class="bi bi-funnel"></i>
+            <span>Filter</span>
+        </div>
+
+        <i class="bi bi-chevron-down"></i>
+
+    </div>
+
+
+    <div id="productFilter"
+         class="collapse show">
+
+        <div class="product-filter-body">
+
+            <form method="get"
+                  asp-action="Index"
+                  asp-controller="Products">
+
+                <div class="product-filter-row">
+                    <div>
+                        <label class="product-filter-label">
+                            Cari
+                        </label>
+
+                        <input type="text" class="form-control"
+                               id="search"
+                               name="search"
+                               value="@Context.Request.Query["search"]"
+                        />
+                    </div>
+                 
+                    <div>
+                        <label class="product-filter-label">
+                            Brand
+                        </label>
+
+                        <select name="brandId" class="form-select">
+                            <option value="">-- Semua --</option> 
+                            @foreach (var brand in brands)
+                            {
+                                <option value="@brand.Id"
+                                        selected="@(Context.Request.Query["brandId"] == brand.Id.ToString())">
+                                    @brand.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+
+                    <div>
+                        <label class="product-filter-label">
+                            Kategori
+                        </label>
+
+                        <select name="categoryId"
+                                class="form-select"
+                                id="categoryId">
+
+                            <option value="">-- Semua --</option>
+
+                            @foreach (var category in (IEnumerable<DropdownItemViewModel>)ViewBag.Categories)
+                            {
+                                <option value="@category.Id"
+                                        selected="@(Context.Request.Query["categoryId"] == category.Id.ToString())">
+                                    @category.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="product-filter-label">
+                            Sub-Kategori
+                        </label>
+
+                        <select name="subCategoryId"
+                                class="form-select"
+                                id="subCategoryId">
+
+                            <option value="">-- Semua Sub-Kategori --</option>
+
+                            @foreach (var subCategory in subCategories)
+                            {
+                                <option value="@subCategory.Id"
+                                        data-parent-id="@subCategory.ParentId"
+                                        selected="@(Context.Request.Query["subCategoryId"] == subCategory.Id.ToString())">
+                                    @subCategory.Name
+                                </option>
+                            }
+                        </select>
+
+                        <div class="product-filter-help">
+                           Pilih Kategori dulu; sub menyesuaikan.
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="product-filter-label">
+                            Jenis Produk
+                        </label>
+
+                        <select name="productType" class="form-select"> 
+
+                            <option value="">-- Semua --</option> 
+                            <option value="RAW_MATERIAL"
+                                    selected="@(Context.Request.Query["productType"] == "RAW_MATERIAL")">
+                                Bahan Baku
+                            </option>
+
+                            <option value="FINISHED_GOOD"
+                                    selected="@(Context.Request.Query["productType"] == "FINISHED_GOOD")">
+                                Barang Jadi
+                            </option>
+
+                        </select>
+                    </div>
+                </div>
+
+                <div class="product-filter-row-bottom">
+                    <div>
+
+                        <label class="product-filter-label">
+                            Unit
+                        </label>
+
+                        <select class="form-select"
+                                id="unitId"
+                                name="unitId">
+
+                            <option value="">-- Semua --</option>
+
+                            @foreach (var unit in units)
+                            {
+                                <option value="@unit.Id"
+                                        selected="@(Context.Request.Query["unitId"] == unit.Id.ToString())">
+                                    @unit.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+
+                    <div>
+                        <label class="product-filter-label">
+                            Track Stock
+                        </label>
+
+                       <select name="trackStock" class="form-select"> 
+
+                            <option value="">-- Semua --</option> 
+                            <option value="true"
+                                    selected="@(Context.Request.Query["trackStock"] == "true")">
+                                Ya
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["trackStock"] == "false")">
+                                Tidak
+                            </option>
+
+                        </select>
+                    </div>
+
+
+                    <div>
+                        <label class="product-filter-label">
+                            Is Active
+                        </label>
+
+                        <select name="isActive" class="form-select"> 
+                            <option value="">-- Semua --</option>
+
+                            <option value="true"
+                                    selected="@(Context.Request.Query["isActive"] == "true")">
+                                Aktif
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["isActive"] == "false")">
+                                Nonaktif
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div>
+
+                        <label class="product-filter-label">
+                            Per Halaman
+                        </label>
+                        <select name="pageSize"
+                                class="form-select"
+                                onchange="this.form.submit()">
+
+                            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+
+                        </select>
+                    </div>
+
+
+                    <div class="product-filter-actions">
+                       <div class="form-check form-switch product-variant-toggle">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   role="switch"
+                                   id="showVariant"
+                                   name="showVariant"
+                                   value="true"
+                                   @(isShowVariant ? "checked" : "")>
+
+                            <label class="form-check-label" for="showVariant">
+                                Tampilkan Varian
+                            </label>
+                        </div>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+
+                            <i class="bi bi-search me-1"></i>
+                            Terapkan
+
+                        </button>
+
+
+                        <a asp-action="Index"
+                           asp-controller="Products"
+                           class="btn filter-reset-btn">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            Reset
+                        </a>
+
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="product-table-card">
+    <div class="product-table-header">
+        <div class="product-table-heading">
+
+            <span class="product-table-title"> Produk </span>
+            <span class="badge badge-count"> @Model.TotalCount </span>
+            <span class="product-table-subtitle"> Kelola master produk / barang </span>
+        </div>
+
+         <div class="d-flex align-items-center gap-2">
+            <a asp-action="ExportPdf"
+               asp-controller="Products"
+               class="btn btn-light p-1 px-2 btn-custom-square text-danger"
+               title="Export PDF">
+                <i class="bi bi-file-earmark-pdf-fill"></i>
+            </a>
+
+            <!-- Export Excel -->
+            <a asp-action="ExportExcel"
+               asp-controller="Products"
+               class="btn btn-light p-1 px-2 btn-custom-square text-success"
+               title="Export Excel">
+                <i class="bi bi-file-earmark-excel-fill"></i>
+            </a>
+
+            <!-- Print -->
+            <a asp-action="Print"
+               asp-controller="Products"
+               class="btn btn-light p-1 px-2 btn-custom-square text-secondary"
+               title="Cetak"
+               target="_blank">
+                <i class="bi bi-printer-fill"></i>
+            </a>
+
+            <!-- Refresh Data -->
+            <button type="button"
+                    class="btn btn-light p-1 px-2 btn-custom-square"
+                    title="Refresh Data"
+                    onclick="loadProducts()">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+
+            <!-- Expand / Collapse -->
+            <button type="button" 
+                    class="btn btn-light p-1 px-2 btn-custom-square "
+                    title="Toggle">
+                <i class="bi bi-chevron-up"></i>
+            </button>
+
+            <button type="button"
+                    class="btn btn-teal btn-custom-action"
+                    onclick="window.location.href='/Products/Create'">
+                <i class="bi bi-plus-circle"></i>
+                <span>Tambah Produk</span>
+            </button>
+          </div>
+    </div>
+
+
+    <!-- TABLE -->
+
+    <div id="productTableBody"
+         class="collapse show">
+        <div class="product-table-wrapper">
+            <table class="table product-table">
+                <thead>
+                    <tr>
+                        <th class="text-center" >#</th>
+                        <th class="text-center" >IMAGE</th>
+                        <th class="text-center" >NO. PRODUK</th>
+                        <th class="text-center" >SKU</th>
+                        <th class="text-center" >NAME</th>
+                        <th class="text-center" >VARIAN</th>
+                        <th class="text-center" >BRAND</th>
+                        <th class="text-center" >CATEGORY</th>
+                        <th class="text-center" >SUB-KATEGORI</th>
+                        <th class="text-center">JENIS</th>
+                        <th class="text-center" >UNIT</th>
+                        <th class="text-center">COST PRICE</th>
+                        <th class="text-center"> SELL PRICE </th>
+                        <th class="text-center"> MIN STOCK </th>
+                        <th class="text-center"> TRACK STOCK </th>
+                        <th class="text-center"> IS ACTIVE </th>
+                        <th class="text-center"> AKSI </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Data != null && Model.Data.Any())
+                    {
+                        foreach (var item in Model.Data)
+                        {
+                            no++;
+
+                            var isVariant = item.ParentId.HasValue;
+
+                            <tr class="@(isVariant ? "product-variant-row" : "product-parent-row")">
+                                 
+                                <td class="text-center">
+                                    @no
+                                </td>
+                                 
+                                <td class="text-center">
+                                    <div class="product-image">
+
+                                        @if (!string.IsNullOrWhiteSpace(item.Image))
+                                        {
+                                            <img src="https://localhost:7101@(item.Image)"
+                                                 alt="@item.Name" />
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-box-seam"></i>
+                                        }
+
+                                    </div>
+                                </td>
+
+                                 
+                                <td>
+                                    @if (isVariant)
+                                    {
+                                        <span class="variant-indent">
+                                            @item.ProductNumber
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="product-number">
+                                            @item.ProductNumber
+                                        </span>
+                                    }  
+                                </td>
+
+                                 
+                                <td class="product-sku-cell"> 
+                                    @if (isVariant)
+                                    {
+                                        <span class="variant-indent">
+                                            <span class="variant-arrow"><i class="bi bi-arrow-return-right"></i></span>
+                                            @item.Sku
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        @item.Sku
+                                    } 
+                                </td>
+                                 
+                                <td> 
+                                    @if (isVariant)
+                                    {
+                                        <span class="variant-name-indent">
+                                            @item.Name
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        @item.Name
+                                    } 
+                                </td>
+                                 
+                                <td class="text-center"> 
+                                    @if (isVariant)
+                                    {
+                                        <span class="variant-badge">
+                                            <i class="bi bi-tag"></i>
+                                            Varian
+                                        </span>
+                                    }
+                                    else if (item.VariantCount > 0)
+                                    {
+                                        <span class="variant-count-badge">
+                                            <i class="bi bi-diagram-3"></i>
+                                            <span>@item.VariantCount varian</span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-description">
+                                            -
+                                        </span>
+                                    } 
+                                </td>
+
+                                 
+                                <td> 
+                                    @if (!string.IsNullOrWhiteSpace(item.BrandName))
+                                    {
+                                        <span class="product-badge product-badge-brand">
+                                            @item.BrandName
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-description">
+                                            -
+                                        </span>
+                                    } 
+                                </td>
+
+                                 
+                                <td> 
+                                    @if (!string.IsNullOrWhiteSpace(item.CategoryName))
+                                    {
+                                        <span class="product-badge product-badge-category fw-bold">
+                                            @item.CategoryName
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-description">
+                                            -
+                                        </span>
+                                    } 
+                                </td>
+
+                                 
+                                <td> 
+                                    @if (!string.IsNullOrWhiteSpace(item.SubCategoryName))
+                                    {
+                                        <span class="product-variant-link fw-bold">
+                                            <i class="bi bi-arrow-return-right"></i>
+                                            @item.SubCategoryName
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-description">
+                                            -
+                                        </span>
+                                    } 
+                                </td>
+                                 
+                                <td> 
+                                    @{
+                                        var typeText = item.ProductType switch
+                                        {
+                                            "RAW_MATERIAL" => "Bahan Baku",
+                                            "FINISHED_GOOD" => "Barang Jadi",
+                                            "SUPPLY" => "Supply",
+                                            "SPAREPART" => "Sparepart",
+                                            "ASSET" => "Asset",
+                                            "SERVICE" => "Service",
+                                            _ => item.ProductType
+                                        };
+                                    }
+
+                                    <span class="product-badge product-badge-type">
+                                        @typeText
+                                    </span> 
+                                </td>
+
+ 
+                                <td> 
+                                    <span class="product-badge product-badge-unit flex-start fw-bold">
+                                        @item.UnitName
+                                    </span> 
+                                </td>
+
+                                 
+                                <td class="product-price">
+
+                                    @item.CostPrice?.ToString(
+                                        "#,##0", new System.Globalization.CultureInfo("id-ID")
+                                    ) 
+                                </td>
+                                 
+                                <td class="product-price"> 
+                                    @item.SellPrice?.ToString(
+                                        "#,##0", new System.Globalization.CultureInfo("id-ID")
+                                    ) 
+                                </td>
+                                 
+                                <td class="product-stock"> 
+                                    @item.MinStock?.ToString("#,##0.###") 
+                                </td>
+
+                                 
+                                <td> 
+                                    @if (item.TrackStock)
+                                    {
+                                        <span class="product-badge product-badge-stock">
+                                            Ya
+                                        </span>
+
+                                        @if (item.TrackSerial)
+                                        {
+                                            <br />
+
+                                            <span class="product-badge product-badge-serial">
+                                                <i class="bi bi-upc me-1"></i>
+                                                Serial
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="product-badge product-badge-no-stock">
+                                            Tidak
+                                        </span>
+                                    }
+
+                                </td>
+                                 
+                                <td> 
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="product-badge product-badge-stock">
+                                            Aktif
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="product-badge product-badge-no-stock">
+                                            Nonaktif
+                                        </span>
+                                    } 
+                                </td>
+                                 
+                                <td> 
+                                    <div class="product-actions"> 
+                                        <a asp-action="Index"
+                                           asp-controller="ProductUnits"
+                                           asp-route-id="@item.Id"
+                                           class="product-action-btn product-action-copy"
+                                           title="Satuan & Konversi">
+
+                                            <i class="bi bi-rulers"></i>
+
+                                        </a>
+
+                                         @if (!isVariant)
+                                        {
+                                            var hasVariants =
+                                                item.HasVariants == true ||
+                                                item.VariantCount > 0;
+
+                                            <a asp-action="Index"
+                                               asp-controller="ProductVariants"
+                                               asp-route-id="@item.Id"
+                                               class="product-action-btn product-action-variant @(hasVariants ? "product-action-variant-active" : "")"
+                                               title="@(hasVariants ? "Kelola Varian - Sudah memiliki varian" : "Kelola Varian")">
+
+                                                <i class="bi bi-diagram-3"></i>
+
+                                            </a>
+                                        }
+
+                                        <a asp-action="Copy"
+                                           asp-controller="Products"
+                                           asp-route-id="@item.Id"
+                                           class="product-action-btn product-action-copy"
+                                           title="Salin Produk">
+
+                                            <i class="bi bi-files"></i>
+
+                                        </a>
+                                         
+                                        <button type="button"
+                                                class="product-action-btn product-action-qr"
+                                                title="QR Code"
+                                                onclick='openQrModal(
+                                                    @Html.Raw(
+                                                        System.Text.Json.JsonSerializer.Serialize(item.Uid)
+                                                    ),
+                                                    @Html.Raw(
+                                                        System.Text.Json.JsonSerializer.Serialize(item.Name ?? "")
+                                                    ),
+                                                    @Html.Raw(
+                                                        System.Text.Json.JsonSerializer.Serialize(item.Sku ?? "")
+                                                    )
+                                                )'>
+
+                                            <i class="bi bi-qr-code"></i>
+
+                                        </button>
+                                         
+                                        <a asp-action="Edit"
+                                           asp-controller="Products"
+                                           asp-route-id="@item.Id"
+                                           class="product-action-btn product-action-edit"
+                                           title="Edit">
+
+                                            <i class="bi bi-pencil-square"></i>
+
+                                        </a>
+                                         
+                                        <form method="post"
+                                              asp-action="Delete"
+                                              asp-controller="Products"
+                                              class="d-inline"
+                                              onsubmit="return confirmDeleteProduct();">
+
+                                            @Html.AntiForgeryToken()
+
+                                            <input type="hidden"
+                                                   name="id"
+                                                   value="@item.Id" />
+
+                                            <button type="submit"
+                                                    class="product-action-btn product-action-delete"
+                                                    title="Hapus">
+
+                                                <i class="bi bi-trash"></i> 
+                                            </button> 
+                                        </form> 
+                                    </div> 
+                                </td> 
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr> 
+                            <td colspan="17"
+                                class="product-empty"> 
+                                <i class="bi bi-box-seam"></i> 
+                                Tidak ada data produk. 
+                            </td> 
+                        </tr>
+                    }
+                </tbody>
+                
+            </table>
+        </div>
+
+        @* <!-- Footer / Pagination !--> *@
+        <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+         @{
+             var startItem = Model.TotalCount == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1;
+             var endItem = Math.Min(Model.Page * Model.PageSize, Model.TotalCount);
+          }
+          <span class="menu-description small"> Menampilkan <strong>@startItem – @endItem</strong> dari <strong>@Model.TotalCount</strong> data </span>
+          @{
+             var currentPage = Model.Page;
+             var totalPages = Model.TotalPage;
+           }
+              <nav aria-label="Pagination">
+                 <ul class="pagination">
+                    <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                       <a class="page-link" href="@Url.Action("Index", new
+                            {
+                                page = currentPage - 1,
+                                pageSize = Model.PageSize,
+                                search = Context.Request.Query["search"].ToString(),
+                                brandId = Context.Request.Query["brandId"].ToString(),
+                                categoryId = Context.Request.Query["categoryId"].ToString(),
+                                subCategoryId = Context.Request.Query["subCategoryId"].ToString(),
+                                productType = Context.Request.Query["productType"].ToString(),
+                                unitId = Context.Request.Query["unitId"].ToString(),
+                                trackStock = Context.Request.Query["trackStock"].ToString(),
+                                isActive = Context.Request.Query["isActive"].ToString(),
+                                showVariant = Context.Request.Query["showVariant"].ToString()
+                            })">
+                             Sebelumnya
+                       </a>
+                    </li>
+
+                    @for (int i = 1; i <= totalPages; i++)
+                    {
+                        <li class="page-item @(i == currentPage ? "active" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new
+                               {
+                                   page = i,
+                                   pageSize = Model.PageSize,
+                                   search = Context.Request.Query["search"].ToString(),
+                                   brandId = Context.Request.Query["brandId"].ToString(),
+                                   categoryId = Context.Request.Query["categoryId"].ToString(),
+                                   subCategoryId = Context.Request.Query["subCategoryId"].ToString(),
+                                   productType = Context.Request.Query["productType"].ToString(),
+                                   unitId = Context.Request.Query["unitId"].ToString(),
+                                   trackStock = Context.Request.Query["trackStock"].ToString(),
+                                   isActive = Context.Request.Query["isActive"].ToString(),
+                                   showVariant = Context.Request.Query["showVariant"].ToString()
+                               })">
+
+                                @i
+
+                            </a>
+
+                        </li>
+                    }
+                       <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new
+                               {
+                                   page = currentPage + 1,
+                                   pageSize = Model.PageSize,
+                                   search = Context.Request.Query["search"].ToString(),
+                                   brandId = Context.Request.Query["brandId"].ToString(),
+                                   categoryId = Context.Request.Query["categoryId"].ToString(),
+                                   subCategoryId = Context.Request.Query["subCategoryId"].ToString(),
+                                   productType = Context.Request.Query["productType"].ToString(),
+                                   unitId = Context.Request.Query["unitId"].ToString(),
+                                   trackStock = Context.Request.Query["trackStock"].ToString(),
+                                   isActive = Context.Request.Query["isActive"].ToString(),
+                                   showVariant = Context.Request.Query["showVariant"].ToString()
+                               })">
+
+                                Berikutnya
+
+                            </a>
+
+                        </li>
+                   </ul>
+              </nav>
+        </div>  
+    </div>
+</div>
+
+@* modal qr-code *@
+<div class="modal fade"
+     id="qrLabelModal"
+     tabindex="-1"
+     aria-labelledby="qrLabelModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered qr-label-modal-dialog">
+
+        <div class="modal-content qr-label-modal">
+             
+            <div class="modal-header qr-label-modal-header">
+
+                <div class="qr-label-title">
+                    <i class="bi bi-qr-code"></i>
+
+                    <span id="qrLabelModalLabel">
+                        Cetak Label QR
+                    </span>
+                </div>
+
+                <button type="button"
+                        class="btn-close qr-modal-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button> 
+            </div>
+
+             
+            <div class="modal-body qr-label-modal-body"> 
+                <div class="qr-product-info"> 
+                    <div class="qr-product-label">
+                        Produk:
+                    </div>
+
+                    <div class="qr-product-value">
+
+                        <strong id="qrProductName">
+                            -
+                        </strong>
+
+                        <span id="qrProductSku">
+                            -
+                        </span> 
+                    </div> 
+                </div>
+                 
+
+                <div class="row g-2"> 
+                    <div class="col-6"> 
+                        <label class="qr-input-label">
+                            Isi per label (pcs)
+                        </label>
+
+                        <input type="number"
+                               class="form-control qr-input"
+                               id="qrPerLabel"
+                               min="1"
+                               value="10">
+
+                    </div>
+
+
+                    <div class="col-6"> 
+                        <label class="qr-input-label">
+                            Jumlah label
+                        </label>
+
+                        <input type="number"
+                               class="form-control qr-input"
+                               id="qrLabelCount"
+                               min="1"
+                               value="1"> 
+                    </div> 
+                </div>
+
+                 
+                <div class="qr-total-info"> 
+                    Total = <strong id="qrTotalPcs">
+                        10
+                    </strong> pcs. QR berisi SKU produk. 
+                </div> 
+            </div>
+
+             
+            <div class="modal-footer qr-label-modal-footer"> 
+                <button type="button"
+                        class="btn btn-outline-secondary qr-preview-btn"
+                        onclick="previewQrLabel()">
+
+                    <i class="bi bi-eye me-1"></i>
+                    Preview
+
+                </button>
+
+
+                <button type="button"
+                        class="btn btn-primary qr-print-btn"
+                        onclick="printQrLabel()">
+
+                    <i class="bi bi-printer me-1"></i>
+                    Cetak
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <script>
+        function confirmDeleteProduct() {
+            return confirm(
+                'Apakah Anda yakin ingin menghapus produk ini?'
+            );
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            // Toggle Varian
+            const showVariant = document.getElementById("showVariant"); 
+            if (showVariant) {
+
+                showVariant.addEventListener("change", function () {
+
+                    const form = showVariant.closest("form");
+
+                    if (form) {
+                        form.submit();
+                    }
+
+                });
+
+            }
+
+            const categorySelect = document.getElementById("categoryId");
+            const subCategorySelect = document.getElementById("subCategoryId");
+            const subCategoryHelp = document.querySelector(".product-filter-help");
+
+            const selectedSubCategoryId =
+                "@Context.Request.Query["subCategoryId"]";
+
+            if (categorySelect && subCategorySelect) {
+
+                async function loadSubCategories(categoryId, selectedId = "") {
+
+                    // Kosongkan dropdown terlebih dahulu
+                    subCategorySelect.innerHTML =
+                        '<option value="">-- Semua Sub-Kategori --</option>';
+
+                    if (!categoryId) {
+
+                        if (subCategoryHelp) {
+                            subCategoryHelp.innerHTML =
+                                '<i class="bi bi-info-circle me-1"></i> ' +
+                                'Pilih Kategori terlebih dahulu.';
+                        }
+
+                        return;
+                    }
+
+                    if (subCategoryHelp) {
+                        subCategoryHelp.innerHTML =
+                            '<i class="bi bi-hourglass-split me-1"></i> ' +
+                            'Memuat subkategori...';
+                    }
+
+                    try {
+
+                        const response = await fetch(
+                            `/Products/GetSubCategories?categoryId=${encodeURIComponent(categoryId)}`
+                        );
+
+                        if (!response.ok) {
+                            throw new Error("Gagal mengambil subkategori.");
+                        }
+
+                        const subCategories = await response.json();
+
+                        if (!subCategories || subCategories.length === 0) {
+
+                            if (subCategoryHelp) {
+                                subCategoryHelp.innerHTML =
+                                    '<i class="bi bi-info-circle me-1"></i> ' +
+                                    'Kategori ini belum memiliki subkategori.';
+                            }
+
+                            return;
+                        }
+
+                        subCategories.forEach(function (subCategory) {
+
+                            const option =
+                                document.createElement("option");
+
+                            option.value = subCategory.id;
+                            option.textContent = subCategory.name;
+
+                            if (
+                                selectedId &&
+                                String(subCategory.id) === String(selectedId)
+                            ) {
+                                option.selected = true;
+                            }
+
+                            subCategorySelect.appendChild(option);
+                        });
+
+                        if (subCategoryHelp) {
+                            subCategoryHelp.innerHTML =
+                                '<i class="bi bi-check-circle me-1"></i> ' +
+                                'Subkategori menyesuaikan dengan kategori yang dipilih.';
+                        }
+
+                    }
+                    catch (error) {
+
+                        console.error(
+                            "Gagal memuat subkategori:",
+                            error
+                        );
+
+                        if (subCategoryHelp) {
+                            subCategoryHelp.innerHTML =
+                                '<i class="bi bi-exclamation-triangle me-1"></i> ' +
+                                'Gagal memuat subkategori.';
+                        }
+                    }
+                }
+
+                categorySelect.addEventListener("change", function () {
+
+                    const categoryId = this.value;
+
+                    // Reset subkategori ketika kategori berubah
+                    loadSubCategories(categoryId);
+
+                });
+
+                // Load ketika halaman pertama kali dibuka
+                if (categorySelect.value) {
+
+                    loadSubCategories(
+                        categorySelect.value,
+                        selectedSubCategoryId
+                    );
+
+                }
+            }
+        });
+
+        // qr-code
+        let currentQrUid = null; 
+        function openQrModal(uid, productName, sku) {
+
+            currentQrUid = uid; 
+            document.getElementById("qrProductName").textContent = productName || "-"; 
+            document.getElementById("qrProductSku").textContent = sku || "-"; 
+            document.getElementById("qrPerLabel").value = 10; 
+            document.getElementById("qrLabelCount").value = 1; 
+            calculateQrTotal();
+
+            const modalElement = document.getElementById("qrLabelModal"); 
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+
+            modal.show();
+        }
+         
+        function calculateQrTotal() {
+
+            const perLabel = parseInt( document.getElementById("qrPerLabel").value ) || 0;
+            const labelCount = parseInt( document.getElementById("qrLabelCount").value ) || 0;
+            const total = perLabel * labelCount; 
+            document.getElementById("qrTotalPcs").textContent = total.toLocaleString("id-ID");
+        }
+
+        function previewQrLabel() {
+
+            if (!currentQrUid) {
+                return;
+            }
+
+            const perLabel = parseInt( document.getElementById("qrPerLabel").value ) || 1; 
+            const labelCount = parseInt( document.getElementById("qrLabelCount").value ) || 1; 
+            const url =
+                `/Products/Label/${encodeURIComponent(currentQrUid)}` +
+                `?per=${perLabel}` +
+                `&count=${labelCount}`;
+
+             window.open(url, "_blank");
+        }
+         
+        function printQrLabel() {
+
+            if (!currentQrUid) {
+                return;
+            }
+
+            const perLabel = parseInt( document.getElementById("qrPerLabel").value ) || 1; 
+            const labelCount = parseInt( document.getElementById("qrLabelCount").value ) || 1; 
+            const url =
+                `/Products/Label/${encodeURIComponent(currentQrUid)}` +
+                `?per=${perLabel}` +
+                `&count=${labelCount}`;
+
+            window.open(url, "_blank");
+        }
+         
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const perLabel = document.getElementById("qrPerLabel"); 
+            const labelCount = document.getElementById("qrLabelCount");
+
+            if (perLabel) {
+                perLabel.addEventListener(
+                    "input",
+                    calculateQrTotal
+                );
+            }
+
+            if (labelCount) {
+                labelCount.addEventListener(
+                    "input",
+                    calculateQrTotal
+                );
+            }
+
+        });
+    </script>
+
+}

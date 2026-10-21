@@ -1,0 +1,323 @@
+@model ERP.Web.Models.PagedResult<ERP.Web.ViewModels.GoodsRfqViewModel>
+
+@{
+    ViewData["Title"] = "RFQ Barang";
+
+    var totalData = Model.TotalCount > 0 ? Model.TotalCount : Model.TotalData;
+    var currentPage = Model.Page < 1 ? 1 : Model.Page;
+    var pageSize = Model.PageSize > 0 ? Model.PageSize : 10;
+
+    var totalPages = totalData > 0
+        ? (int)Math.Ceiling((double)totalData / pageSize)
+        : 0;
+
+    var startItem = totalData == 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+    var endItem = Math.Min(currentPage * pageSize, totalData);
+
+    var selectedStatus = ViewBag.Status?.ToString() ?? "";
+}
+
+<div class="supplier-page">
+
+    <!-- JUDUL -->
+    <div class="mb-3">
+        <h4 class="page-title">RFQ Barang</h4>
+    </div>
+
+    <!-- INFORMASI -->
+    <div class="product-info-card mb-3">
+    <div class="product-info-header">
+        <div class="samll" style="font-size: .8rem;">
+        <i class="bi bi-box-seam me-2"></i>
+        <strong>RFQ (Request for Quotation)</strong>
+        — permintaan penawaran harga ke supplier. Setelah supplier
+        memberi harga, RFQ dikonversi menjadi <strong>PO Barang</strong>.
+    </div>
+    </div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="card supplier-card supplier-filter">
+        <div class="attribute-filter-header"
+             data-bs-toggle="collapse"
+             data-bs-target="#rfqFilter"
+             role="button">
+            <span><i class="bi bi-funnel"></i> Filter</span>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+
+        <div class="attribute-filter-body collapse show" id="rfqFilter">
+
+                <form method="get"
+                      asp-controller="GoodsRfq"
+                      asp-action="Index"
+                      class="row g-2 align-items-end">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Cari (No/Supplier)</label>
+                        <input type="text"
+                               name="search"
+                               value="@ViewBag.Search"
+                               class="form-control" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">-- Semua --</option>
+
+                            <option value="draft" selected="@(selectedStatus == "draft")">Draft</option>
+                            <option value="sent" selected="@(selectedStatus == "terkirim")">Terkirim</option>
+                            <option value="quoted" selected="@(selectedStatus == "ditawar")">Ditawar</option>
+                            <option value="converted" selected="@(selectedStatus == "jadi_po")">Jadi PO</option>
+                            <option value="cancelled" selected="@(selectedStatus == "batal")">Batal</option>
+                      </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Per Halaman</label>
+                        <select name="pageSize" class="form-select">
+                            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+
+                    <div class="attribute-filter-actions">
+                        <button type="submit" class="btn attribute-apply-btn">
+                            <i class="bi bi-search me-1"></i> Terapkan
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn attribute-reset-btn"
+                           title="Reset filter">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                  </div>
+               </form>
+            </div>
+        </div>
+   
+
+    <!-- TABEL -->
+    <div class="card supplier-card supplier-table-card">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+            <div class="d-flex align-items-center gap-2">
+                <strong>RFQ Barang</strong>
+                <span class="attribute-count">@totalData</span>
+                <small>Permintaan penawaran harga ke supplier</small>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2">
+
+           <div class="d-flex align-items-center gap-2">
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        onclick="location.reload()"
+                        title="Muat ulang">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#rfqTableBody"
+                        title="Tampilkan/sembunyikan tabel">
+                    <i class="bi bi-chevron-up"></i>
+                </button>
+
+                </div>
+
+                <a asp-controller="GoodsRfq"
+                   asp-action="Create"
+                   class="btn btn-primary btn-sm attribute-add-btn">
+                    <i class="bi bi-plus-circle"></i> Tambah RFQ
+                </a>
+            </div>
+        </div>
+
+        <div class="collapse show" id="rfqTableBody">
+            <div class="table-responsive">
+                <table class="table table-hover  align-middle mb-0 supplier-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 45px">#</th>
+                            <th>No. RFQ</th>
+                            <th>Tanggal</th>
+                            <th>Supplier</th>
+                            <th>Berlaku s/d</th>
+                            <th class="text-end">Total</th>
+                            <th>Status</th>
+                            <th class="attribute-action-cell">
+                                <div class="attribute-actions">Aksi</div>
+                           </th>
+                            
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                    @if (Model.Data != null && Model.Data.Any())
+                    {
+                        var nomor = ((Model.Page < 1 ? 1 : Model.Page) - 1)
+                                   * (Model.PageSize > 0 ? Model.PageSize : 10) + 1;
+
+                        foreach (var item in Model.Data)
+                        {
+                            <tr>
+                                <td>@nomor</td>
+
+                                <td>
+                                    <strong>@item.RfqNo</strong>
+                                </td>
+
+                                <td>@item.RfqDate.ToString("yyyy-MM-dd")</td>
+
+                                <td>@item.SupplierName</td>
+
+                                <td>
+                                    @(item.ValidUntil?.ToString("yyyy-MM-dd") ?? "-")
+                                </td>
+
+                                <td class="text-end">
+                                    @item.SubtotalAmount.ToString("N0")
+                                </td>
+
+                                <td>
+                                   @{
+                                     var st = (item.Status ?? "draft").Trim().ToLowerInvariant().Replace(" ", "_");
+
+                                     var (stText, stClass) = st switch
+                                     {
+                                          "draft"    => ("Draft", "bg-secondary"),
+                                          "sent" => ("Terkirim", "bg-info text-dark"),
+                                          "quoted"  => ("Ditawar", "bg-primary"),
+                                          "converted"  => ("Jadi PO", "bg-success"),
+                                          "cancelled"    => ("Batal", "bg-danger"),
+                                            _          => (item.Status ?? "-", "bg-secondary")
+                                     };
+                                  }
+                                  <span class="badge @stClass">@stText</span>
+                               </td>
+
+                                <td class="attribute-action-cell">
+                                <div class="attribute-actions">
+                                    <a asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       class="attribute-btn attribute-btn-edit"
+                                       title="Lihat detail">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                   </div>
+                                </td>
+                            </tr>
+
+                            nomor++;
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                Data RFQ belum tersedia.
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+
+ 
+<!-- PAGINATION DAN FOOTER -->
+
+<div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+
+    <span class="menu-description small">
+        Menampilkan
+        <strong>@startItem–@endItem</strong>
+        dari
+        <strong>@totalData data</strong>
+    </span>
+
+    <nav aria-label="Pagination">
+        <ul class="pagination mb-0">
+
+            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                @if (currentPage <= 1)
+                {
+                    <span class="page-link">Sebelumnya</span>
+                }
+                else
+                {
+                    <a class="page-link"
+                       href="@Url.Action("Index", new {
+                           search = Context.Request.Query["search"].ToString(),
+                           status = Context.Request.Query["status"].ToString(),
+                           page = currentPage - 1,
+                           pageSize = pageSize
+                       })">Sebelumnya</a>
+                }
+            </li>
+
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <a class="page-link"
+                       href="@Url.Action("Index", new {
+                           search = Context.Request.Query["search"].ToString(),
+                           status = Context.Request.Query["status"].ToString(),
+                           page = i,
+                           pageSize = pageSize
+                       })">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(totalPages == 0 || currentPage >= totalPages ? "disabled" : "")">
+                @if (currentPage >= totalPages || totalPages == 0)
+                {
+                    <span class="page-link">Berikutnya</span>
+                }
+                else
+                {
+                    <a class="page-link"
+                       href="@Url.Action("Index", new {
+                           search = Context.Request.Query["search"].ToString(),
+                           status = Context.Request.Query["status"].ToString(),
+                           page = currentPage + 1,
+                           pageSize = pageSize
+                       })">Berikutnya</a>
+                }
+            </li>
+
+        </ul>
+    </nav>
+
+</div>
+</div>
+</div>
+</div>
+
+@section Scripts {
+<script>
+    // =========================
+    // TOGGLE TABEL
+    // =========================
+    function toggleRfqTable(button) {
+
+        const content = document.getElementById("rfqTableBody");
+        const icon = button.querySelector("i");
+
+        if (content.style.display === "none") {
+            content.style.display = "";
+            icon.classList.remove("bi-chevron-down");
+            icon.classList.add("bi-chevron-up");
+        } else {
+            content.style.display = "none";
+            icon.classList.remove("bi-chevron-up");
+            icon.classList.add("bi-chevron-down");
+        }
+    }
+</script>
+}

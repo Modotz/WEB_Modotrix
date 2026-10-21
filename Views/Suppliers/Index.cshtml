@@ -1,0 +1,637 @@
+@using ERP.Web.Models
+@model PagedResult<SupplierViewModel>
+
+@{
+    ViewData["Title"] = "Supplier";
+
+    var no = ((Model.Page - 1) * Model.PageSize);
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">Supplier</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter"> 
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center"> 
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">Filter</span>
+            </div>
+
+            <button class="btn btn-sm text-muted p-0"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#filterCollapse"
+                    aria-expanded="true"
+                    aria-controls="filterCollapse"> 
+                <i class="bi bi-chevron-down"></i> 
+            </button> 
+        </div>
+
+        <div class="collapse show" id="filterCollapse"> 
+            <div class="card-body"> 
+                <form method="get"
+                      asp-action="Index"
+                      class="row g-2 align-items-end">
+
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">
+                            Cari
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="search"
+                               name="search"
+                               value="@Context.Request.Query["search"]" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="isActive" class="form-label">
+                            Is Active
+                        </label>
+
+                        <select class="form-select"
+                                id="isActive"
+                                name="isActive">
+
+                            <option value=""
+                                    selected="@(Context.Request.Query["isActive"] == "")">
+                                -- Semua --
+                            </option>
+
+                            <option value="true"
+                                    selected="@(Context.Request.Query["isActive"] == "true")">
+                                Aktif
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["isActive"] == "false")">
+                                Non-Aktif
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="pageSize" class="form-label">
+                            Per Halaman
+                        </label>
+
+                        <select class="form-select"
+                                id="pageSize"
+                                name="pageSize">
+
+                            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 d-flex gap-2"> 
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2"> 
+                            <i class="bi bi-search"></i>
+                            Terapkan 
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary"
+                           title="Reset Filter"> 
+                            <i class="bi bi-arrow-counterclockwise"></i> 
+                        </a> 
+                    </div> 
+                </form> 
+            </div> 
+        </div> 
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+
+        <!-- HEADER -->
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+            <div class="d-flex align-items-center gap-2">
+
+                <span class="fw-bold fs-5">Supplier</span>
+
+                <span class="badge badge-count">
+                    @Model.TotalCount
+                </span>
+
+                <span class="menu-description small ms-1">
+                    Kelola data pemasok
+                </span>
+
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+
+                <!-- Export PDF -->
+                <a asp-action="ExportPdf"
+                   asp-controller="Suppliers"
+                   class="btn btn-light btn-custom-square text-danger"
+                   title="Export PDF">
+
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+
+                </a>
+
+                <!-- Export Excel -->
+                <a asp-action="ExportExcel"
+                   asp-controller="Suppliers"
+                   class="btn btn-light btn-custom-square text-success"
+                   title="Export Excel">
+
+                    <i class="bi bi-file-earmark-excel-fill"></i>
+
+                </a>
+
+                <!-- Print -->
+                <a asp-action="Print"
+                   asp-controller="Suppliers"
+                   class="btn btn-light btn-custom-square text-secondary"
+                   title="Cetak"
+                   target="_blank">
+
+                    <i class="bi bi-printer-fill"></i>
+
+                </a>
+
+                <!-- Refresh Data -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Refresh Data"
+                        onclick="loadSuppliers()">
+
+                    <i class="bi bi-arrow-clockwise"></i>
+
+                </button>
+
+                <!-- Expand / Collapse -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Toggle">
+
+                    <i class="bi bi-chevron-up"></i>
+
+                </button>
+
+                <!-- Tambah Supplier -->
+                <button type="button"
+                        class="btn btn-teal btn-custom-action"
+                        id="btnAddSupplier"
+                        onclick="openCreateModal()">
+
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Tambah Supplier</span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- TABLE BODY -->
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0 supplier-table">
+
+                    <thead>
+                        <tr>
+                            <th class="ps-4">#</th>
+                            <th>CODE</th>
+                            <th>NAME</th>
+                            <th>CONTACT PERSON</th>
+                            <th>PHONE</th>
+                            <th>EMAIL</th>
+                            <th>NPWP</th>
+                            <th>IS ACTIVE</th>
+                            <th>AKSI</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @if (Model.Data != null && Model.Data.Any())
+                        {
+                            foreach (var item in Model.Data)
+                            {
+                                <tr>
+
+                                    <td class="ps-4">
+                                        @(++no)
+                                    </td>
+
+                                    <td>
+                                        @item.Code
+                                    </td>
+
+                                    <td>
+                                        @item.Name
+                                    </td>
+
+                                    <td>
+                                        @item.ContactPerson
+                                    </td>
+
+                                    <td>
+                                        @item.Phone
+                                    </td>
+
+                                    <td>
+                                        @item.Email
+                                    </td>
+
+                                    <td>
+                                        @item.Npwp
+                                    </td>
+
+                                    <td>
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge bg-success">
+                                                Aktif
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                Nonaktif
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <div class="d-flex justify-content-center gap-1">
+
+                                            <button type="button"
+                                                    class="btn btn-sm menu-action-edit"
+                                                    title="Edit"
+                                                    onclick="openEditModal(
+                                                        '@item.Id',
+                                                        '@item.Code',
+                                                        '@item.Name',
+                                                        '@item.ContactPerson',
+                                                        '@item.Phone',
+                                                        '@item.Email',
+                                                        '@item.Npwp',
+                                                        '@item.Address',
+                                                        '@item.IsActive'
+                                                    )">
+
+                                                <i class="bi bi-pencil"></i>
+
+                                            </button>
+
+                                            <form method="post"
+                                                  asp-action="Delete"
+                                                  class="d-inline"
+                                                  onsubmit="return confirmDeleteSupplier();">
+
+                                                @Html.AntiForgeryToken()
+
+                                                <input type="hidden"
+                                                       name="id"
+                                                       value="@item.Id" />
+
+                                                <button type="submit"
+                                                        class="btn btn-sm menu-action-delete"
+                                                        title="Nonaktifkan">
+
+                                                    <i class="bi bi-trash"></i>
+
+                                                </button>
+
+                                            </form>
+
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <p class="menu-description mb-0">
+                                        Belum ada data pemasok.
+                                    </p>
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- FOOTER / PAGINATION -->
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+
+                @{
+                    var startItem = Model.TotalCount == 0
+                        ? 0
+                        : ((Model.Page - 1) * Model.PageSize) + 1;
+
+                    var endItem = Math.Min(
+                        Model.Page * Model.PageSize,
+                        Model.TotalCount
+                    );
+                }
+
+                <span class="menu-description small">
+                    Menampilkan
+                    <strong>@startItem – @endItem</strong>
+                    dari
+                    <strong>@Model.TotalCount</strong>
+                    data
+                </span>
+
+                @{
+                    var currentPage = Model.Page;
+                    var totalPages = Model.TotalPage;
+                }
+
+                <nav aria-label="Pagination">
+
+                    <ul class="pagination">
+
+                        <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new {
+                                   search = Context.Request.Query["search"],
+                                   isActive = Context.Request.Query["isActive"],
+                                   page = currentPage - 1,
+                                   pageSize = Model.PageSize
+                               })">
+
+                                Sebelumnya
+
+                            </a>
+
+                        </li>
+
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       search = Context.Request.Query["search"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = i,
+                                       pageSize = Model.PageSize
+                                   })">
+
+                                    @i
+
+                                </a>
+
+                            </li>
+                        }
+
+                        <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                            <a class="page-link"
+                               href="@Url.Action("Index", new {
+                                   search = Context.Request.Query["search"],
+                                   isActive = Context.Request.Query["isActive"],
+                                   page = currentPage + 1,
+                                   pageSize = Model.PageSize
+                               })">
+
+                                Berikutnya
+
+                            </a>
+
+                        </li>
+
+                    </ul>
+
+                </nav>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@* modal *@
+<div class="modal fade"
+     id="supplierModal"
+     tabindex="-1"
+     aria-labelledby="modalTitle"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content menu-modal-content">
+            <form method="post" id="supplierForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-header menu-modal-header">
+                    <h5 class="modal-title  fw-semibold menu-modal-title"
+                        id="modalTitle">
+                        Tambah Supplier
+                    </h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+                </div>
+           
+                <div class="modal-body py-4">
+                    <input type="hidden" id="Id" name="Id" />
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="Code" class="form-label fw-medium">
+                                Kode <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control bg-transparent text-white border-secondary"
+                                   id="Code"
+                                   name="Code" 
+                                   required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="Name" class="form-label fw-medium">
+                                Nama Supplier <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control bg-transparent text-white border-secondary"
+                                   id="Name"
+                                   name="Name" 
+                                   placeholder=""
+                                   required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="ContactPerson" class="form-label fw-medium">
+                                Contact Person
+                            </label>
+                            <input type="text" class="form-control bg-transparent text-white border-secondary"
+                                   id="ContactPerson"
+                                   name="ContactPerson"/>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="Phone" class="form-label fw-medium">
+                                Phone
+                            </label>
+                            <input type="text" class="form-control bg-transparent text-white border-secondary"
+                                   id="Phone"
+                                   name="Phone"/>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="Email" class="form-label fw-medium">
+                                Email
+                            </label>
+                            <input type="email"
+                                   class="form-control"
+                                   id="Email"
+                                   name="Email"
+                                   maxlength="191"
+                                   autocomplete="off"
+                                   required />
+                        </div>
+
+                         <div class="col-md-6">
+                            <label for="Npwp" class="form-label fw-medium">
+                                Npwp
+                            </label>
+                            <input type="text" class="form-control bg-transparent text-white border-secondary"
+                                   id="Npwp"
+                                   name="Npwp"/>
+                        </div>
+
+                         <div class="col-md-6">
+                            <label for="Address" class="form-label fw-medium">
+                                Address
+                            </label>
+                            <input type="textarea" class="form-control bg-transparent text-white border-secondary"
+                                   id="Address"
+                                   name="Address"/>
+                        </div>
+
+                        <div class="col-12 mt-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="IsActive"
+                                       name="IsActive"
+                                       value="true"
+                                       checked />
+                                <input type="hidden" name="IsActive" value="false" />
+                                <label class="form-check-label ms-2" for="IsActive">
+                                    Aktif
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer menu-modal-footer">
+                    <button type="submit" class="btn btn-primary px-3">
+                        <i class="bi bi-box-arrow-down me-2"></i>Simpan
+                    </button>
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">
+                        Batal
+                    </button>
+                </div>
+           </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/Nestable2/1.6.0/jquery.nestable.min.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/nestable2@1.6.0/jquery.nestable.min.js"></script>
+
+    <script>
+        const supplierModal = new bootstrap.Modal(
+            document.getElementById('supplierModal')
+        );
+
+        function loadSuppliers() {
+            location.reload();
+         }
+         
+        //create
+        function openCreateModal() {
+
+            document.getElementById('modalTitle').innerText = 'Tambah Supplier';
+            document.getElementById('supplierForm').action = '@Url.Action("Create", "Suppliers")';
+            document.getElementById('Id').value = '';
+            document.getElementById('Code').value = '';
+            document.getElementById('Name').value = '';
+            document.getElementById('ContactPerson').value = '';
+            document.getElementById('Phone').value = '';
+            document.getElementById('Email').value = '';
+            document.getElementById('Npwp').value = '';
+            document.getElementById('Address').value = '';
+            document.getElementById('IsActive').checked = true;
+            supplierModal.show();
+        }
+
+
+        // edit
+        function openEditModal(
+            id,
+            code,
+            name,
+            contactPerson,
+            phone,
+            email,
+            npwp,
+            address, 
+            isActive
+        ) {
+
+            document.getElementById('modalTitle').innerText = 'Edit Supplier';
+            document.getElementById('supplierForm').action = '@Url.Action("Edit", "Suppliers")';
+            document.getElementById('Id').value = id;
+            document.getElementById('Code').value = code || '';
+            document.getElementById('Name').value = name || '';
+            document.getElementById('ContactPerson').value = contactPerson || '';
+            document.getElementById('Phone').value = phone || '';
+            document.getElementById('Email').value = email || '';
+            document.getElementById('Npwp').value = npwp || '';
+            document.getElementById('Address').value = address || '';
+            document.getElementById('IsActive').checked =
+                isActive === true ||
+                isActive === 'True' ||
+                isActive === 'true';
+
+            supplierModal.show();
+        }
+
+
+        // soft-delete
+        function confirmDeleteSupplier() {
+
+            return confirm(
+                "Hapus supplier ini?"
+            );
+        }
+
+    </script>
+}
+
+
+

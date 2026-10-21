@@ -1,0 +1,563 @@
+@using ERP.Web.Models
+@using System.Globalization
+@model ProductLabelViewModel
+
+@{
+    ViewData["Title"] = "Preview Label Produk";
+    Layout = null;
+
+    var totalPcs = Model.PerLabel * Model.LabelCount;
+    var culture = new CultureInfo("id-ID");
+
+    var productName = Model.ProductName ?? "-";
+    var sku = Model.Sku ?? "-";
+    var productNumber = Model.ProductNumber ?? "-";
+    var operatorName = Model.OperatorName ?? "ADMINISTRATOR";
+    var dimensions = !string.IsNullOrWhiteSpace(Model.Dimensions)
+        ? Model.Dimensions
+        : sku;
+
+    var barcodeValue = !string.IsNullOrWhiteSpace(Model.BarcodeValue)
+        ? Model.BarcodeValue
+        : dimensions;
+
+    var printDate = Model.PrintDate ?? DateTime.Now;
+}
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>@productName - Label Produk</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #111;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 12px;
+            background: #eceef1;
+        }
+ 
+        .preview-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 0 auto 12px;
+        }
+
+        .preview-summary {
+            font-size: 11px;
+            line-height: 1.5;
+            font-weight: 600;
+            overflow-wrap: anywhere;
+        }
+
+        .preview-summary .muted {
+            color: #666;
+            font-weight: 400;
+        }
+
+        .preview-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .preview-button {
+            height: 29px;
+            padding: 0 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            background: #fff;
+            color: #222;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .preview-button.print {
+            color: #fff;
+            background: #203e65;
+            border-color: #203e65;
+        }
+
+        .preview-button:hover {
+            opacity: .88;
+        }
+ 
+        .label-list {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+ 
+        .product-label {
+            width: 302px;
+            height: 400px;
+            flex: 0 0 302px;
+            padding: 9px;
+            border: 2px solid #111;
+            background: #fff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+ 
+        .brand-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 5px;
+            min-height: 34px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #111;
+        }
+
+        .brand-name {
+            font-size: 27px;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: -1.3px;
+            white-space: nowrap;
+        }
+
+        .brand-description {
+            text-align: right;
+            font-size: 9px;
+            line-height: 1.3;
+            font-weight: 700;
+        }
+
+        .brand-description small {
+            display: block;
+            font-size: 8px;
+            font-weight: 500;
+        }
+ 
+        .product-main {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 108px;
+            gap: 7px;
+            height: 158px;
+            padding: 10px 0 8px;
+            border-bottom: 1px solid #111;
+        }
+
+        .product-information {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .product-type {
+            font-size: 12px;
+            line-height: 1.2;
+            font-weight: 900;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .product-meta {
+            font-family: "Courier New", monospace;
+            font-size: 9px;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .product-meta div {
+            margin-bottom: 2px;
+        }
+
+        .quantity-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: auto;
+            padding-top: 5px;
+        }
+
+        .quantity-label {
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .quantity-value {
+            padding: 3px 6px;
+            border: 1.5px solid #111;
+            border-radius: 2px;
+            font-size: 16px;
+            line-height: 1;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .qr-container {
+            width: 108px;
+            height: 108px;
+            align-self: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-image {
+            width: 108px;
+            height: 108px;
+            object-fit: contain;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        .qr-error {
+            font-size: 10px;
+            text-align: center;
+            color: #b91c1c;
+        }
+ 
+        .barcode-heading {
+            min-height: 29px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 0;
+            border-bottom: 1px solid #111;
+            font-size: 12px;
+            line-height: 1.2;
+            font-weight: 900;
+            text-align: center;
+            text-transform: uppercase;
+            overflow-wrap: anywhere;
+        }
+ 
+        .barcode-container {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            overflow: hidden;
+            padding-top: 4px;
+        }
+
+        .barcode-svg {
+            display: block;
+            width: 100%;
+            height: 57px;
+            min-height: 45px;
+        }
+
+        .barcode-value {
+            margin-top: 0;
+            font-size: 19px;
+            line-height: 1.1;
+            font-weight: 900;
+            text-align: center;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .barcode-error {
+            color: #b91c1c;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        @@media screen and (max-width: 480px) {
+            body {
+                padding: 10px 5px;
+            }
+
+            .preview-summary {
+                text-align: center;
+            }
+
+            .product-label {
+                width: 302px;
+                flex-basis: 302px;
+            }
+        }
+
+        @@media print {
+            @@page {
+                size: 80mm 80mm;
+                margin: 0;
+            }
+
+            html, body {
+                width: 80mm;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+            }
+
+            .preview-header {
+                display: none !important;
+            }
+
+            .label-list {
+                display: block;
+                margin: 0;
+                padding: 0;
+            }
+
+            .product-label {
+                width: 80mm;
+                height: 80mm;
+                flex: none;
+                margin: 0;
+                padding: 2.3mm;
+                border: 0.45mm solid #111;
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .product-label:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
+
+            .brand-name {
+                font-size: 7.2mm;
+            }
+
+            .brand-description {
+                font-size: 2.4mm;
+            }
+
+            .brand-description small {
+                font-size: 2.1mm;
+            }
+
+            .brand-header {
+                min-height: 9mm;
+                padding-bottom: 1.2mm;
+            }
+
+            .product-main {
+                height: 41mm;
+                grid-template-columns: minmax(0, 1fr) 28mm;
+                gap: 1mm;
+                padding: 2.2mm 0;
+            }
+
+            .product-type {
+                font-size: 3.1mm;
+                margin-bottom: 1.5mm;
+            }
+
+            .product-meta {
+                font-size: 2.25mm;
+                line-height: 1.35;
+            }
+
+            .quantity-label {
+                font-size: 3.1mm;
+            }
+
+            .quantity-value {
+                font-size: 4mm;
+                padding: 0.7mm 1.2mm;
+            }
+
+            .qr-container,
+            .qr-image {
+                width: 27mm;
+                height: 27mm;
+            }
+
+            .barcode-heading {
+                min-height: 7.5mm;
+                font-size: 3mm;
+            }
+
+            .barcode-svg {
+                height: 14mm;
+                min-height: 12mm;
+            }
+
+            .barcode-value {
+                font-size: 4.8mm;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="preview-header">
+        <div class="preview-summary">
+            <span>@productName</span>
+            <span class="muted"> · SKU @sku · </span>
+            <span>@Model.LabelCount label</span>
+            <span class="muted"> × </span>
+            <span>@Model.PerLabel pcs/label</span>
+            <span class="muted"> = </span>
+            <span>@totalPcs pcs</span>
+        </div>
+
+        <div class="preview-actions">
+            <button type="button"
+                    class="preview-button print"
+                    onclick="printLabels()">
+                🖨️ Cetak
+            </button>
+
+            <button type="button"
+                    class="preview-button"
+                    onclick="window.close(); setTimeout(() => {
+                        if (!window.closed) history.back();
+                    }, 100)">
+                Tutup
+            </button>
+        </div>
+    </header>
+
+    <main class="label-list">
+        @for (int i = 0; i < Model.LabelCount; i++)
+        {
+            <article class="product-label">
+                <header class="brand-header">
+                    <div class="brand-name">ERPLITE</div>
+
+                    <div class="brand-description">
+                        Foam | Mattress | Spring Bed
+                        <small>www.perusahaan.com</small>
+                    </div>
+                </header>
+
+                <section class="product-main">
+                    <div class="product-information">
+                        <div class="product-type">BUSA</div>
+
+                        <div class="product-meta">
+                            <div>@sku</div>
+                            <div>@productNumber</div>
+                            <div>@printDate.ToString("yyyy-MM-dd HH:mm:ss", culture)</div>
+                            <div>@operatorName</div>
+                        </div>
+
+                        <div class="quantity-row">
+                            <span class="quantity-label">Isi:</span>
+                            <span class="quantity-value">
+                                @Model.PerLabel pcs
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="qr-container">
+                        @if (!string.IsNullOrWhiteSpace(Model.QrCodeBase64))
+                        {
+                            <img class="qr-image"
+                                 src="data:image/png;base64,@Model.QrCodeBase64"
+                                 alt="QR Code @sku" />
+                        }
+                        else
+                        {
+                            <div class="qr-error">QR gagal dibuat</div>
+                        }
+                    </div>
+                </section>
+
+                <div class="barcode-heading">
+                    @productName
+                </div>
+
+                <section class="barcode-container">
+                    <svg class="barcode-svg"
+                         data-barcode="@barcodeValue"
+                         role="img"
+                         aria-label="Barcode @barcodeValue"></svg>
+
+                    <div class="barcode-value">@dimensions</div>
+                </section>
+            </article>
+        }
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+    <script>
+        function renderBarcodes() {
+            if (typeof JsBarcode === "undefined") {
+                document.querySelectorAll(".barcode-container").forEach(container => {
+                    const svg = container.querySelector(".barcode-svg");
+
+                    if (svg) {
+                        svg.outerHTML =
+                            '<div class="barcode-error">' +
+                            'Barcode gagal dimuat. Periksa koneksi internet.' +
+                            '</div>';
+                    }
+                });
+
+                return;
+            }
+
+            document.querySelectorAll(".barcode-svg").forEach(svg => {
+                const value = svg.dataset.barcode;
+
+                if (!value || !value.trim()) {
+                    svg.outerHTML =
+                        '<div class="barcode-error">Data barcode kosong</div>';
+                    return;
+                }
+
+                try {
+                    JsBarcode(svg, value, {
+                        format: "CODE128",
+                        displayValue: false,
+                        lineColor: "#000000",
+                        background: "#ffffff",
+                        width: 1.5,
+                        height: 55,
+                        margin: 0
+                    });
+                } catch (error) {
+                    svg.outerHTML =
+                        '<div class="barcode-error">Barcode tidak valid</div>';
+                }
+            });
+        }
+
+        function printLabels() {
+            renderBarcodes();
+
+            setTimeout(() => {
+                window.print();
+            }, 250);
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", renderBarcodes);
+        } else {
+            renderBarcodes();
+        }
+
+        window.addEventListener("beforeprint", renderBarcodes);
+    </script>
+</body>
+</html>

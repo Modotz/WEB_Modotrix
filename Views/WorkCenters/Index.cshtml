@@ -1,0 +1,960 @@
+@model PagedResult<WorkCenterViewModel>
+
+@{
+ViewData["Title"] = "Work Center";
+}
+
+<div class="supplier-page">
+
+    <!-- HEADER -->
+    <div class="mb-3">
+        <h4 class="page-title">
+            Work Center
+        </h4>
+    </div>
+
+
+    <!-- FILTER -->
+    <div class="ard supplier-card supplier-filter">
+
+        <div class="attribute-filter-header">
+
+            <strong>
+                <i class="bi bi-funnel me-1"></i>
+                Filter
+            </strong>
+
+            <i class="bi bi-chevron-down"></i>
+
+        </div>
+
+
+        <div class="attribute-filter-body">
+
+            <form method="get"
+                  asp-controller="WorkCenters"
+                  asp-action="Index">
+
+                <div class="row g-2 align-items-end">
+
+                    <!-- SEARCH -->
+                    <div class="col-md-4">
+
+                        <label class="form-label">
+                            Cari (Kode/Nama)
+                        </label>
+
+                        <input type="text"
+                               name="search"
+                               value="@ViewBag.Search"
+                               class="form-control"
+                               placeholder="Cari work center..." />
+
+                    </div>
+
+
+                    <!-- PER HALAMAN -->
+                    <div class="col-md-2">
+
+                        <label class="form-label">
+                            Per Halaman
+                        </label>
+
+                        <select name="pageSize"
+                                class="form-select">
+
+                            <option value="10"
+                                    selected="@(Model.PageSize == 10 ? "selected" : null)">
+                                10
+                            </option>
+
+                            <option value="25"
+                                    selected="@(Model.PageSize == 25 ? "selected" : null)">
+                                25
+                            </option>
+
+                            <option value="50"
+                                    selected="@(Model.PageSize == 50 ? "selected" : null)">
+                                50
+                            </option>
+
+                            <option value="100"
+                                    selected="@(Model.PageSize == 100 ? "selected" : null)">
+                                100
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- BUTTON -->
+                    <div class="col-md-3">
+
+                        <div class="attribute-filter-actions">
+
+                            <button type="submit"
+                                    class="btn attribute-apply-btn">
+
+                                <i class="bi bi-search me-1"></i>
+                                Terapkan
+
+                            </button>
+
+
+                            <a asp-controller="WorkCenters"
+                               asp-action="Index"
+                               class="btn attribute-reset-btn"
+                               title="Reset">
+
+                                <i class="bi bi-arrow-counterclockwise"></i>
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ========================= -->
+    <!-- DAFTAR WORK CENTER -->
+    <!-- ========================= -->
+
+    <div class="card supplier-card supplier-table-card">
+
+        <!-- CARD HEADER -->
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+            <div class="d-flex align-items-center gap-2">
+
+                <strong class="attribute-card-title">
+                    Work Center
+                </strong>
+
+                <span class="attribute-count">
+                    @Model.TotalData
+                </span>
+
+                <small class="attribute-card-description d-none d-md-inline">
+                    Stasiun kerja &amp; tarif per jam
+                </small>
+
+           </div>
+
+          <div class="d-flex align-items-center gap-2">
+
+          <div class="d-flex align-items-center gap-2">
+               <a asp-action="ExportPdf" 
+                  asp-controller="WorkCenters"
+                  class="btn btn-light btn-custom-square text-danger" 
+                  title="Export PDF">
+               <i class="bi bi-file-earmark-pdf-fill"></i>
+               </a>
+
+                <a asp-action="ExportExcel" 
+                   asp-controller="WorkCenters"
+                   class="btn btn-light btn-custom-square text-success" 
+                   title="Export Excel">
+                <i class="bi bi-file-earmark-excel-fill"></i>
+                </a>
+             
+                 <a asp-action="Print" 
+                    asp-controller="WorkCenters"
+                    class="btn btn-light btn-custom-square text-secondary" 
+                    title="Cetak" target="_blank">
+                 <i class="bi bi-printer-fill"></i>
+                 </a>
+
+         
+                  <button type="button"
+                          class="btn btn-light btn-custom-square"
+                          title="Refresh"
+                          onclick="location.reload()">
+
+                   <i class="bi bi-arrow-clockwise"></i>
+
+                   </button>
+
+
+                   <button type="button"
+                           class="btn btn-light btn-custom-square"
+                           title="Toggle Collapse"
+                           onclick="toggleWorkCenterTable(this)">
+
+                    <i class="bi bi-chevron-up"></i>
+
+                    </button>
+
+                </div>
+
+
+                <!-- TAMBAH WORK CENTER -->
+                <button type="button"
+                        class="btn btn-primary btn-sm attribute-add-btn"
+                        onclick="openCreateWorkCenter()">
+
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Tambah Work Center
+
+                </button>
+
+            </div>
+
+        </div>
+
+       <!-- BAGIAN TABEL + PAGINATION -->
+       <div id="workCenterTableContent">
+
+        <!-- TABLE -->
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0 supplier-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th class="attribute-number">
+                                #
+                            </th>
+
+                            <th style="width: 20%;">
+                                KODE
+                            </th>
+
+                            <th style="width: 30%;">
+                                NAMA
+                            </th>
+
+                            <th class="text-center"
+                                style="width: 20%;">
+                                TARIF / JAM
+                            </th>
+
+                            <th style="width: 16%;">
+                                STATUS
+                            </th>
+
+                            <th style="width: 140px;">
+                                AKSI
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        @if (Model.Data != null && Model.Data.Any())
+                        {
+                            var no =
+                                ((Model.Page - 1) * Model.PageSize) + 1;
+
+                            foreach (var item in Model.Data)
+                            {
+                                <tr>
+
+                                    <!-- NOMOR -->
+                                    <td class="attribute-number">
+                                        @no
+                                    </td>
+
+
+                                    <!-- KODE -->
+                                    <td class="attribute-code">
+
+                                        <strong>
+                                            @item.Code
+                                        </strong>
+
+                                    </td>
+
+
+                                    <!-- NAMA -->
+                                    <td>
+
+                                        <strong>
+                                            @item.Name
+                                        </strong>
+
+                                    </td>
+
+
+                                    <!-- TARIF -->
+                                    <td class="text-center">
+
+                                        <strong>
+                                            @item.CostPerHour.ToString("N0")
+                                        </strong>
+
+                                    </td>
+
+
+                                    <!-- STATUS -->
+                                    <td>
+
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge bg-success">
+                                                Aktif
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">
+                                                Tidak Aktif
+                                            </span>
+                                        }
+
+                                    </td>
+
+
+                                    <!-- AKSI -->
+                                    <td class="attribute-action-cell">
+
+                                        <div class="attribute-actions">
+
+                                            <!-- EDIT -->
+                                            <button type="button"
+                                                    class="attribute-btn attribute-btn-edit"
+                                                    title="Edit"
+                                                    onclick="openEditWorkCenter(@item.Id)">
+
+                                                <i class="bi bi-pencil-square"></i>
+
+                                            </button>
+
+
+                                            <!-- DELETE -->
+                                            <form asp-controller="WorkCenters"
+                                                  asp-action="Delete"
+                                                  method="post"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Yakin ingin menghapus Work Center ini?');">
+
+                                                @Html.AntiForgeryToken()
+
+                                                <input type="hidden"
+                                                       name="id"
+                                                       value="@item.Id" />
+
+                                                <button type="submit"
+                                                        class="attribute-btn attribute-btn-delete"
+                                                        title="Delete">
+
+                                                    <i class="bi bi-trash"></i>
+
+                                                </button>
+
+                                            </form>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+
+                                no++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+
+                                <td colspan="6"
+                                    class="text-center text-muted py-4">
+
+                                    Tidak ada data Work Center.
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+   <!-- FOOTER / PAGINATION -->
+   <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+
+    @{
+        var totalData = Model.TotalData;
+        var currentPage = Model.Page < 1 ? 1 : Model.Page;
+        var pageSize = Model.PageSize > 0 ? Model.PageSize : 10;
+
+        // Hitung jumlah halaman berdasarkan total data
+        var totalPages = totalData > 0
+            ? (int)Math.Ceiling((double)totalData / pageSize)
+            : 0;
+
+        var startItem = totalData == 0
+            ? 0
+            : ((currentPage - 1) * pageSize) + 1;
+
+        var endItem = Math.Min(
+            currentPage * pageSize,
+            totalData
+        );
+    }
+
+    <span class="menu-description small">
+        Menampilkan
+        <strong>@startItem – @endItem</strong>
+        dari
+        <strong>@totalData</strong>
+        data
+    </span>
+
+    <nav aria-label="Pagination">
+
+        <ul class="pagination mb-0">
+
+            @* SEBELUMNYA *@
+            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+
+                @if (currentPage <= 1)
+                {
+                    <span class="page-link">
+                        Sebelumnya
+                    </span>
+                }
+                else
+                {
+                    <a class="page-link"
+                       href="@Url.Action("Index", new {
+                           search = Context.Request.Query["search"],
+                           isActive = Context.Request.Query["isActive"],
+                           page = currentPage - 1,
+                           pageSize = pageSize
+                       })">
+                        Sebelumnya
+                    </a>
+                }
+
+            </li>
+
+
+            @* NOMOR HALAMAN *@
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+
+                    <a class="page-link"
+                       href="@Url.Action("Index", new {
+                           search = Context.Request.Query["search"],
+                           isActive = Context.Request.Query["isActive"],
+                           page = i,
+                           pageSize = pageSize
+                       })">
+                        @i
+                    </a>
+
+                </li>
+            }
+
+
+            <!-- BERIKUTNYA -->
+            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                @if (currentPage >= totalPages || totalPages == 0)
+                {
+                    <span class="page-link">
+                        Berikutnya
+                    </span>
+                }
+                else
+                {
+                    <a class="page-link"
+                       href="@Url.Action("Index", new {
+                           search = Context.Request.Query["search"],
+                           isActive = Context.Request.Query["isActive"],
+                           page = currentPage + 1,
+                           pageSize = pageSize
+                       })">
+                        Berikutnya
+                    </a>
+                }
+
+            </li>
+
+        </ul>
+
+    </nav>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- =====================================================
+     CREATE MODAL
+     ===================================================== -->
+
+<div class="modal fade"
+     id="createWorkCenterModal"
+     tabindex="-1">
+
+<div class="modal-dialog">
+
+    <div class="modal-content">
+
+        <form asp-controller="WorkCenters"
+              asp-action="Create"
+              method="post">
+
+            @Html.AntiForgeryToken()
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Tambah Work Center
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Kode
+                    </label>
+
+                    <input type="text"
+                           name="Code"
+                           id="createWorkCenterCode"
+                           class="form-control"
+                           maxlength="30"
+                           required />
+
+                </div>
+
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Nama
+                    </label>
+
+                    <input type="text"
+                           name="Name"
+                           id="createWorkCenterName"
+                           class="form-control"
+                           maxlength="100"
+                           required />
+
+                </div>
+
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Tarif Biaya per Jam
+                    </label>
+
+                    <input type="text"
+                           name="CostPerHour"
+                           id="createWorkCenterCost"
+                           class="form-control"
+                           min="0"
+                           step="1"
+                           value="0"
+                           inputmode="numeric"
+                           autocomplete="off"
+                           required />
+
+                
+
+                <span class="menu-description small ms-1">
+                    Dipakai menghitung biaya tenaga kerja Work Order (menit ÷ 60 × tarif).
+                </span>
+
+                </div>
+
+
+                <div class="form-check form-switch">
+
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="IsActive"
+                           value="true"
+                           id="createWorkCenterActive"
+                           checked />
+
+                    <input type="hidden"
+                           name="IsActive"
+                           value="false" />
+
+                    <label class="form-check-label"
+                           for="createWorkCenterActive">
+
+                        Aktif
+
+                    </label>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+
+                    Batal
+
+                </button>
+
+                <button type="submit"
+                        class="btn btn-primary">
+
+                    <i class="bi bi-save"></i>
+                    Simpan
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+</div>
+
+<!-- =====================================================
+     EDIT MODAL
+     ===================================================== -->
+
+<div class="modal fade"
+     id="editWorkCenterModal"
+     tabindex="-1">
+
+<div class="modal-dialog">
+
+    <div class="modal-content">
+
+        <form asp-controller="WorkCenters"
+              asp-action="Edit"
+              method="post">
+
+            @Html.AntiForgeryToken()
+
+            <input type="hidden"
+                   name="Id"
+                   id="editWorkCenterId" />
+
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Edit Work Center
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Kode
+                    </label>
+
+                    <input type="text"
+                           name="Code"
+                           id="editWorkCenterCode"
+                           class="form-control"
+                           maxlength="30"
+                           required />
+
+                </div>
+
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Nama
+                    </label>
+
+                    <input type="text"
+                           name="Name"
+                           id="editWorkCenterName"
+                           class="form-control"
+                           maxlength="100"
+                           required />
+
+                </div>
+
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Biaya per Jam
+                    </label>
+
+                    <input type="number"
+                           name="CostPerHour"
+                           id="editWorkCenterCost"
+                           class="form-control"
+                           min="0"
+                           step="0.01"
+                           required />
+
+                
+                <span class="menu-description small ms-1">
+                    Dipakai menghitung biaya tenaga kerja Work Order (menit ÷ 60 × tarif).
+                </span>
+                
+                </div>
+
+
+                <div class="form-check form-switch">
+
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="IsActive"
+                           value="true"
+                           id="editWorkCenterActive" />
+
+                    <input type="hidden"
+                           name="IsActive"
+                           value="false" />
+
+                    <label class="form-check-label"
+                           for="editWorkCenterActive">
+
+                        Aktif
+
+                    </label>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+
+                    Batal
+
+                </button>
+
+                <button type="submit"
+                        class="btn btn-primary">
+
+                    <i class="bi bi-save"></i>
+                    Simpan Perubahan
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+</div>
+
+@section Scripts {
+
+<script>
+
+ // =========================
+ // TOGGLE TABEL 
+ // =========================
+
+function toggleWorkCenterTable(button) {
+
+    const content = document.getElementById("workCenterTableContent");
+    const icon = button.querySelector("i");
+
+    if (content.style.display === "none") {
+
+        // BUKA
+        content.style.display = "";
+
+        icon.classList.remove("bi-chevron-down");
+        icon.classList.add("bi-chevron-up");
+
+    } else {
+
+        // TUTUP
+        content.style.display = "none";
+
+        icon.classList.remove("bi-chevron-up");
+        icon.classList.add("bi-chevron-down");
+
+    }
+}
+
+    // =========================
+    // CREATE
+    // =========================
+
+    function openCreateWorkCenter() {
+
+        document.getElementById(
+            "createWorkCenterCode"
+        ).value = "";
+
+        document.getElementById(
+            "createWorkCenterName"
+        ).value = "";
+
+        document.getElementById(
+            "createWorkCenterCost"
+        ).value = "0";
+
+        document.getElementById(
+            "createWorkCenterActive"
+        ).checked = true;
+
+        const modal =
+            new bootstrap.Modal(
+                document.getElementById(
+                    "createWorkCenterModal"
+                )
+            );
+
+        modal.show();
+    }
+
+    // =========================
+// FORMAT TARIF
+// =========================
+
+const costInput =
+    document.getElementById("createWorkCenterCost");
+
+if (costInput) {
+
+    costInput.addEventListener("input", function () {
+
+        // Ambil hanya angka
+        let value =
+            this.value.replace(/\D/g, "");
+
+        if (value === "") {
+            this.value = "";
+            return;
+        }
+
+        // Format ribuan menggunakan titik
+        this.value =
+            value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    });
+}
+
+
+    // =========================
+    // EDIT
+    // =========================
+
+    async function openEditWorkCenter(id) {
+
+        try {
+
+            const response =
+                await fetch(
+                    `/WorkCenters/GetById?id=${id}`
+                );
+
+            if (!response.ok) {
+
+                alert(
+                    "Data Work Center tidak ditemukan."
+                );
+
+                return;
+            }
+
+            const data =
+                await response.json();
+
+
+            document.getElementById(
+                "editWorkCenterId"
+            ).value = data.id;
+
+            document.getElementById(
+                "editWorkCenterCode"
+            ).value = data.code ?? "";
+
+            document.getElementById(
+                "editWorkCenterName"
+            ).value = data.name ?? "";
+
+            document.getElementById(
+                "editWorkCenterCost"
+            ).value = data.costPerHour ?? 0;
+
+            document.getElementById(
+                "editWorkCenterActive"
+            ).checked = data.isActive;
+
+
+            const modal =
+                new bootstrap.Modal(
+                    document.getElementById(
+                        "editWorkCenterModal"
+                    )
+                );
+
+            modal.show();
+
+        }
+        catch (error) {
+
+            console.error(error);
+
+            alert(
+                "Terjadi kesalahan saat mengambil data Work Center."
+            );
+
+        }
+
+    }
+
+</script>
+
+}

@@ -1,0 +1,712 @@
+
+@using ERP.Web.Models
+@model PagedResult<PriceListViewModel>
+
+@{
+    ViewData["Title"] = "Price List"; 
+    var no = ((Model.Page - 1) * Model.PageSize);
+    
+}
+
+<div class="page-heading supplier-page"> 
+    <h3 class="fw-bold mb-3">Price List</h3> 
+    <div class="card supplier-card supplier-filter">
+
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">Filter</span>
+            </div>
+
+            <button class="btn btn-sm text-muted p-0"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#filterCollapse"
+                    aria-expanded="true"
+                    aria-controls="filterCollapse"> 
+                <i class="bi bi-chevron-down"></i> 
+            </button>
+
+        </div>
+        <div class="collapse show" id="filterCollapse">
+
+            <div class="card-body">
+
+                <form method="get"
+                      asp-action="Index"
+                      class="row g-2 align-items-end">
+
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">
+                            Cari
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               id="search"
+                               name="search"
+                               value="@Context.Request.Query["search"]" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="isActive" class="form-label">
+                            Is Active
+                        </label>
+
+                        <select class="form-select"
+                                id="isActive"
+                                name="isActive">
+
+                            <option value=""
+                                    selected="@(Context.Request.Query["isActive"] == "")">
+                                -- Semua --
+                            </option>
+
+                            <option value="true"
+                                    selected="@(Context.Request.Query["isActive"] == "true")">
+                                Aktif
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Context.Request.Query["isActive"] == "false")">
+                                Non-Aktif
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="pageSize" class="form-label">
+                            Per Halaman
+                        </label>
+
+                        <select class="form-select"
+                                id="pageSize"
+                                name="pageSize">
+
+                            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                            <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 d-flex gap-2">
+
+                        <button type="submit"
+                                class="btn btn-primary d-flex align-items-center gap-2">
+
+                            <i class="bi bi-search"></i>
+                            Terapkan
+
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary"
+                           title="Reset Filter">
+
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a> 
+                    </div> 
+                </form> 
+            </div> 
+        </div>  
+    </div>
+
+
+    <!-- ==========================================
+         DATA TABLE CARD
+         ========================================== -->
+    <div class="card supplier-card supplier-table-card">
+
+        <!-- HEADER -->
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+
+            <div class="d-flex align-items-center gap-2">
+
+                <span class="fw-bold fs-5">
+                    Price List
+                </span>
+
+                <span class="badge badge-count">
+                    @Model.TotalData
+                </span>
+
+                <span class="menu-description small ms-1">
+                    Daftar harga jual per customer/kelompok
+                </span>
+
+            </div>
+
+            <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
+
+               <a asp-action="ExportPdf" 
+                  asp-controller="PriceLists"
+                  class="btn btn-light btn-custom-square text-danger" 
+                  title="Export PDF">
+               <i class="bi bi-file-earmark-pdf-fill"></i>
+               </a>
+
+                <a asp-action="ExportExcel" 
+                   asp-controller="PriceLists"
+                   class="btn btn-light btn-custom-square text-success" 
+                   title="Export Excel">
+                <i class="bi bi-file-earmark-excel-fill"></i>
+                </a>
+             
+                 <a asp-action="Print" 
+                    asp-controller="PriceLists"
+                    class="btn btn-light btn-custom-square text-secondary" 
+                    title="Cetak" target="_blank">
+                 <i class="bi bi-printer-fill"></i>
+                 </a>
+                
+                <!-- refresh -->
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="refresh"
+                        onclick="location.reload()">
+
+                    <i class="bi bi-arrow-clockwise"></i>
+
+                </button>
+
+                <button type="button"
+                        class="btn btn-light btn-custom-square"
+                        title="Toggle Collapse"
+                         onclick="togglePriceListTable(this)">
+
+                    <i class="bi bi-chevron-up"></i>
+
+                </button>
+
+                <!-- TAMBAH PRICE LIST -->
+                <button type="button"
+                        class="btn btn-teal btn-custom-action"
+                        id="btnAddPriceList"
+                        onclick="openCreatePriceList()">
+
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Tambah Price List</span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ==========================================
+             TABLE BODY
+             ========================================== -->
+        <div class="card-body p-0">
+
+            <div class="table-responsive" id="priceListTableContent">
+
+                <table class="table align-middle category-table">
+
+                    <thead>
+                        <tr>
+                            <th class="text-center ps-4" style="width: 60px;">
+                                #
+                            </th>
+
+                            <th style="width: 200px;">
+                                KODE
+                            </th>
+
+                            <th>
+                                NAMA
+                            </th>
+
+                            <th class="text-center" style="width: 200px;">
+                                JUMLAH PRODUK
+                            </th>
+
+                            <th style="width: 220px;">
+                                STATUS
+                            </th>
+
+                            <th class="text-center" style="width: 140px;">
+                                AKSI
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @if (Model.Data != null && Model.Data.Any())
+                        {
+                            foreach (var item in Model.Data)
+                            {
+                                <tr>
+
+                                    <!-- NOMOR -->
+                                    <td class="text-center ps-4">
+                                        @(++no)
+                                    </td>
+
+                                    <!-- KODE -->
+                                    <td>
+                                        <span class="badge bg-light text-dark border">
+                                            @item.Code
+                                        </span>
+                                    </td>
+
+                                    <!-- NAMA -->
+                                    <td>
+
+                                        <span class="fw-bold">
+                                            @item.Name
+                                        </span>
+
+                                        @if (!string.IsNullOrWhiteSpace(item.Note))
+                                        {
+                                            <div class="text-secondary small mt-1">
+                                                @item.Note
+                                            </div>
+                                        }
+
+                                    </td>
+
+                                    <!-- JUMLAH PRODUK -->
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">
+                                            @item.ItemCount
+                                        </span>
+                                    </td>
+
+                                    <!-- STATUS -->
+                                    <td class="ps-5">
+
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge bg-success">
+                                                Aktif
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                Tidak Aktif
+                                            </span>
+                                        }
+
+                                    </td>
+
+                                    <!-- AKSI -->
+                                    <td class="text-center">
+
+                                        <div class="d-flex justify-content-center gap-1">
+
+                                            <!-- EDIT -->
+                                            <a asp-action="Edit"
+                                               asp-route-id="@item.Id"
+                                               class="btn btn-sm menu-action-edit"
+                                               title="Edit">
+
+                                                <i class="bi bi-pencil"></i>
+
+                                            </a>
+
+                                            <!-- DELETE -->
+                                            <form asp-action="Delete"
+                                                  method="post"
+                                                  class="d-inline"
+                                                  onsubmit="return confirmDeletePriceList();">
+
+                                                @Html.AntiForgeryToken()
+
+                                                <input type="hidden"
+                                                       name="id"
+                                                       value="@item.Id" />
+
+                                                <button type="submit"
+                                                        class="btn btn-sm menu-action-delete"
+                                                        title="Hapus">
+
+                                                    <i class="bi bi-trash"></i>
+
+                                                </button>
+
+                                            </form>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+
+                                    <span class="menu-description">
+                                        Belum ada data Price List.
+                                    </span>
+
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            </div>
+
+            @* FOOTER / PAGINATION *@
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
+
+                @{
+                    var totalData = Model.TotalData;
+                    var currentPage = Model.Page < 1 ? 1 : Model.Page;
+                    var pageSize = Model.PageSize > 0 ? Model.PageSize : 10;
+
+                    // Hitung jumlah halaman berdasarkan total data
+                    var totalPages = totalData > 0
+                        ? (int)Math.Ceiling((double)totalData / pageSize)
+                        : 0;
+
+                    var startItem = totalData == 0
+                        ? 0
+                        : ((currentPage - 1) * pageSize) + 1;
+
+                    var endItem = Math.Min(
+                        currentPage * pageSize,
+                        totalData
+                    );
+                }
+
+                <span class="menu-description small">
+                    Menampilkan
+                    <strong>@startItem – @endItem</strong>
+                    dari
+                    <strong>@totalData</strong>
+                    data
+                </span>
+
+                <nav aria-label="Pagination">
+                    <ul class="pagination mb-0">
+
+                        @* SEBELUMNYA *@
+                        <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+
+                            @if (currentPage <= 1)
+                            {
+                                <span class="page-link">Sebelumnya</span>
+                            }
+                            else
+                            {
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       search = Context.Request.Query["search"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = currentPage - 1,
+                                       pageSize = pageSize
+                                   })">
+                                    Sebelumnya
+                                </a>
+                            }
+
+                        </li>
+
+                        @* NOMOR HALAMAN *@
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       search = Context.Request.Query["search"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = i,
+                                       pageSize = pageSize
+                                   })">
+                                    @i
+                                </a>
+
+                            </li>
+                        }
+
+                        @* BERIKUTNYA *@
+                        <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+
+                            @if (currentPage >= totalPages || totalPages == 0)
+                            {
+                                <span class="page-link">Berikutnya</span>
+                            }
+                            else
+                            {
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       search = Context.Request.Query["search"],
+                                       isActive = Context.Request.Query["isActive"],
+                                       page = currentPage + 1,
+                                       pageSize = pageSize
+                                   })">
+                                    Berikutnya
+                                </a>
+                            }
+
+                        </li>
+
+                    </ul>
+                </nav>
+
+            </div>
+
+    </div>
+
+</div>
+
+
+<!-- ==============================================
+     MODAL TAMBAH PRICE LIST
+     ============================================== -->
+<div class="modal fade"
+     id="createPriceListModal"
+     tabindex="-1"
+     aria-labelledby="createPriceListTitle"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <!-- HEADER -->
+            <div class="modal-header">
+
+                <h5 class="modal-title" id="createPriceListTitle">
+                    Tambah Price List
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+            <!-- FORM -->
+            <form asp-action="Create"
+                  method="post"
+                  id="createPriceListForm">
+
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+
+                    <div class="row g-3">
+
+                        <!-- KODE -->
+                        <div class="col-md-6">
+
+                            <label for="createPriceListCode" class="form-label">
+                                Kode Price List
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <input type="text"
+                                   name="Code"
+                                   id="createPriceListCode"
+                                   class="form-control"
+                                   placeholder="Masukkan kode"
+                                   required />
+
+                        </div>
+
+                        <!-- NAMA -->
+                        <div class="col-md-6">
+
+                            <label for="createPriceListName" class="form-label">
+                                Nama Price List
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <input type="text"
+                                   name="Name"
+                                   id="createPriceListName"
+                                   class="form-control"
+                                   placeholder="Masukkan nama"
+                                   required />
+
+                        </div>
+
+                        <!-- CATATAN -->
+                        <div class="col-md-12">
+
+                            <label for="createPriceListNote" class="form-label">
+                                Catatan
+                            </label>
+
+                            <textarea name="Note"
+                                      id="createPriceListNote"
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="Mis. Harga Grosir / Reseller"></textarea>
+
+                        </div>
+
+                        <!-- STATUS -->
+                        <div class="col-md-12">
+
+                            <div class="form-check form-switch">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="createPriceListActive"
+                                       name="IsActive"
+                                       value="true"
+                                       checked />
+
+                                <input type="hidden"
+                                       name="IsActive"
+                                       id="createPriceListActiveHidden"
+                                       value="false" />
+
+                                <label class="form-check-label ms-2"
+                                       for="createPriceListActive">
+                                    Aktif
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- FOOTER -->
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Simpan
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section Scripts {
+
+    <script>
+
+    // =========================
+    // TOGGLE TABEL 
+    // =========================
+
+    function togglePriceListTable(button) {
+
+    const content = document.getElementById("priceListTableContent");
+    const icon = button.querySelector("i");
+
+    if (content.style.display === "none") {
+
+        // BUKA
+        content.style.display = "";
+
+        icon.classList.remove("bi-chevron-down");
+        icon.classList.add("bi-chevron-up");
+
+    } else {
+
+        // TUTUP
+        content.style.display = "none";
+
+        icon.classList.remove("bi-chevron-up");
+        icon.classList.add("bi-chevron-down");
+
+    }
+}
+
+        // ==========================================
+        // ELEMENT MODAL
+        // ==========================================
+        const createPriceListModal = new bootstrap.Modal(
+            document.getElementById('createPriceListModal')
+        );
+
+
+        // ==========================================
+        // SINKRONISASI CHECKBOX ISACTIVE
+        // ==========================================
+        function setupActiveCheckbox(checkboxId, hiddenId) {
+
+            const checkbox = document.getElementById(checkboxId);
+            const hidden = document.getElementById(hiddenId);
+
+            function syncValue() {
+
+                // Jika checkbox aktif, kirim hanya nilai true.
+                // Jika tidak aktif, kirim hanya nilai false.
+                hidden.disabled = checkbox.checked;
+
+            }
+
+            checkbox.addEventListener('change', syncValue);
+
+            syncValue();
+        }
+
+        setupActiveCheckbox(
+            'createPriceListActive',
+            'createPriceListActiveHidden'
+        );
+
+
+        // ==========================================
+        // TAMBAH PRICE LIST
+        // ==========================================
+        function openCreatePriceList() {
+
+            const form = document.getElementById('createPriceListForm');
+
+            form.reset();
+
+            // Default status aktif
+            document.getElementById('createPriceListActive').checked = true;
+
+            // Perbarui nilai hidden setelah reset
+            document.getElementById('createPriceListActiveHidden').disabled = true;
+
+            createPriceListModal.show();
+        }
+
+        // ==========================================
+        // KONFIRMASI DELETE
+        // ==========================================
+        function confirmDeletePriceList() {
+
+            return confirm(
+                'Yakin ingin menghapus Price List ini?'
+            );
+
+        }
+
+    </script>
+
+}

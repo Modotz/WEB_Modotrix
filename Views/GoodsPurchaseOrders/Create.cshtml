@@ -1,0 +1,801 @@
+@using System.Text.Json
+@using ERP.Web.Models
+@model GoodsPurchaseOrderViewModel
+
+@{
+    ViewData["Title"] = "Tambah PO Barang";
+
+    var suppliers = ViewBag.Suppliers as IEnumerable<SupplierViewModel> ?? Enumerable.Empty<SupplierViewModel>(); 
+    var warehouses = ViewBag.Warehouses as IEnumerable<WarehouseViewModel> ?? Enumerable.Empty<WarehouseViewModel>(); 
+    var products = ViewBag.Products as IEnumerable<ProductViewModel> ?? Enumerable.Empty<ProductViewModel>(); 
+    var units = ViewBag.Units as IEnumerable<DropdownItemViewModel> ?? Enumerable.Empty<DropdownItemViewModel>();
+
+    var orderedProducts = products
+        .OrderBy(p => string.IsNullOrWhiteSpace(p.CategoryName) ? 0 : 1)
+        .ThenBy(p => p.CategoryName)
+        .ThenBy(p => p.Name)
+        .ToList();
+
+    var productOptions = products.Select(p => new
+    {
+        id = p.Id,
+        name = p.Name,
+        sku = p.Sku,
+        categoryName = p.CategoryName,
+        unitId = p.UnitId,
+        unitName = p.UnitName,
+        costPrice = p.CostPrice
+    }).ToList();
+
+    var unitOptions = units.Select(u => new
+    {
+        id = u.Id,
+        code = u.Code,
+        name = u.Name
+    }).ToList();
+
+    var productsJson = JsonSerializer.Serialize(productOptions);
+    var unitsJson = JsonSerializer.Serialize(unitOptions);
+}
+
+ <div class="po-create-page">
+     <div class="product-page-title">
+            Tambah PO Barang
+     </div>
+
+      <div class="product-info-card">
+            <div class="product-info-header"
+                 data-bs-toggle="collapse"
+                 data-bs-target="#productInfo">
+                <div>
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>Panduan Pengisian - PO Barang </strong>
+                </div>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+
+            <div id="productInfo"
+                 class="collapse show">
+
+                <div class="product-info-body">
+                    <ol class="ps-3 mb-0">
+                        <li>
+                            Isi <strong> Tanggal PO </strong>, pilih <strong>Supplier</strong> dan <strong>Gudang Tujuan.</strong>
+                            <i> Perkiraan Terima & Catatan opsional.</i>
+                        </li>
+
+                        <li>
+                            Klik <strong> Tambah Baris, </strong> lalu pada kolom  <strong> Produk </strong> ketik nama/kode untuk mencari. Isi <strong>Qty,</strong>
+                            pilih <strong>Satuan, </strong>dan isi <strong>Harga</strong>
+                        </li>
+
+                        <li>
+                            Bila perlu, isi <strong> Disk % </strong> dan <strong> Pajak % </strong> per baris - <i>Subtotal </i> dihitung otomatis.
+                        </li>
+
+                        <li>
+                            Di bagian bawah bisa menambah <stong>Diskon Nota (Rp) </stong>dan <strong>Pajak (%) </strong>tingkat nota untuk memperoleh Total.
+                        </li>
+
+                        <li>
+                            Klik <strong>Simpan Draft </strong>untuk menyimpan PO. <strong>Stok belum berubah</strong> di tahap ini — stok bertambah nanti saat barang diterima lewat menu
+                            <strong> Penerimaan.</strong>
+                        </li>
+
+                    </ol>
+
+                    <div class="product-info-tip">
+                        <i class="bi bi-lightbulb"></i>
+                        Tips : gunakan tombol <span class="required-mark"> x </span> untuk menghapus baris. Panel ini bisa ditutup dengan mengklik judulnya.
+                    </div>
+
+              </div>
+         
+         </div>
+     </div>
+
+     <form method="post"
+              asp-controller="GoodsPurchaseOrders"
+              asp-action="Create">
+            <!-- FORM PURCHASE ORDER -->
+            <div class="card po-detail-card">
+                <div class="card-header">
+                    <strong>Tambah Purchase Order</strong>
+                </div>
+
+                <div class="card-body">
+                    @Html.AntiForgeryToken()
+
+                     @if (!ViewData.ModelState.IsValid)
+                        {
+                            <div class="alert alert-danger mb-3">
+                                <strong>Data belum dapat disimpan.</strong>
+
+                                <ul class="mb-0 mt-2">
+                                    @foreach (var item in ViewData.ModelState)
+                                    {
+                                        @foreach (var error in item.Value.Errors)
+                                        {
+                                            <li>
+                                                @*<strong>
+                                                    @(string.IsNullOrWhiteSpace(item.Key)
+                                                        ? "Form"
+                                                        : item.Key)
+                                                </strong>:*@
+
+                                                @(string.IsNullOrWhiteSpace(error.ErrorMessage)
+                                                    ? error.Exception?.GetBaseException().Message
+                                                        ?? "Nilai yang dimasukkan tidak valid."
+                                                    : error.ErrorMessage)
+                                            </li>
+                                        }
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        @if (TempData["Error"] != null)
+                        {
+                            <div class="alert alert-danger">
+                                <strong>Gagal menyimpan:</strong>
+                                @TempData["Error"]
+                            </div>
+                        }
+
+                    <!-- INFORMASI PO -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label">No. PO</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="PONo"
+                                   name="PONo"
+                                   value="@Model?.PONo"
+                                   placeholder="Nomor PO"
+                                   readonly />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">
+                                Tanggal PO <span class="text-danger">*</span>
+                            </label>
+                            <input type="date"
+                                   class="form-control"
+                                   id="PODate"
+                                   name="PODate"
+                                   value="@((Model?.PODate ?? DateOnly.FromDateTime(DateTime.Today)).ToString("yyyy-MM-dd"))"
+                                   required />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Perkiraan Terima</label>
+                            <input type="date"
+                                   class="form-control"
+                                   id="ExpectedDate"
+                                   name="ExpectedDate"
+                                   value="@(Model?.ExpectedDate?.ToString("yyyy-MM-dd"))" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">
+                                Supplier <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select"
+                                    id="SupplierId"
+                                    name="SupplierId"
+                                    required>
+                                <option value="">-- Pilih Supplier --</option>
+
+                                @foreach (var supplier in suppliers)
+                                {
+                                <option value="@supplier.Id"
+                                        selected="@(Model?.SupplierId == supplier.Id)">
+                                    @supplier.Name
+                                </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">
+                                Gudang Tujuan <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select"
+                                    id="WarehouseId"
+                                    name="WarehouseId"
+                                    required>
+                                <option value="">-- Pilih Gudang --</option>
+
+                                @foreach (var warehouse in warehouses)
+                                {
+                                <option value="@warehouse.Id"
+                                        selected="@(Model?.WarehouseId == warehouse.Id)">
+                                    @warehouse.Name
+                                </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Catatan</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="Note"
+                                   name="Note"
+                                   value="@Model?.Note" />
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- DETAIL ITEM -->
+            <div class="card mt-2">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Detail Item</strong>
+                    <button type="button"
+                            class="btn btn-sm btn-add-row"
+                            id="btnTambahBaris">
+                        <i class="bi bi-plus-lg"></i> Tambah Baris
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0"
+                           id="tableDetail">
+                        <thead>
+                            <tr>
+                                <th style="width:32px">#</th>
+                                <th>PRODUK<span class="text-danger">*</span></th>
+                                <th style="width:80px">QTY</th>
+                                <th style="width:85px">SATUAN</th>
+                                <th style="width:100px">HARGA</th>
+                                <th style="width:65px">DISK %</th>
+                                <th style="width:65px">PAJAK %</th>
+                                <th style="width:110px">SUBTOTAL</th>
+                                <th style="width:35px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailBody">
+                            <tr>
+                                <td class="row-number text-end">1</td>
+
+                                <td>
+                                    <select class="form-select form-select-sm product-select"
+                                            name="Details[0].ProductId"
+                                            required>
+                                        <option value="">-- Cari produk --</option>
+
+                                        @if (orderedProducts.Any(p => string.IsNullOrWhiteSpace(p.CategoryName)))
+                                        {
+                                        <optgroup label="Tanpa Kategori">
+                                            @foreach (var product in orderedProducts
+                                            .Where(p => string.IsNullOrWhiteSpace(p.CategoryName)))
+                                            {
+                                            <option value="@product.Id"
+                                                    data-sku="@product.Sku"
+                                                    data-name="@product.Name">
+                                                @product.Name
+                                            </option>
+                                            }
+                                        </optgroup>
+                                        }
+
+                                        @foreach (var category in orderedProducts
+                                        .Where(p => !string.IsNullOrWhiteSpace(p.CategoryName))
+                                        .GroupBy(p => p.CategoryName!)
+                                        .OrderBy(g => g.Key))
+                                        {
+                                        <optgroup label="@category.Key">
+                                            @foreach (var product in category)
+                                            {
+                                            <option value="@product.Id"
+                                                    data-sku="@product.Sku"
+                                                    data-name="@product.Name">
+                                                @product.Name
+                                            </option>
+                                            }
+                                        </optgroup>
+                                        }
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <input type="number"
+                                           class="form-control form-control-sm qty"
+                                           name="Details[0].Qty"
+                                           min="0.01" step="0.01" value="1" required />
+                                </td>
+
+                               <td>
+                                    <select class="form-select form-select-sm unit-select"
+                                            name="Details[0].UnitId"
+                                            required>
+                                        <option value="">-</option>
+
+                                        @foreach (var unit in units.OrderBy(u => u.Code))
+                                        {
+                                            <option value="@unit.Id">
+                                                @unit.Code
+                                            </option>
+                                        }
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <input type="number"
+                                           class="form-control form-control-sm price"
+                                           name="Details[0].UnitPrice"
+                                           min="0"
+                                           step="0.01"
+                                           value="0"
+                                           required />
+                                </td>
+
+                                <td>
+                                    <input type="number"
+                                           class="form-control form-control-sm discount"
+                                           name="Details[0].DiscPercent"
+                                           min="0" max="100" step="0.01" value="0" />
+                                </td>
+
+                                <td>
+                                    <input type="number"
+                                           class="form-control form-control-sm tax"
+                                           name="Details[0].TaxPercent"
+                                           min="0" max="100" step="0.01" value="0" />
+                                </td>
+
+                                <td>
+                                    <input type="number"
+                                           class="form-control form-control-sm subtotal"
+                                           name="Details[0].Subtotal"
+                                           value="0" readonly />
+                                </td>
+
+                                <td>
+                                    <button type="button"
+                                            class="btn btn-sm btn-danger btn-hapus"
+                                            title="Hapus baris">
+                                        ×
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TOTAL -->
+                <div class="po-summary-wrap">
+                    <div class="row justify-content-end">
+                        <div class="col-md-5">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <tbody>
+                                        <tr>
+                                            <td>Subtotal</td>
+                                            <td>
+                                                <input type="number"
+                                                       class="form-control form-control-sm text-end"
+                                                       id="SubtotalAmount"
+                                                       name="SubtotalAmount"
+                                                       min="0"
+                                                       step="0.01"
+                                                       value="@(Model?.SubtotalAmount ?? 0)"
+                                                       readonly />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Diskon Nota (Rp)</td>
+                                            <td>
+                                                <input type="number"
+                                                       class="form-control form-control-sm text-end"
+                                                       id="DiscountAmount"
+                                                       name="DiscountAmount"
+                                                       min="0"
+                                                       step="0.01"
+                                                       value="@(Model?.DiscountAmount ?? 0)" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Pajak (%)</td>
+                                            <td>
+                                                <input type="number"
+                                                       class="form-control form-control-sm text-end"
+                                                       id="TaxPercent"
+                                                       name="TaxPercent"
+                                                       min="0"
+                                                       max="100"
+                                                       step="0.01"
+                                                       value="@(Model?.TaxPercent ?? 0)" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Total</strong></td>
+                                            <td>
+                                                <input type="number"
+                                                       class="form-control form-control-sm text-end fw-bold"
+                                                       id="TotalAmount"
+                                                       name="TotalAmount"
+                                                       min="0"
+                                                       step="0.01"
+                                                       value="@(Model?.TotalAmount ?? 0)"
+                                                       readonly />
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="Status" name="Status" value="draft" />
+
+                    <div class="po-form-actions">
+                        <button type="submit" class="btn po-btn-save">
+                            <i class="bi bi-save"></i> Simpan Draft
+                        </button>
+
+                        <a asp-controller="GoodsPurchaseOrders"
+                           asp-action="Index"
+                           class="btn po-btn-cancel">
+                            Batal
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form> 
+ </div>
+
+ 
+@section Scripts { 
+   <script>
+
+        const products = @Html.Raw(productsJson);
+        const units = @Html.Raw(unitsJson);
+
+        const tbody = document.getElementById('detailBody');
+        const btnTambahBaris = document.getElementById('btnTambahBaris');
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[char]);
+        }
+        //dropdown kategori produk
+        function buildProductOptionsHtml() {
+            const groupedProducts = {};
+
+            products.forEach(product => {
+                const category =
+                    product.categoryName?.trim() || 'Tanpa Kategori';
+
+                if (!groupedProducts[category]) {
+                    groupedProducts[category] = [];
+                }
+
+                groupedProducts[category].push(product);
+            });
+
+            const categories = Object.keys(groupedProducts).sort((a, b) => {
+                if (a === 'Tanpa Kategori') return -1;
+                if (b === 'Tanpa Kategori') return 1;
+                return a.localeCompare(b, 'id');
+            });
+
+            return categories.map(category => `
+                <optgroup label="${escapeHtml(category)}">
+                    ${groupedProducts[category].map(product => `
+                        <option value="${product.id}">
+                            ${escapeHtml(product.name)}
+                        </option>
+                    `).join('')}
+                </optgroup>
+            `).join('');
+        }
+
+        function buildUnitOptionsHtml(selectedUnitId = '') {
+        const sortedUnits = [...units].sort((a, b) =>
+            String(a.code ?? '').localeCompare(String(b.code ?? ''), 'id')
+        );
+
+        return `
+            <option value="">-</option>
+            ${sortedUnits.map(unit => `
+                <option value="${unit.id}"
+                    ${String(unit.id) === String(selectedUnitId) ? 'selected' : ''}>
+                    ${escapeHtml(unit.code)}
+                </option>
+            `).join('')}
+        `;
+    }
+     
+        function tambahBaris() {
+            const row = document.createElement('tr');
+
+            row.innerHTML = `
+                <td class="row-number text-end"></td>
+
+                <td>
+                    <select class="form-select form-select-sm product-select"
+                            name="Details[0].ProductId"
+                            required>
+                        <option value="">-- Cari produk --</option>
+                        ${buildProductOptionsHtml()}
+                    </select>
+                </td>
+
+                <td>
+                    <input type="number"
+                           class="form-control form-control-sm qty"
+                           name="Details[0].Qty"
+                           min="0.01"
+                           step="0.01"
+                           value="1"
+                           required />
+                </td>
+
+                <td>
+                    <select class="form-select form-select-sm unit-select"
+                            name="Details[0].UnitId"
+                            required>
+                        ${buildUnitOptionsHtml()}
+                    </select>
+                </td>
+
+                <td>
+                    <input type="number"
+                           class="form-control form-control-sm price"
+                           name="Details[0].UnitPrice"
+                           min="0"
+                           step="0.01"
+                           value="0"
+                           required />
+                </td>
+
+                <td>
+                    <input type="number"
+                           class="form-control form-control-sm discount"
+                           name="Details[0].DiscPercent"
+                           min="0"
+                           max="100"
+                           step="0.01"
+                           value="0" />
+                </td>
+
+                <td>
+                    <input type="number"
+                           class="form-control form-control-sm tax"
+                           name="Details[0].TaxPercent"
+                           min="0"
+                           max="100"
+                           step="0.01"
+                           value="0" />
+                </td>
+
+                <td>
+                    <input type="number"
+                           class="form-control form-control-sm subtotal"
+                           name="Details[0].Subtotal"
+                           value="0"
+                           readonly />
+                </td>
+
+                <td>
+                    <button type="button"
+                            class="btn btn-sm btn-danger btn-hapus"
+                            title="Hapus baris">×</button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+            perbaruiNomor();
+            hitungTotal();
+        }
+
+         
+        function perbaruiNomor() {
+            tbody.querySelectorAll('tr').forEach((row, index) => {
+                const numberCell = row.querySelector('.row-number');
+
+                if (numberCell) {
+                    numberCell.textContent = index + 1;
+                }
+
+                row.querySelectorAll('[name]').forEach(input => {
+                    input.name = input.name.replace(
+                        /Details\[\d+\]/,
+                        `Details[${index}]`
+                    );
+                });
+            });
+        }
+
+       
+        function isiDataProduk(row, product) {
+            const unitSelect = row.querySelector('.unit-select');
+            const priceInput = row.querySelector('.price');
+
+            if (!product) {
+                if (unitSelect) {
+                    unitSelect.value = '';
+                }
+
+                if (priceInput) {
+                    priceInput.value = '0';
+                }
+
+                hitungTotal();
+                return;
+            }
+
+            
+            if (unitSelect) {
+                const unitExists = units.some(
+                    unit => String(unit.id) === String(product.unitId)
+                );
+
+                unitSelect.value = unitExists
+                    ? String(product.unitId)
+                    : '';
+            }
+
+            
+            if (priceInput) {
+                priceInput.value = Number(product.costPrice ?? 0).toFixed(2);
+            }
+
+            hitungTotal();
+        }
+
+        // --------------------------------------------------
+        // HITUNG SUBTOTAL PER BARIS
+        // --------------------------------------------------
+
+        function hitungBaris(row) {
+            const qty = Math.max(
+                0,
+                Number(row.querySelector('.qty')?.value) || 0
+            );
+
+            const price = Math.max(
+                0,
+                Number(row.querySelector('.price')?.value) || 0
+            );
+
+            const discount = Math.min(
+                100,
+                Math.max(0, Number(row.querySelector('.discount')?.value) || 0)
+            );
+
+            const tax = Math.min(
+                100,
+                Math.max(0, Number(row.querySelector('.tax')?.value) || 0)
+            );
+
+            const bruto = qty * price;
+            const setelahDiskon = bruto * (1 - discount / 100);
+            const nilaiPajak = setelahDiskon * tax / 100;
+            const subtotal = setelahDiskon + nilaiPajak;
+
+            const subtotalInput = row.querySelector('.subtotal');
+
+            if (subtotalInput) {
+                subtotalInput.value = subtotal.toFixed(2);
+            }
+        }
+
+        // --------------------------------------------------
+        // HITUNG TOTAL NOTA
+        // --------------------------------------------------
+
+        function hitungTotal() {
+            tbody.querySelectorAll('tr').forEach(hitungBaris);
+
+            let subtotalNota = 0;
+
+            tbody.querySelectorAll('.subtotal').forEach(input => {
+                subtotalNota += Number(input.value) || 0;
+            });
+
+            const discountInput = document.getElementById('DiscountAmount');
+            const taxInput = document.getElementById('TaxPercent');
+
+            const diskonNota = Math.max(
+                0,
+                Number(discountInput.value) || 0
+            );
+
+            const pajakNota = Math.min(
+                100,
+                Math.max(0, Number(taxInput.value) || 0)
+            );
+
+            const dasarPajak = Math.max(0, subtotalNota - diskonNota);
+            const totalNota = dasarPajak * (1 + pajakNota / 100);
+
+            document.getElementById('SubtotalAmount').value =
+                subtotalNota.toFixed(2);
+
+            document.getElementById('TotalAmount').value =
+                totalNota.toFixed(2);
+        }
+         
+        btnTambahBaris.addEventListener('click', tambahBaris); 
+        tbody.addEventListener('change', event => {
+            if (!event.target.matches('.product-select')) {
+                return;
+            }
+
+            const row = event.target.closest('tr');
+
+            const product = products.find(
+                p => String(p.id) === String(event.target.value)
+            );
+
+            isiDataProduk(row, product);
+        });
+         
+        tbody.addEventListener('input', event => {
+            if (event.target.matches('.qty, .price, .discount, .tax')) {
+                hitungTotal();
+            }
+        });
+         
+        tbody.addEventListener('click', event => {
+            const button = event.target.closest('.btn-hapus');
+
+            if (!button) {
+                return;
+            }
+
+            button.closest('tr').remove();
+            perbaruiNomor();
+            hitungTotal();
+        });
+         
+        document.getElementById('DiscountAmount')
+            .addEventListener('input', hitungTotal);
+
+        document.getElementById('TaxPercent')
+            .addEventListener('input', hitungTotal);
+             
+        const poDateInput = document.getElementById('PODate');
+        const poNumberInput = document.getElementById('PONo');
+
+        poDateInput.addEventListener('change', async function () {
+            if (!this.value) {
+                poNumberInput.value = '';
+                return;
+            }
+
+            try {
+                const url =
+                    '@Url.Action("NextPONumber", "GoodsPurchaseOrders")'
+                    + '?poDate=' + encodeURIComponent(this.value);
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error('Gagal mengambil nomor PO.');
+                }
+
+                const result = await response.json();
+                poNumberInput.value = result.poNo ?? '';
+            } catch (error) {
+                console.error(error);
+                poNumberInput.value = '';
+
+                alert('Nomor PO gagal diperbarui. Silakan coba kembali.');
+            }
+        });
+         
+        perbaruiNomor();
+        hitungTotal();
+
+   </script>
+}
