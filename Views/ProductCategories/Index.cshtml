@@ -3,14 +3,14 @@
 @model PagedResult<ProductCategoryViewModel>
 
 @{
-    ViewData["Title"] = "Kategori Produk";
+    ViewData["Title"] = T["Kategori Produk"];
 }
 
 <div class="page-heading supplier-page">
 
     <!-- HEADER -->
     <div class="mb-3">
-        <h4 class="page-title">Kategori Produk</h4>
+        <h4 class="page-title">@T["Kategori Produk"]</h4>
     </div>
 
     <!-- FILTER -->
@@ -19,7 +19,7 @@
         <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
             <strong class="small">
                 <i class="bi bi-funnel me-1"></i>
-                Filter
+                @T["Filter"]
             </strong>
 
             <i class="bi bi-chevron-down"></i>
@@ -32,28 +32,28 @@
 
                     <!-- SEARCH -->
                     <div class="col-md-4">
-                        <label class="form-label">Cari (kode / nama)</label>
+                        <label class="form-label">@T["Cari (kode / nama)"]</label>
 
                         <input type="text"
                                name="search"
                                value="@ViewBag.Search"
                                class="form-control"
-                               placeholder="Cari kategori..." />
+                               placeholder="@T["Cari kategori..."]" />
                     </div>
 
                     <!-- INDUK -->
                     <div class="col-md-3">
-                        <label class="form-label">Induk</label>
+                        <label class="form-label">@T["Induk"]</label>
 
                         <div class="position-relative">
                             <select name="parentId"
                                     class="form-select category-filter-select">
 
-                                <option value="">-- Semua --</option>
+                                <option value="">-- @T["Semua"] --</option>
 
                                 <option value="0"
                                         selected="@(ViewBag.ParentId?.ToString() == "0" ? "selected" : null)">
-                                    Kategori Utama saja
+                                    @T["Kategori Utama saja"]
                                 </option>
 
                                 @foreach (var category in ViewBag.AllCategories)
@@ -72,22 +72,22 @@
 
                     <!-- STATUS -->
                     <div class="col-md-3">
-                        <label class="form-label">Status</label>
+                        <label class="form-label">@T["Status"]</label>
 
                         <div class="position-relative">
                             <select name="isActive"
                                     class="form-select category-filter-select">
 
-                                <option value="">-- Semua --</option>
+                                <option value="">-- @T["Semua"] --</option>
 
                                 <option value="true"
                                         selected="@(ViewBag.IsActive?.ToString()?.ToLower() == "true" ? "selected" : null)">
-                                    Aktif
+                                    @T["Aktif"]
                                 </option>
 
                                 <option value="false"
                                         selected="@(ViewBag.IsActive?.ToString()?.ToLower() == "false" ? "selected" : null)">
-                                    Tidak Aktif
+                                    @T["Tidak Aktif"]
                                 </option>
 
                             </select>
@@ -101,13 +101,13 @@
                         <button type="submit"
                                 class="btn btn-primary d-flex align-items-center gap-2">
                             <i class="bi bi-search me-1"></i>
-                            Terapkan
+                            @T["Terapkan"]
                         </button>
 
                         <a asp-controller="WorkCenters"
                            asp-action="Index"
                            class="btn btn-outline-secondary"
-                           title="Reset">
+                           title="@T["Reset"]">
 
                            <i class="bi bi-arrow-counterclockwise"></i>
                     
@@ -127,14 +127,14 @@
         <div class="card-header bg-transparent d-flex align-items-center justify-content-between p-3">
 
             <div class="d-flex align-items-center gap-2">
-                <strong class="fw-bold fs-5">Kategori</strong>
+                <strong class="fw-bold fs-5">@T["Kategori"]</strong>
 
                 <span class="badge badge-count">
                     @Model.TotalData
                 </span>
 
                 <small class="menu-description small ms-1 d-none d-md-inline">
-                    Struktur kategori &amp; sub-kategori produk
+                    @T["Struktur kategori & sub-kategori produk"]
                 </small>
             </div>
 
@@ -160,7 +160,7 @@
                 <a asp-action="Print"
                    asp-controller="ProductCategories"
                    class="btn btn-light btn-custom-square text-secondary"
-                   title="Cetak"
+                   title="@T["Cetak"]"
                    target="_blank">
                     <i class="bi bi-printer-fill"></i>
                 </a>
@@ -184,9 +184,10 @@
                 <!-- Tambah Supplier -->
                 <button type="button"
                         class="btn btn-teal btn-custom-action"
+                        data-perm="create"
                         onclick="openCreateCategory()">
                     <i class="bi bi-plus-circle"></i>
-                    <span>Tambah Kategori</span>
+                    <span>@T["Tambah Kategori"]</span>
                 </button>
               </div>
         </div>
@@ -201,9 +202,9 @@
                         <tr>
                             <th class="text-center" style="width: 50px;">#</th>
                             <th style="width: 130px;">CODE</th>
-                            <th>NAMA KATEGORI</th>
-                            <th style="width: 100px;">STATUS</th>
-                            <th class="text-center" style="width: 130px;">AKSI</th>
+                            <th>@T["NAMA KATEGORI"]</th>
+                            <th style="width: 100px;">@T["STATUS"]</th>
+                            <th class="text-center" style="width: 130px;">@T["AKSI"]</th>
                         </tr>
                     </thead>
 
@@ -239,7 +240,7 @@
                                                 </span>
 
                                                 <span class="badge bg-light text-dark border">
-                                                    induk
+                                                    @T["induk"]
                                                 </span>
                                             }
                                             else
@@ -259,49 +260,52 @@
                                         @if (item.IsActive)
                                         {
                                             <span class="badge bg-success">
-                                                Aktif
+                                                @T["Aktif"]
                                             </span>
                                         }
                                         else
                                         {
                                             <span class="badge bg-danger">
-                                                Tidak Aktif
+                                                @T["Tidak Aktif"]
                                             </span>
                                         }
                                     </td>
 
                                     <!-- AKSI -->
-                                    <td class="category-action-cell">
-                                        <div class="actions-actions">
+                                    <td class="text-center">
+                                        <div class="row-actions">
 
                                             <button type="button"
-                                                    class="action-btn action-add"
-                                                    title="Tambah Subkategori"
+                                                    class="act-btn act-other"
+                                                    title="@T["Tambah Subkategori"]"
+                                                    data-perm="create"
                                                     onclick="openCreateSubCategory(@item.Id)">
                                                 <i class="bi bi-plus-lg"></i>
                                             </button>
 
                                             <button type="button"
-                                                    class="action-btn action-edit"
-                                                    title="Edit"
-                                                    onclick="openEditCategory(@item.Id)">
+                                                    class="act-btn act-edit"
+                                                    title="@T["Edit"]"
+                                                    data-perm="update"
+                                                    onclick="openEditCategory('@item.Uid')">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
 
                                             <form asp-action="Delete"
                                                   method="post"
+                                                  data-perm="delete"
                                                   class="d-inline"
-                                                  onsubmit="return confirm('Yakin ingin menghapus kategori ini?');">
+                                                  onsubmit='return confirm(@Json.Serialize(T["Yakin ingin menghapus kategori ini?"]));'>
 
                                                 @Html.AntiForgeryToken()
 
                                                 <input type="hidden"
-                                                       name="id"
-                                                       value="@item.Id" />
+                                                       name="uid"
+                                                       value="@item.Uid" />
 
                                                 <button type="submit"
-                                                        class="action-btn action-delete"
-                                                        title="Hapus">
+                                                        class="act-btn act-delete"
+                                                        title="@T["Hapus"]">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>
@@ -319,7 +323,7 @@
                             <tr>
                                 <td colspan="5"
                                     class="text-center text-muted py-4">
-                                    Tidak ada data kategori.
+                                    @T["Tidak ada data kategori."]
                                 </td>
                             </tr>
                         }
@@ -353,11 +357,11 @@
                 }
 
                 <span class="menu-description small">
-                    Menampilkan
+                    @T["Menampilkan"]
                     <strong>@startItem – @endItem</strong>
-                    dari
+                    @T["dari"]
                     <strong>@totalData</strong>
-                    data
+                    @T["data"]
                 </span>
 
                 <nav aria-label="Pagination">
@@ -368,7 +372,7 @@
 
                             @if (currentPage <= 1)
                             {
-                                <span class="page-link">Sebelumnya</span>
+                                <span class="page-link">@T["Sebelumnya"]</span>
                             }
                             else
                             {
@@ -380,7 +384,7 @@
                                        page = currentPage - 1,
                                        pageSize = pageSize
                                    })">
-                                    Sebelumnya
+                                    @T["Sebelumnya"]
                                 </a>
                             }
 
@@ -410,7 +414,7 @@
 
                             @if (currentPage >= totalPages || totalPages == 0)
                             {
-                                <span class="page-link">Berikutnya</span>
+                                <span class="page-link">@T["Berikutnya"]</span>
                             }
                             else
                             {
@@ -422,7 +426,7 @@
                                        page = currentPage + 1,
                                        pageSize = pageSize
                                    })">
-                                    Berikutnya
+                                    @T["Berikutnya"]
                                 </a>
                             }
 
@@ -453,7 +457,7 @@
         <div class="modal-content">
 
             <div class="modal-header">
-                <h5 class="modal-title">Tambah Kategori</h5>
+                <h5 class="modal-title">@T["Tambah Kategori"]</h5>
 
                 <button type="button"
                         class="btn-close btn-close-white"
@@ -469,33 +473,33 @@
                 <div class="modal-body">
 
                     <div class="mb-3">
-                        <label class="form-label">Kode</label>
+                        <label class="form-label">@T["Kode"]</label>
 
                         <input type="text"
                                name="Code"
                                class="form-control"
-                               placeholder="Masukkan kode kategori" />
+                               placeholder="@T["Masukkan kode kategori"]" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">
-                            Nama Kategori
+                            @T["Nama Kategori"]
                         </label>
 
                         <input type="text"
                                name="Name"
                                class="form-control"
-                               placeholder="Masukkan nama kategori"
+                               placeholder="@T["Masukkan nama kategori"]"
                                required />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">
-                            Induk Kategori
+                            @T["Induk Kategori"]
                         </label>
 
                         <select name="ParentId" class="form-select">
-                            <option value="">-- Kategori Utama --</option>
+                            <option value="">-- @T["Kategori Utama"] --</option>
 
                             @foreach (var category in ViewBag.AllCategories)
                             {
@@ -516,7 +520,7 @@
                                        checked />
                           <input type="hidden" name="IsActive" value="false" />
                           <label class="form-check-label ms-2" for="createCategoryActive">
-                                    Aktif
+                                    @T["Aktif"]
                           </label>
                      </div>          
                 </div>
@@ -525,11 +529,11 @@
                     <button type="button"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
-                        Batal
+                        @T["Batal"]
                     </button>
 
                     <button type="submit" class="btn btn-primary">
-                        Simpan
+                        @T["Simpan"]
                     </button>
                 </div>
 
@@ -551,7 +555,7 @@
         <div class="modal-content">
 
             <div class="modal-header">
-                <h5 class="modal-title">Edit Kategori</h5>
+                <h5 class="modal-title">@T["Edit Kategori"]</h5>
 
                 <button type="button"
                         class="btn-close btn-close-white"
@@ -567,11 +571,11 @@
                 <div class="modal-body">
 
                     <input type="hidden"
-                           name="Id"
+                           name="Uid"
                            id="editCategoryId" />
 
                     <div class="mb-3">
-                        <label class="form-label">Kode</label>
+                        <label class="form-label">@T["Kode"]</label>
 
                         <input type="text"
                                name="Code"
@@ -581,7 +585,7 @@
 
                     <div class="mb-3">
                         <label class="form-label">
-                            Nama Kategori
+                            @T["Nama Kategori"]
                         </label>
 
                         <input type="text"
@@ -593,14 +597,14 @@
 
                     <div class="mb-3">
                         <label class="form-label">
-                            Induk Kategori
+                            @T["Induk Kategori"]
                         </label>
 
                         <select name="ParentId"
                                 id="editCategoryParentId"
                                 class="form-select">
 
-                            <option value="">-- Kategori Utama --</option>
+                            <option value="">-- @T["Kategori Utama"] --</option>
 
                             @foreach (var category in ViewBag.AllCategories)
                             {
@@ -626,7 +630,7 @@
 
                         <label class="form-check-label ms-2"
                                for="editCategoryIsActive">
-                            Aktif
+                            @T["Aktif"]
                         </label>
                     </div>
                 </div>
@@ -635,11 +639,11 @@
                     <button type="button"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
-                        Batal
+                        @T["Batal"]
                     </button>
 
                     <button type="submit" class="btn btn-primary">
-                        Simpan Perubahan
+                        @T["Simpan Perubahan"]
                     </button>
                 </div>
 
@@ -717,21 +721,21 @@
         // EDIT KATEGORI
         // =========================
 
-        async function openEditCategory(id) {
+        async function openEditCategory(uid) {
 
             try {
                 const response = await fetch(
-                    `/ProductCategories/GetById?id=${id}`
+                    `/ProductCategories/GetById?uid=${encodeURIComponent(uid)}`
                 );
 
                 if (!response.ok) {
-                    alert("Data kategori tidak ditemukan.");
+                    alert(@Json.Serialize(T["Data kategori tidak ditemukan."]));
                     return;
                 }
 
                 const data = await response.json();
 
-                document.getElementById("editCategoryId").value = data.id;
+                document.getElementById("editCategoryId").value = data.uid;
                 document.getElementById("editCategoryName").value = data.name ?? "";
                 document.getElementById("editCategoryCode").value = data.code ?? "";
                 document.getElementById("editCategoryParentId").value = data.parentId ?? "";
@@ -771,7 +775,7 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Terjadi kesalahan saat mengambil data kategori.");
+                alert(@Json.Serialize(T["Terjadi kesalahan saat mengambil data kategori."]));
             }
         }
     </script>

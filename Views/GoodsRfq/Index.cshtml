@@ -1,7 +1,7 @@
 @model ERP.Web.Models.PagedResult<ERP.Web.ViewModels.GoodsRfqViewModel>
 
 @{
-    ViewData["Title"] = "RFQ Barang";
+    ViewData["Title"] = T["RFQ Barang"];
 
     var totalData = Model.TotalCount > 0 ? Model.TotalCount : Model.TotalData;
     var currentPage = Model.Page < 1 ? 1 : Model.Page;
@@ -21,7 +21,7 @@
 
     <!-- JUDUL -->
     <div class="mb-3">
-        <h4 class="page-title">RFQ Barang</h4>
+        <h4 class="page-title">@T["RFQ Barang"]</h4>
     </div>
 
     <!-- INFORMASI -->
@@ -30,8 +30,7 @@
         <div class="samll" style="font-size: .8rem;">
         <i class="bi bi-box-seam me-2"></i>
         <strong>RFQ (Request for Quotation)</strong>
-        — permintaan penawaran harga ke supplier. Setelah supplier
-        memberi harga, RFQ dikonversi menjadi <strong>PO Barang</strong>.
+        — @T["permintaan penawaran harga ke supplier. Setelah supplier memberi harga, RFQ dikonversi menjadi"] <strong>@T["PO Barang"]</strong>.
     </div>
     </div>
     </div>
@@ -42,7 +41,7 @@
              data-bs-toggle="collapse"
              data-bs-target="#rfqFilter"
              role="button">
-            <span><i class="bi bi-funnel"></i> Filter</span>
+            <span><i class="bi bi-funnel"></i> @T["Filter"]</span>
             <i class="bi bi-chevron-down"></i>
         </div>
 
@@ -54,7 +53,7 @@
                       class="row g-2 align-items-end">
 
                     <div class="col-md-4">
-                        <label class="form-label">Cari (No/Supplier)</label>
+                        <label class="form-label">@T["Cari (No/Supplier)"]</label>
                         <input type="text"
                                name="search"
                                value="@ViewBag.Search"
@@ -62,20 +61,20 @@
                     </div>
 
                     <div class="col-md-2">
-                        <label class="form-label">Status</label>
+                        <label class="form-label">@T["Status"]</label>
                         <select name="status" class="form-select">
-                            <option value="">-- Semua --</option>
+                            <option value="">@T["-- Semua --"]</option>
 
-                            <option value="draft" selected="@(selectedStatus == "draft")">Draft</option>
-                            <option value="sent" selected="@(selectedStatus == "terkirim")">Terkirim</option>
-                            <option value="quoted" selected="@(selectedStatus == "ditawar")">Ditawar</option>
-                            <option value="converted" selected="@(selectedStatus == "jadi_po")">Jadi PO</option>
-                            <option value="cancelled" selected="@(selectedStatus == "batal")">Batal</option>
+                            <option value="draft" selected="@(selectedStatus == "draft")">@T["Draft"]</option>
+                            <option value="sent" selected="@(selectedStatus == "terkirim")">@T["Terkirim"]</option>
+                            <option value="quoted" selected="@(selectedStatus == "ditawar")">@T["Ditawar"]</option>
+                            <option value="converted" selected="@(selectedStatus == "jadi_po")">@T["Jadi PO"]</option>
+                            <option value="cancelled" selected="@(selectedStatus == "batal")">@T["Batal"]</option>
                       </select>
                     </div>
 
                     <div class="col-md-2">
-                        <label class="form-label">Per Halaman</label>
+                        <label class="form-label">@T["Per Halaman"]</label>
                         <select name="pageSize" class="form-select">
                             <option value="10" selected="@(Model.PageSize == 10)">10</option>
                             <option value="25" selected="@(Model.PageSize == 25)">25</option>
@@ -87,12 +86,12 @@
 
                     <div class="attribute-filter-actions">
                         <button type="submit" class="btn attribute-apply-btn">
-                            <i class="bi bi-search me-1"></i> Terapkan
+                            <i class="bi bi-search me-1"></i> @T["Terapkan"]
                         </button>
 
                         <a asp-action="Index"
                            class="btn attribute-reset-btn"
-                           title="Reset filter">
+                           title="@T["Reset filter"]">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </a>
                     </div>
@@ -106,9 +105,9 @@
     <div class="card supplier-card supplier-table-card">
         <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
             <div class="d-flex align-items-center gap-2">
-                <strong>RFQ Barang</strong>
+                <strong>@T["RFQ Barang"]</strong>
                 <span class="attribute-count">@totalData</span>
-                <small>Permintaan penawaran harga ke supplier</small>
+                <small>@T["Permintaan penawaran harga ke supplier"]</small>
             </div>
             
             <div class="d-flex align-items-center gap-2">
@@ -117,7 +116,7 @@
                 <button type="button"
                         class="btn btn-light btn-custom-square"
                         onclick="location.reload()"
-                        title="Muat ulang">
+                        title="@T["Muat ulang"]">
                     <i class="bi bi-arrow-clockwise"></i>
                 </button>
 
@@ -125,7 +124,7 @@
                         class="btn btn-light btn-custom-square"
                         data-bs-toggle="collapse"
                         data-bs-target="#rfqTableBody"
-                        title="Tampilkan/sembunyikan tabel">
+                        title="@T["Tampilkan/sembunyikan tabel"]">
                     <i class="bi bi-chevron-up"></i>
                 </button>
 
@@ -133,8 +132,9 @@
 
                 <a asp-controller="GoodsRfq"
                    asp-action="Create"
+                   data-perm="create"
                    class="btn btn-primary btn-sm attribute-add-btn">
-                    <i class="bi bi-plus-circle"></i> Tambah RFQ
+                    <i class="bi bi-plus-circle"></i> @T["Tambah RFQ"]
                 </a>
             </div>
         </div>
@@ -145,15 +145,13 @@
                     <thead>
                         <tr>
                             <th style="width: 45px">#</th>
-                            <th>No. RFQ</th>
-                            <th>Tanggal</th>
-                            <th>Supplier</th>
-                            <th>Berlaku s/d</th>
-                            <th class="text-end">Total</th>
-                            <th>Status</th>
-                            <th class="attribute-action-cell">
-                                <div class="attribute-actions">Aksi</div>
-                           </th>
+                            <th>@T["No. RFQ"]</th>
+                            <th>@T["Tanggal"]</th>
+                            <th>@T["Supplier"]</th>
+                            <th>@T["Berlaku s/d"]</th>
+                            <th class="text-end">@T["Total"]</th>
+                            <th>@T["Status"]</th>
+                            <th class="text-center">@T["Aksi"]</th>
                             
                         </tr>
                     </thead>
@@ -191,23 +189,23 @@
 
                                      var (stText, stClass) = st switch
                                      {
-                                          "draft"    => ("Draft", "bg-secondary"),
-                                          "sent" => ("Terkirim", "bg-info text-dark"),
-                                          "quoted"  => ("Ditawar", "bg-primary"),
-                                          "converted"  => ("Jadi PO", "bg-success"),
-                                          "cancelled"    => ("Batal", "bg-danger"),
+                                          "draft"    => (T["Draft"], "bg-secondary"),
+                                          "sent" => (T["Terkirim"], "bg-info text-dark"),
+                                          "quoted"  => (T["Ditawar"], "bg-primary"),
+                                          "converted"  => (T["Jadi PO"], "bg-success"),
+                                          "cancelled"    => (T["Batal"], "bg-danger"),
                                             _          => (item.Status ?? "-", "bg-secondary")
                                      };
                                   }
                                   <span class="badge @stClass">@stText</span>
                                </td>
 
-                                <td class="attribute-action-cell">
-                                <div class="attribute-actions">
+                                <td class="text-center">
+                                <div class="row-actions">
                                     <a asp-action="Details"
-                                       asp-route-id="@item.Id"
-                                       class="attribute-btn attribute-btn-edit"
-                                       title="Lihat detail">
+                                       asp-route-uid="@item.Uid"
+                                       class="act-btn act-view"
+                                       title="@T["Lihat detail"]">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                    </div>
@@ -221,7 +219,7 @@
                     {
                         <tr>
                             <td colspan="8" class="text-center py-4">
-                                Data RFQ belum tersedia.
+                                @T["Data RFQ belum tersedia."]
                             </td>
                         </tr>
                     }
@@ -235,10 +233,10 @@
 <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3">
 
     <span class="menu-description small">
-        Menampilkan
+        @T["Menampilkan"]
         <strong>@startItem–@endItem</strong>
-        dari
-        <strong>@totalData data</strong>
+        @T["dari"]
+        <strong>@totalData @T["data"]</strong>
     </span>
 
     <nav aria-label="Pagination">
@@ -247,7 +245,7 @@
             <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
                 @if (currentPage <= 1)
                 {
-                    <span class="page-link">Sebelumnya</span>
+                    <span class="page-link">@T["Sebelumnya"]</span>
                 }
                 else
                 {
@@ -257,7 +255,7 @@
                            status = Context.Request.Query["status"].ToString(),
                            page = currentPage - 1,
                            pageSize = pageSize
-                       })">Sebelumnya</a>
+                       })">@T["Sebelumnya"]</a>
                 }
             </li>
 
@@ -277,7 +275,7 @@
             <li class="page-item @(totalPages == 0 || currentPage >= totalPages ? "disabled" : "")">
                 @if (currentPage >= totalPages || totalPages == 0)
                 {
-                    <span class="page-link">Berikutnya</span>
+                    <span class="page-link">@T["Berikutnya"]</span>
                 }
                 else
                 {
@@ -287,7 +285,7 @@
                            status = Context.Request.Query["status"].ToString(),
                            page = currentPage + 1,
                            pageSize = pageSize
-                       })">Berikutnya</a>
+                       })">@T["Berikutnya"]</a>
                 }
             </li>
 

@@ -1,0 +1,98 @@
+@model ERP.Web.Models.BudgetVsActualViewModel
+@{
+    ViewData["Title"] = T["Anggaran vs Realisasi"];
+    var header = new ListHeaderModel
+    {
+        Title = T["Tahun {0}", Model.Year],
+        Count = Model.Rows.Count,
+        Description = T["Realisasi dari jurnal posted; pending = faktur menunggu persetujuan"],
+        ShowRefresh = false
+    };
+    var remaining = Model.TotalBudget - Model.TotalActual - Model.TotalPending;
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Anggaran vs Realisasi"]</h3>
+
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+        <div>
+            <label class="form-label text-white small mb-1" for="fYear">@T["Tahun"]</label>
+            <input type="number" class="form-control form-control-sm" name="year" id="fYear" value="@Model.Year" min="2000" max="2100" style="width: 110px;" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>@T["Terapkan"]</button>
+        <a asp-controller="Budgets" asp-action="Index" asp-route-year="@Model.Year" class="btn btn-outline-info btn-sm ms-auto"><i class="bi bi-wallet2 me-1"></i>@T["Kelola Anggaran"]</a>
+    </form>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Pemakaian = (realisasi + pending) ÷ anggaran. Aman < 80%, Mendekati ≥ 80%, Melebihi > 100% (baris merah). Penegakan lunak: tidak ada dokumen yang ditolak karena anggaran — faktur yang melebihi anggaran dialihkan ke persetujuan."]
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">@T["ANGGARAN"]</th>
+                            <th>@T["AKUN"]</th>
+                            <th class="text-end">@T["NILAI"]</th>
+                            <th class="text-end">@T["REALISASI"]</th>
+                            <th class="text-end">@T["PENDING"]</th>
+                            <th class="text-end">@T["SISA"]</th>
+                            <th style="width: 180px;">@T["PEMAKAIAN"]</th>
+                            <th style="width: 110px;">@T["STATUS"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Rows.Count == 0)
+                        {
+                            <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada anggaran untuk tahun ini."]</td></tr>
+                        }
+                        @foreach (var b in Model.Rows)
+                        {
+                            var (sl, sc) = ERP.Web.Models.BudgetViewModel.StateBadge(b.State);
+                            var pctActual = b.Amount == 0 ? 0 : Math.Min(100, b.Actual / b.Amount * 100);
+                            var pctPending = b.Amount == 0 ? 0 : Math.Min(100 - pctActual, b.Pending / b.Amount * 100);
+                            <tr class="@(b.State == "over" ? "table-danger-soft" : "")">
+                                <td class="ps-4 text-white">
+                                    <span class="badge @(b.BudgetAgainst == "project" ? "bg-primary" : "bg-secondary") me-1">@(b.BudgetAgainst == "project" ? T["Project"] : T["CC"])</span>
+                                    @b.DimensionCode <span class="text-white-50 small">@b.DimensionName</span>
+                                </td>
+                                <td class="text-white small">@b.AccountCode @b.AccountName</td>
+                                <td class="text-end text-white">@Acc.Money(b.Amount)</td>
+                                <td class="text-end text-white">@Acc.Money(b.Actual)</td>
+                                <td class="text-end @(b.Pending > 0 ? "text-warning" : "text-white-50")">@(b.Pending == 0 ? "-" : Acc.Money(b.Pending))</td>
+                                <td class="text-end @(b.Remaining < 0 ? "text-danger fw-semibold" : "text-white")">@Acc.Money(b.Remaining)</td>
+                                <td>
+                                    <div class="progress" style="height: 8px;" title="@b.UsedPercent.ToString("0.#", Acc.Culture)%">
+                                        <div class="progress-bar @(b.State == "over" ? "bg-danger" : b.State == "warning" ? "bg-warning" : "bg-success")" style="width: @pctActual.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                        <div class="progress-bar bg-info" style="width: @pctPending.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                    </div>
+                                    <div class="text-white-50 small">@b.UsedPercent.ToString("0.#", Acc.Culture)%</div>
+                                </td>
+                                <td><span class="badge @sc">@T[sl]</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (Model.Rows.Count > 0)
+                    {
+                        <tfoot>
+                            <tr>
+                                <td class="ps-4 fw-bold text-white" colspan="2">@T["TOTAL"]</td>
+                                <td class="text-end fw-bold text-white">@Acc.Money(Model.TotalBudget)</td>
+                                <td class="text-end fw-bold text-white">@Acc.Money(Model.TotalActual)</td>
+                                <td class="text-end fw-bold text-warning">@Acc.Money(Model.TotalPending)</td>
+                                <td class="text-end fw-bold @(remaining < 0 ? "text-danger" : "text-white")">@Acc.Money(remaining)</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

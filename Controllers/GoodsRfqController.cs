@@ -11,10 +11,12 @@ namespace ERP.Web.Controllers;
 public class GoodsRfqController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public GoodsRfqController(ApiClient api)
+    public GoodsRfqController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     // =========================
@@ -67,7 +69,7 @@ public class GoodsRfqController : Controller
             return View(model);
         }
 
-        var (success, error, id) = await _api.CreateGoodsRfqAsync(BuildPayload(model));
+        var (success, error, uid) = await _api.CreateGoodsRfqAsync(BuildPayload(model));
 
         if (!success)
         {
@@ -78,8 +80,8 @@ public class GoodsRfqController : Controller
 
         TempData["Success"] = "RFQ disimpan sebagai draft.";
 
-        return id.HasValue
-            ? RedirectToAction(nameof(Details), new { id = id.Value })
+        return !string.IsNullOrWhiteSpace(uid)
+            ? RedirectToAction(nameof(Details), new { uid })
             : RedirectToAction(nameof(Index));
     }
 
@@ -87,15 +89,19 @@ public class GoodsRfqController : Controller
     // EDIT (hanya saat draft, memakai view Create)
     // =========================
     [HttpGet]
-    public async Task<IActionResult> Edit(long id)
+    public async Task<IActionResult> Edit(Guid uid)
     {
-        var rfq = await _api.GetGoodsRfqAsync(id);
-        if (rfq == null) return NotFound();
+        var rfq = uid == Guid.Empty ? null : await _api.GetGoodsRfqAsync(uid);
+        if (rfq == null)
+        {
+            TempData["Error"] = "RFQ tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         if (!IsStatus(rfq, "draft"))
         {
             TempData["Error"] = "Hanya RFQ berstatus Draft yang bisa diedit.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToAction(nameof(Details), new { uid });
         }
 
         await LoadLookupsAsync();
@@ -111,8 +117,17 @@ public class GoodsRfqController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(long id, GoodsRfqViewModel model)
+    public async Task<IActionResult> Edit(Guid uid, GoodsRfqViewModel model)
     {
+        // UID wajib untuk update (record tidak diidentifikasi dengan id angka)
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] = "RFQ tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        model.Uid = uid.ToString();
+
         model.Items = (model.Items ?? new()).Where(i => i.ProductId > 0).ToList();
 
         if (!model.Items.Any())
@@ -126,7 +141,7 @@ public class GoodsRfqController : Controller
             return View("Create", model);
         }
 
-        var (success, error) = await _api.UpdateGoodsRfqAsync(id, BuildPayload(model));
+        var (success, error) = await _api.UpdateGoodsRfqAsync(uid, BuildPayload(model));
 
         if (!success)
         {
@@ -137,17 +152,21 @@ public class GoodsRfqController : Controller
         }
 
         TempData["Success"] = "RFQ berhasil diperbarui.";
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectToAction(nameof(Details), new { uid });
     }
 
     // =========================
     // DETAILS
     // =========================
     [HttpGet]
-    public async Task<IActionResult> Details(long id)
+    public async Task<IActionResult> Details(Guid uid)
     {
-        var rfq = await _api.GetGoodsRfqAsync(id);
-        if (rfq == null) return NotFound();
+        var rfq = uid == Guid.Empty ? null : await _api.GetGoodsRfqAsync(uid);
+        if (rfq == null)
+        {
+            TempData["Error"] = "RFQ tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         await EnrichItemsAsync(rfq);
 
@@ -159,29 +178,33 @@ public class GoodsRfqController : Controller
     // =========================
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Send(long id)
+    public async Task<IActionResult> Send(Guid uid)
     {
-        var (success, error) = await _api.SendGoodsRfqAsync(id);
+        var (success, error) = await _api.SendGoodsRfqAsync(uid);
 
         if (success) TempData["Success"] = "RFQ berhasil dikirim ke supplier.";
         else TempData["Error"] = error ?? "Gagal mengirim RFQ.";
 
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectToAction(nameof(Details), new { uid });
     }
 
     // =========================
     // INPUT PENAWARAN (terkirim -> ditawar)
     // =========================
     [HttpGet]
-    public async Task<IActionResult> Quote(long id)
+    public async Task<IActionResult> Quote(Guid uid)
     {
-        var rfq = await _api.GetGoodsRfqAsync(id);
-        if (rfq == null) return NotFound();
+        var rfq = uid == Guid.Empty ? null : await _api.GetGoodsRfqAsync(uid);
+        if (rfq == null)
+        {
+            TempData["Error"] = "RFQ tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         if (!IsStatus(rfq, "sent") && !IsStatus(rfq, "quoted"))
         {
             TempData["Error"] = "Penawaran hanya bisa diinput setelah RFQ dikirim ke supplier.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToAction(nameof(Details), new { uid });
         }
 
         await EnrichItemsAsync(rfq);
@@ -191,19 +214,20 @@ public class GoodsRfqController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Quote(long id, List<GoodsRfqQuoteItem> items)
+    public async Task<IActionResult> Quote(Guid uid, List<GoodsRfqQuoteItem> items)
     {
+        // items[].Id = id baris item yang di-submit bersama dokumen RFQ (boleh id angka).
         var payload = new
         {
             items = (items ?? new()).Select(i => new { id = i.Id, quotedPrice = i.QuotedPrice })
         };
 
-        var (success, error) = await _api.SaveGoodsRfqQuoteAsync(id, payload);
+        var (success, error) = await _api.SaveGoodsRfqQuoteAsync(uid, payload);
 
         if (success) TempData["Success"] = "Penawaran supplier disimpan.";
         else TempData["Error"] = error ?? "Gagal menyimpan penawaran.";
 
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectToAction(nameof(Details), new { uid });
     }
 
     // =========================
@@ -211,14 +235,14 @@ public class GoodsRfqController : Controller
     // =========================
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Cancel(long id)
+    public async Task<IActionResult> Cancel(Guid uid)
     {
-        var (success, error) = await _api.CancelGoodsRfqAsync(id);
+        var (success, error) = await _api.CancelGoodsRfqAsync(uid);
 
         if (success) TempData["Success"] = "RFQ dibatalkan.";
         else TempData["Error"] = error ?? "Gagal membatalkan RFQ.";
 
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectToAction(nameof(Details), new { uid });
     }
 
     // =========================
@@ -283,15 +307,19 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
     }
 
     [HttpGet]
-    public async Task<IActionResult> ConvertToPo(long id)
+    public async Task<IActionResult> ConvertToPo(Guid uid)
     {
-        var rfq = await _api.GetGoodsRfqAsync(id);
-        if (rfq == null) return NotFound();
+        var rfq = uid == Guid.Empty ? null : await _api.GetGoodsRfqAsync(uid);
+        if (rfq == null)
+        {
+            TempData["Error"] = "RFQ tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         if (!IsStatus(rfq, "quoted") && !IsStatus(rfq, "ditawar"))
         {
             TempData["Error"] = "RFQ harus berstatus Ditawar sebelum dijadikan PO.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToAction(nameof(Details), new { uid });
         }
 
         await EnrichItemsAsync(rfq);
@@ -301,11 +329,40 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
         return View(rfq);
     }
 
+    /// <summary>Buat PO draft dari RFQ (harga = harga penawaran), lalu buka detail PO.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> ConvertToPo(Guid uid, long warehouseId)
     {
-        var (success, error) = await _api.DeleteGoodsRfqAsync(id);
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] = "RFQ tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (warehouseId <= 0)
+        {
+            TempData["Error"] = "Gudang tujuan wajib dipilih.";
+            return RedirectToAction(nameof(ConvertToPo), new { uid });
+        }
+
+        var (success, error, poUid) = await _api.ConvertGoodsRfqToPoAsync(uid, warehouseId);
+
+        if (!success || string.IsNullOrWhiteSpace(poUid))
+        {
+            TempData["Error"] = error ?? "RFQ gagal dijadikan PO.";
+            return RedirectToAction(nameof(Details), new { uid });
+        }
+
+        TempData["Success"] = "PO draft dibuat dari RFQ. Lengkapi & setujui PO.";
+        return RedirectToAction("Details", "GoodsPurchaseOrders", new { uid = poUid });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(Guid uid)
+    {
+        var (success, error) = await _api.DeleteGoodsRfqAsync(uid);
 
         if (success)
         {
@@ -314,14 +371,18 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
         }
 
         TempData["Error"] = error ?? "Gagal menghapus RFQ.";
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectToAction(nameof(Details), new { uid });
     }
 
     [HttpGet]
-    public async Task<IActionResult> Print(long id, bool pdf = false)
+    public async Task<IActionResult> Print(Guid uid, bool pdf = false)
     {
-        var rfq = await _api.GetGoodsRfqAsync(id);
-        if (rfq == null) return NotFound();
+        var rfq = uid == Guid.Empty ? null : await _api.GetGoodsRfqAsync(uid);
+        if (rfq == null)
+        {
+            TempData["Error"] = "RFQ tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         await EnrichItemsAsync(rfq);
         ViewBag.Pdf = pdf;
@@ -333,11 +394,11 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
     // EXPORT PDF 
     // =========================
     [HttpGet]
-    public async Task<IActionResult> ExportPdf(long id)
+    public async Task<IActionResult> ExportPdf(Guid uid)
     {
-        if (id <= 0) return BadRequest("ID RFQ tidak valid.");
+        if (uid == Guid.Empty) return NotFound("RFQ tidak ditemukan.");
 
-        var rfq = await _api.GetGoodsRfqAsync(id);
+        var rfq = await _api.GetGoodsRfqAsync(uid);
         if (rfq == null) return NotFound("RFQ tidak ditemukan.");
 
         await EnrichItemsAsync(rfq);
@@ -353,10 +414,10 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
         var statusText = status switch
         {
             "draft" => "DRAFT",
-            "sent" or "terkirim" => "TERKIRIM",
-            "quoted" or "ditawar" => "DITAWAR",
-            "converted" or "jadi_po" => "JADI PO",
-            "cancelled" or "batal" => "BATAL",
+            "sent" or "terkirim" => _t["TERKIRIM"],
+            "quoted" or "ditawar" => _t["DITAWAR"],
+            "converted" or "jadi_po" => _t["JADI PO"],
+            "cancelled" or "batal" => _t["BATAL"],
             _ => (rfq.Status ?? "-").ToUpperInvariant()
         };
 
@@ -365,7 +426,7 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
         var quoteTotal = items.Where(i => i.QuotedPrice > 0)
                               .Sum(i => i.Quantity * i.QuotedPrice);
 
-        var grandLabel = hasQuote ? "TOTAL PENAWARAN" : "ESTIMASI TOTAL";
+        var grandLabel = hasQuote ? _t["TOTAL PENAWARAN"] : _t["ESTIMASI TOTAL"];
         var grandValue = hasQuote ? quoteTotal : estimateTotal;
 
         static QuestPDF.Infrastructure.IContainer CellStyle(
@@ -442,11 +503,11 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
                                     });
                             }
 
-                            Info("Nomor", rfq.RfqNo ?? "-");
-                            Info("Tanggal", Tanggal(rfq.RfqDate));
-                            Info("Berlaku s/d", Tanggal(rfq.ValidUntil));
-                            Info("Supplier", rfq.SupplierName ?? "-");
-                            Info("Status", statusText);
+                            Info(_t["Nomor"], rfq.RfqNo ?? "-");
+                            Info(_t["Tanggal"], Tanggal(rfq.RfqDate));
+                            Info(_t["Berlaku s/d"], Tanggal(rfq.ValidUntil));
+                            Info(_t["Supplier"], rfq.SupplierName ?? "-");
+                            Info(_t["Status"], statusText);
                         });
                     });
 
@@ -501,11 +562,11 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
                                 }
 
                                 HeaderCell("NO", false);
-                                HeaderCell("PRODUK", false);
-                                HeaderCell("QTY", true);
-                                HeaderCell("EST. HARGA", true);
-                                HeaderCell("HARGA PENAWARAN", true);
-                                HeaderCell("SUBTOTAL", true);
+                                HeaderCell(_t["PRODUK"], false);
+                                HeaderCell(_t["QTY"], true);
+                                HeaderCell(_t["EST. HARGA"], true);
+                                HeaderCell(_t["HARGA PENAWARAN"], true);
+                                HeaderCell(_t["SUBTOTAL"], true);
                             });
 
                             if (items.Count > 0)
@@ -572,7 +633,7 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
                                     .BorderColor("#D8E1ED")
                                     .Padding(15)
                                     .AlignCenter()
-                                    .Text("Detail barang tidak tersedia untuk RFQ ini.");
+                                    .Text(_t["Detail barang tidak tersedia untuk RFQ ini."]);
                             }
                         });
 
@@ -586,7 +647,7 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
                                     .Column(note =>
                                     {
                                         note.Item()
-                                            .Text("CATATAN")
+                                            .Text(_t["CATATAN"])
                                             .Bold()
                                             .FontSize(9)
                                             .FontColor("#64748B");
@@ -636,7 +697,7 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
                                         {
                                             signature.Item()
                                                 .AlignCenter()
-                                                .Text(title)
+                                                .Text(_t[title])
                                                 .Bold();
 
                                             signature.Item()
@@ -650,7 +711,7 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
                                                 .Text(
                                                     title == "Dibuat oleh"
                                                         ? "Administrator"
-                                                        : "(Nama & Tanda Tangan)")
+                                                        : _t["(Nama & Tanda Tangan)"])
                                                 .FontSize(8)
                                                 .FontColor("#64748B");
                                         });
@@ -666,7 +727,7 @@ private async Task EnrichItemsAsync(GoodsRfqViewModel rfq)
                     .AlignCenter()
                     .Text(
                         $"© {DateTime.Now.Year} Modotz App | " +
-                        $"Dicetak {DateTime.Now:dd/MM/yyyy HH:mm}")
+                        $"{_t["Dicetak"]} {DateTime.Now:dd/MM/yyyy HH:mm}")
                     .FontSize(8)
                     .FontColor("#94A3B8");
             });

@@ -12,10 +12,12 @@ namespace ERP.Web.Controllers;
 public class MsfieldsController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public MsfieldsController(ApiClient api)
+    public MsfieldsController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     [HttpGet]
@@ -45,12 +47,12 @@ public class MsfieldsController : Controller
     }
 
     // ==========================================
-    // GET: /Msfield/GetById/1
+    // GET: /Msfields/GetById/{uid}
     // ==========================================
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var field = await _api.GetMsfieldsAsync(id);
+        var field = await _api.GetMsfieldsAsync(uid);
 
         if (field == null)
             return NotFound();
@@ -102,11 +104,11 @@ public class MsfieldsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        // Validasi ID
-        if (!model.Id.HasValue)
+        // Validasi UID (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
             TempData["Error"] =
-                "ID field tidak ditemukan.";
+                "Data field tidak ditemukan.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -136,9 +138,9 @@ public class MsfieldsController : Controller
     // ==========================================
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
-        var result = await _api.DeleteFieldAsync(id);
+        var result = await _api.DeleteFieldAsync(uid);
 
         TempData[result.Success ? "Success" : "Error"] =
             result.Success
@@ -181,7 +183,7 @@ public class MsfieldsController : Controller
             worksheet.Cell(row, 3).Value = item.FieldText;
             worksheet.Cell(row, 4).Value = item.FiledValue;
             worksheet.Cell(row, 5).Value =
-                item.IsActive ? "Aktif" : "Nonaktif";
+                item.IsActive ? _t["Aktif"] : _t["Nonaktif"];
 
             row++;
             no++;
@@ -228,9 +230,9 @@ public class MsfieldsController : Controller
                     {
                         text.Span("Msfield").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span(_t["Dicetak: {0}", DateTime.Now.ToString("dd/MM/yyyy HH:mm")]).FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {listMsfields.Count} data").FontColor("#6c757d"); // Menggunakan listMsfields
+                        text.Span(_t["Total: {0} data", listMsfields.Count]).FontColor("#6c757d"); // Menggunakan listMsfields
                     });
                 });
 
@@ -280,7 +282,7 @@ public class MsfieldsController : Controller
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.FieldKey ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.FieldText ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.FiledValue ?? "");
-                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? "Aktif" : "Nonaktif");
+                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? _t["Aktif"] : _t["Nonaktif"]);
 
                         no++;
                     }
@@ -301,7 +303,7 @@ public class MsfieldsController : Controller
                 page.Footer()
                     .AlignLeft()
                     .PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f)
                     .FontColor("#888888");
             });

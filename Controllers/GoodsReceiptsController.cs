@@ -12,10 +12,12 @@ namespace ERP.Web.Controllers;
 public class GoodsReceiptsController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public GoodsReceiptsController(ApiClient api)
+    public GoodsReceiptsController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     [HttpGet]
@@ -115,7 +117,7 @@ public class GoodsReceiptsController : Controller
         {
             return StatusCode(500, new
             {
-                message = "Nomor PO gagal dibuat."
+                message = _t["Nomor PO gagal dibuat."]
             });
         }
 
@@ -123,7 +125,7 @@ public class GoodsReceiptsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(Guid? poUid = null)
     {
         var model = new GoodsReceiptViewModel
         {
@@ -132,6 +134,32 @@ public class GoodsReceiptsController : Controller
         };
 
         await LoadCreateDropdowns();
+
+        // Penerimaan dari PO: PO diidentifikasi lewat uid di URL (?poUid=...).
+        // Id angka PO hanya dipakai sebagai nilai FK tersembunyi di form.
+        if (poUid.HasValue && poUid.Value != Guid.Empty)
+        {
+            var po = await _api.GetGoodsPurchaseOrderAsync(poUid.Value);
+
+            if (po == null)
+            {
+                TempData["Error"] = "Purchase Order tidak ditemukan.";
+            }
+            else
+            {
+                model.POId = po.Id;
+
+                // Pastikan PO terpilih (beserta detail barangnya) tersedia di daftar pilihan PO.
+                var purchaseOrders =
+                    ViewBag.PurchaseOrders as List<GoodsPurchaseOrderViewModel>
+                    ?? new List<GoodsPurchaseOrderViewModel>();
+
+                purchaseOrders.RemoveAll(x => x.Id == po.Id);
+                purchaseOrders.Insert(0, po);
+
+                ViewBag.PurchaseOrders = purchaseOrders;
+            }
+        }
 
         // false = PO manual dengan prefix GPO
         model.ReceiptNo = await _api.GetNextGoodsReceiptNumberAsync(
@@ -144,7 +172,7 @@ public class GoodsReceiptsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(GoodsReceiptViewModel model)
+    public async Task<IActionResult> Create(GoodsReceiptViewModel model, string? submitAction)
     {
         if (!ModelState.IsValid)
         {
@@ -155,30 +183,35 @@ public class GoodsReceiptsController : Controller
         model.Status = "draft"; 
         var result = await _api.CreateGoodsReceiptAsync(model);
 
-        if (!result.Success || !result.Id.HasValue)
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Uid))
         {
             TempData["Error"] = result.Error ?? "Penerimaan Barang gagal disimpan."; 
             await LoadCreateDropdowns(); 
             return View(model);
         }
 
-        // Berhasil disimpan: langsung buka halaman Detail PO.
+        // "Simpan & Posting": langsung posting setelah draft tersimpan.
+        TempData["Success"] = await PostIfRequestedAsync(submitAction, result.Uid)
+            ?? "Penerimaan Barang disimpan sebagai draft.";
+
         return RedirectToAction(
             "Details",
-            new { id = result.Id.Value });
+            new { uid = result.Uid });
     }
 
     //detail purchase order
     [HttpGet]
-    public async Task<IActionResult> Details(long id)
+    public async Task<IActionResult> Details(Guid uid)
     {
-        if (id <= 0)
-            return BadRequest("ID Penerimaan Barang tidak valid.");
-
-        var model = await _api.GetGoodsReceiptAsync(id);
+        var model = uid == Guid.Empty
+            ? null
+            : await _api.GetGoodsReceiptAsync(uid);
 
         if (model == null)
-            return NotFound("Penerimaan Barang tidak ditemukan.");
+        {
+            TempData["Error"] = "Penerimaan Barang tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         // Pastikan collection tidak null ketika digunakan di View.
         model.Details ??= new List<GoodsReceiptItemViewModel>();
@@ -187,12 +220,11 @@ public class GoodsReceiptsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Edit(long id)
+    public async Task<IActionResult> Edit(Guid uid)
     {
-        if (id <= 0)
-            return BadRequest("ID Penerimaan Barang tidak valid.");
-
-        var model = await _api.GetGoodsReceiptAsync(id);
+        var model = uid == Guid.Empty
+            ? null
+            : await _api.GetGoodsReceiptAsync(uid);
 
         if (model == null)
         {
@@ -200,20 +232,32 @@ public class GoodsReceiptsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        if (!string.Equals(model.Status, "draft", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["Error"] = "Hanya Penerimaan Barang berstatus draft yang dapat diubah.";
+            return RedirectToAction(nameof(Details), new { uid });
+        }
+
         model.Details ??= new List<GoodsReceiptItemViewModel>();
 
         await LoadCreateDropdowns();
 
-        return View(model);
+        // Form tambah & ubah memakai view yang sama.
+        return View("Create", model);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(
-        GoodsReceiptViewModel model)
+        GoodsReceiptViewModel model,
+        string? submitAction)
     {
-        if (model.Id <= 0)
-            return BadRequest("ID Penerimaan Barang tidak valid.");
+        // UID wajib untuk update (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
+        {
+            TempData["Error"] = "Penerimaan Barang tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         if (!ModelState.IsValid)
         {
@@ -222,9 +266,10 @@ public class GoodsReceiptsController : Controller
 
             await LoadCreateDropdowns();
 
-            return View("Edit", model);
+            return View("Create", model);
         }
 
+        model.Status = "draft";
         var result = await _api.UpdateGoodsReceiptAsync(model);
 
         if (!result.Success)
@@ -234,41 +279,82 @@ public class GoodsReceiptsController : Controller
 
             await LoadCreateDropdowns();
 
-            return View("Edit", model);
+            return View("Create", model);
         }
 
-        TempData["Success"] = "Penerimaan Barang berhasil diubah.";
+        TempData["Success"] = await PostIfRequestedAsync(submitAction, model.Uid)
+            ?? "Penerimaan Barang berhasil diubah.";
 
-        return RedirectToAction(nameof(Details), new { id = model.Id });
+        return RedirectToAction(nameof(Details), new { uid = model.Uid });
     }
 
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
-        if (id <= 0)
-            return BadRequest("ID Penerimaan Barang tidak valid.");
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] = "Penerimaan Barang tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         var result =
-            await _api.DeleteGoodsReceiptAsync(id);
+            await _api.DeleteGoodsReceiptAsync(uid);
 
         TempData[result.Success ? "Success" : "Error"] =
-            result.Success
+            result.Message ?? (result.Success
                 ? "Penerimaan Barang berhasil dihapus."
-                : result.Error ?? "Gagal menghapus Penerimaan Barang.";
+                : "Gagal menghapus Penerimaan Barang.");
 
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Approve(Guid uid)
+    {
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] = "Penerimaan Barang tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Posting draft: stok masuk, PO diperbarui, jurnal & faktur otomatis dibuat oleh API.
+        var result = await _api.ApproveGoodsReceiptAsync(uid);
+
+        TempData[result.Success ? "Success" : "Error"] =
+            result.Message ?? (result.Success
+                ? "Penerimaan Barang berhasil diposting."
+                : "Penerimaan Barang gagal diposting.");
+
+        return RedirectToAction(nameof(Details), new { uid });
+    }
+
+    /// <summary>
+    /// Posting draft bila tombol "Simpan &amp; Posting" yang ditekan. Mengembalikan pesan hasil, atau null bila hanya simpan draft.
+    /// </summary>
+    private async Task<string?> PostIfRequestedAsync(string? submitAction, string? uid)
+    {
+        if (!string.Equals(submitAction, "post", StringComparison.OrdinalIgnoreCase) ||
+            !Guid.TryParse(uid, out var receiptUid))
+            return null;
+
+        var result = await _api.ApproveGoodsReceiptAsync(receiptUid);
+
+        return result.Success
+            ? result.Message ?? "Penerimaan Barang disimpan dan diposting."
+            : $"Penerimaan Barang tersimpan sebagai draft, tetapi gagal diposting. {result.Message}".TrimEnd();
+    }
+
     // Export PDF satu PO Barang
     [HttpGet]
-    public async Task<IActionResult> ExportPdf(long id)
+    public async Task<IActionResult> ExportPdf(Guid uid)
     {
-         if (id <= 0)  return BadRequest("ID Penerimaan Barang tidak valid.");
+         if (uid == Guid.Empty)  return NotFound("Penerimaan Barang tidak ditemukan.");
 
 
-        var po = await _api.GetGoodsReceiptAsync(id);
+        var po = await _api.GetGoodsReceiptAsync(uid);
 
         if (po == null) return NotFound("Penerimaan Barang tidak ditemukan.");
 
@@ -317,7 +403,7 @@ public class GoodsReceiptsController : Controller
                         {
                             right.Item()
                                 .AlignRight()
-                                .Text("PURCHASE ORDER BARANG")
+                                .Text(_t["PURCHASE ORDER BARANG"])
                                 .Bold()
                                 .FontSize(17)
                                 .FontColor("#2864FF");
@@ -339,12 +425,12 @@ public class GoodsReceiptsController : Controller
                                     });
                             }
 
-                            Info("Nomor", po.ReceiptNo ?? "-");
-                            Info("Tanggal", Tanggal(po.ReceiptDate));
-                            Info("Supplier", po.SupplierName ?? "-");
-                            Info("Gudang", po.WarehouseName ?? "-");
+                            Info(_t["Nomor"], po.ReceiptNo ?? "-");
+                            Info(_t["Tanggal"], Tanggal(po.ReceiptDate));
+                            Info(_t["Supplier"], po.SupplierName ?? "-");
+                            Info(_t["Gudang"], po.WarehouseName ?? "-");
                             Info(
-                                "Status",
+                                _t["Status"],
                                 (po.Status ?? "-")
                                     .Replace("_", " ")
                                     .ToUpperInvariant()
@@ -391,7 +477,7 @@ public class GoodsReceiptsController : Controller
                                         .Border(1)
                                         .BorderColor("#203D63")
                                         .Padding(7)
-                                        .Text(title)
+                                        .Text(_t[title])
                                         .Bold()
                                         .FontSize(8)
                                         .FontColor("#FFFFFF");
@@ -455,7 +541,7 @@ public class GoodsReceiptsController : Controller
                                     .BorderColor("#D8E1ED")
                                     .Padding(15)
                                     .AlignCenter()
-                                    .Text("Detail barang tidak tersedia untuk PO ini.");
+                                    .Text(_t["Detail barang tidak tersedia untuk penerimaan ini."]);
                             }
                         });
 
@@ -468,7 +554,7 @@ public class GoodsReceiptsController : Controller
                                     .Column(note =>
                                     {
                                         note.Item()
-                                            .Text("CATATAN")
+                                            .Text(_t["CATATAN"])
                                             .Bold()
                                             .FontSize(9)
                                             .FontColor("#64748B");
@@ -544,7 +630,7 @@ public class GoodsReceiptsController : Controller
                                         {
                                             signature.Item()
                                                 .AlignCenter()
-                                                .Text(title)
+                                                .Text(_t[title])
                                                 .Bold();
 
                                             signature.Item()
@@ -558,7 +644,7 @@ public class GoodsReceiptsController : Controller
                                                 .Text(
                                                     title == "Dibuat oleh"
                                                         ? "Administrator"
-                                                        : "(Nama & Tanda Tangan)"
+                                                        : _t["(Nama & Tanda Tangan)"]
                                                 )
                                                 .FontSize(8)
                                                 .FontColor("#64748B");
@@ -574,7 +660,7 @@ public class GoodsReceiptsController : Controller
                     .AlignCenter()
                     .Text(
                         $"© {DateTime.Now.Year} Modotz App | " +
-                        $"Dicetak {DateTime.Now:dd/MM/yyyy HH:mm}"
+                        $"{_t["Dicetak"]} {DateTime.Now:dd/MM/yyyy HH:mm}"
                     )
                     .FontSize(8)
                     .FontColor("#94A3B8");
@@ -593,13 +679,15 @@ public class GoodsReceiptsController : Controller
 
     //print
     [HttpGet]
-    public async Task<IActionResult> Print(long id)
+    public async Task<IActionResult> Print(Guid uid)
     {
-        var po = await _api.GetGoodsReceiptAsync(id);
+        var po = uid == Guid.Empty
+            ? null
+            : await _api.GetGoodsReceiptAsync(uid);
 
         if (po == null)
         {
-            return NotFound("PO Barang tidak ditemukan.");
+            return NotFound("Penerimaan Barang tidak ditemukan.");
         }
 
         return View("Print", po);

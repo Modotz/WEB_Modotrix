@@ -43,7 +43,7 @@
 
                     <div class="col-md-3">
                         <label for="search" class="form-label">
-                            Cari
+                            @T["Cari"]
                         </label>
 
                         <input type="text"
@@ -64,17 +64,17 @@
 
                             <option value=""
                                     selected="@(Context.Request.Query["isActive"] == "")">
-                                -- Semua --
+                                -- @T["Semua"] --
                             </option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["isActive"] == "true")">
-                                Aktif
+                                @T["Aktif"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["isActive"] == "false")">
-                                Non-Aktif
+                                @T["Non-Aktif"]
                             </option>
 
                         </select>
@@ -82,7 +82,7 @@
 
                     <div class="col-md-2">
                         <label for="pageSize" class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select class="form-select"
@@ -103,7 +103,7 @@
                                 class="btn btn-primary d-flex align-items-center gap-2">
 
                             <i class="bi bi-search"></i>
-                            Terapkan
+                            @T["Terapkan"]
 
                         </button>
 
@@ -134,7 +134,7 @@
                 </span>
 
                 <span class="menu-description small ms-1">
-                     Kelola data msfield
+                     @T["Kelola data msfield"]
                 </span>
 
             </div>
@@ -165,7 +165,7 @@
                 <a asp-action="Print"
                    asp-controller="Msfields"
                    class="btn btn-light btn-custom-square text-secondary"
-                   title="Cetak"
+                   title="@T["Cetak"]"
                    target="_blank">
 
                     <i class="bi bi-printer-fill"></i>
@@ -192,13 +192,13 @@
                 </button>
 
                 <!-- Tambah Supplier -->
-                <button type="button"
+                <button data-perm="create" type="button"
                         class="btn btn-teal btn-custom-action"
                         id="btnAddMsfield"
                         onclick="openCreateModal()">
 
                     <i class="bi bi-plus-circle"></i>
-                    <span>Tambah Msfield</span>
+                    <span>@T["Tambah Msfield"]</span>
 
                 </button>
 
@@ -220,7 +220,7 @@
                             <th>FIELD TEXT</th>
                             <th>FIELD VALUE</th>
                             <th>STATUS</th>
-                            <th class="text-center" style="width: 120px;">AKSI</th>
+                            <th class="text-center" style="width: 120px;">@T["AKSI"]</th>
                         </tr>
                     </thead>
                      <tbody>
@@ -248,23 +248,24 @@
                                 @if (item.IsActive)
                                 {
                                 <span class="badge bg-success">
-                                    Aktif
+                                    @T["Aktif"]
                                 </span>
                                 }
                                 else
                                 {
                                 <span class="badge bg-danger">
-                                    Tidak Aktif
+                                    @T["Tidak Aktif"]
                                 </span>
                                 }
                             </td>
 
                             <td class="text-center">
-                                <div class="d-flex justify-content-center gap-1">
-                                    <button type="button"
-                                            class="btn btn-sm menu-action-edit"
+                                <div class="row-actions">
+                                    <button data-perm="update" type="button"
+                                            class="act-btn act-edit"
+                                            title="@T["Edit"]"
                                             onclick="openEditModal(
-                                                    '@item.Id',
+                                                    '@item.Uid',
                                                     '@item.FieldKey',
                                                     '@item.FieldText',
                                                     '@item.FiledValue',
@@ -274,7 +275,7 @@
                                         <i class="bi bi-pencil"></i>
                                     </button>
 
-                                    <form method="post"
+                                    <form data-perm="delete" method="post"
                                           asp-action="Delete"
                                           class="d-inline"
                                           onsubmit="return confirmDeleteMsfield();">
@@ -282,12 +283,12 @@
                                         @Html.AntiForgeryToken()
 
                                         <input type="hidden"
-                                               name="id"
-                                               value="@item.Id" />
+                                               name="uid"
+                                               value="@item.Uid" />
 
                                         <button type="submit"
-                                                class="btn btn-sm menu-action-delete"
-                                                title="Nonaktifkan">
+                                                class="act-btn act-delete"
+                                                title="@T["Nonaktifkan"]">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
@@ -300,7 +301,7 @@
                         {
                         <tr>
                             <td colspan="6" class="text-center py-4 form-label">
-                                <p class="menu-description">Belum ada data field.</p>
+                                <p class="menu-description">@T["Belum ada data field."]</p>
                             </td>
                         </tr>
                         }
@@ -324,11 +325,11 @@
                 }
 
                 <span class="menu-description small">
-                    Menampilkan
+                    @T["Menampilkan"]
                     <strong>@startItem – @endItem</strong>
-                    dari
+                    @T["dari"]
                     <strong>@Model.TotalCount</strong>
-                    data
+                    @T["data"]
                 </span>
 
                 @{
@@ -350,7 +351,7 @@
                                    pageSize = Model.PageSize
                                })">
 
-                                Sebelumnya
+                                @T["Sebelumnya"]
 
                             </a>
 
@@ -385,7 +386,7 @@
                                    pageSize = Model.PageSize
                                })">
 
-                                Berikutnya
+                                @T["Berikutnya"]
 
                             </a>
                         </li>
@@ -410,7 +411,7 @@
                 <div class="modal-header menu-modal-header">
                     <h5 class="modal-title  fw-semibold menu-modal-title"
                         id="modalTitle">
-                        Tambah Msfield
+                        @T["Tambah Msfield"]
                     </h5>
                     <button type="button"
                             class="btn-close btn-close-white"
@@ -419,7 +420,7 @@
                     </button>
                 </div>
                 <div class="modal-body py-3">
-                    <input type="hidden" id="Id" name="Id" />
+                    <input type="hidden" id="Uid" name="Uid" />
                     
                     <div class="row g-3">
                         <div class="col-12">
@@ -456,7 +457,7 @@
 
                         <div class="col-12">
                             <label for="Description" class="form-label fw-medium">
-                                Deskripsi
+                                @T["Deskripsi"]
                             </label>
                             <textarea class="form-control bg-transparent text-white border-secondary"
                                       id="Description"
@@ -481,7 +482,7 @@
                                        value="false" />
 
                                 <label class="form-check-label ms-2" for="IsActive">
-                                    Aktif
+                                    @T["Aktif"]
                                 </label>
 
                             </div>
@@ -491,10 +492,10 @@
 
                 <div class="modal-footer menu-modal-footer">
                     <button type="submit" class="btn btn-primary px-3">
-                        <i class="bi bi-box-arrow-down me-2"></i>Simpan
+                        <i class="bi bi-box-arrow-down me-2"></i>@T["Simpan"]
                     </button>
                     <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">
-                        Batal
+                        @T["Batal"]
                     </button>
                 </div>
            </form>
@@ -520,9 +521,9 @@
         //create
         function openCreateModal() {
 
-            document.getElementById('modalTitle').innerText = 'Tambah Msfield';
+            document.getElementById('modalTitle').innerText = @Json.Serialize(T["Tambah Msfield"]);
             document.getElementById('msfieldForm').action = '@Url.Action("Create", "Msfields")';
-            document.getElementById('Id').value = '';
+            document.getElementById('Uid').value = '';
             document.getElementById('FieldKey').value = '';
             document.getElementById('FieldText').value = '';
             document.getElementById('FiledValue').value = '';
@@ -534,7 +535,7 @@
 
         // edit
         function openEditModal(
-            id,
+            uid,
             fieldKey,
             fieldText,
             filedValue,
@@ -544,7 +545,7 @@
 
             document.getElementById('modalTitle').innerText = 'Edit Msfield';
             document.getElementById('msfieldForm').action = '@Url.Action("Edit", "Msfields")';
-            document.getElementById('Id').value = id;
+            document.getElementById('Uid').value = uid;
             document.getElementById('FieldKey').value = fieldKey || '';
             document.getElementById('FieldText').value = fieldText || '';
             document.getElementById('FiledValue').value = filedValue || '';
@@ -562,7 +563,7 @@
         function confirmDeleteMsfield() {
 
             return confirm(
-                "Hapus satuan ini?"
+                @Json.Serialize(T["Hapus satuan ini?"])
             );
         }
 

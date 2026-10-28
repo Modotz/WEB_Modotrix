@@ -2,7 +2,7 @@
 @model PagedResult<ProductViewModel> 
 
 @{
-    ViewData["Title"] = "Produk";
+    ViewData["Title"] = T["Produk"];
 
     var no = ((Model.Page - 1) * Model.PageSize);
 
@@ -17,7 +17,7 @@
 }
 
 <div class="product-page-title">
-    Produk
+    @T["Produk"]
 </div>
 
 
@@ -27,7 +27,7 @@
          data-bs-target="#productInfo">
         <div>
             <i class="bi bi-info-circle-fill me-2"></i>
-            <strong>Tentang Halaman Produk</strong>
+            <strong>@T["Tentang Halaman Produk"]</strong>
         </div>
         <i class="bi bi-chevron-down"></i>
     </div>
@@ -38,39 +38,38 @@
         <div class="product-info-body">
             <ul>
                 <li>
-                    Halaman ini menampilkan <strong>daftar seluruh produk/barang.</strong> Gunakan kartu <strong>Filter</strong> 
-                    di bawah (cari nama/SKU, kategori, brand, jenis, unit, status) lalu klik <strong>Terapkan; Reset</strong> menghapus filter.
+                    @T["Halaman ini menampilkan"] <strong>@T["daftar seluruh produk/barang."]</strong> @T["Gunakan kartu"] <strong>@T["Filter"]</strong>
+                    @T["di bawah (cari nama/SKU, kategori, brand, jenis, unit, status) lalu klik"] <strong>@T["Terapkan; Reset"]</strong> @T["menghapus filter."]
                 </li>
 
                 <li>
-                    Aktifkan
-                    <strong>Tampilkan Varian</strong>
-                    untuk menampilkan produk varian
-                    (anak) di bawah induknya.
+                    @T["Aktifkan"]
+                    <strong>@T["Tampilkan Varian"]</strong>
+                    @T["untuk menampilkan produk varian (anak) di bawah induknya."]
                 </li>
 
                 <li>
-                    Klik
-                    <strong>Tambah Produk</strong> (kanan atas)
-                    untuk membuat produk baru.
-                    Tersedia juga fitur
+                    @T["Klik"]
+                    <strong>@T["Tambah Produk"]</strong> @T["(kanan atas)"]
+                    @T["untuk membuat produk baru."]
+                    @T["Tersedia juga fitur"]
                     <strong>Export Excel/PDF</strong>
-                    dan <strong>Print</strong> (mengikuti filter aktif).
+                    @T["dan"] <strong>Print</strong> @T["(mengikuti filter aktif)."]
                 </li>
 
                 <li>
-                    Aksi setiap baris:
-                    <i class="bi bi-diagram-3"></i> <strong>Varian</strong>(kelola varian),
-                    <i class="bi bi-copy"></i> <strong>Copy</strong> (duplikat produk),
-                    <i class="bi bi-pencil"></i> <strong>Edit</strong>,
-                    dan <i class="bi bi-trash"></i> <strong>Hapus</strong>.
+                    @T["Aksi setiap baris:"]
+                    <i class="bi bi-diagram-3"></i> <strong>@T["Varian"]</strong>@T["(kelola varian),"]
+                    <i class="bi bi-copy"></i> <strong>Copy</strong> @T["(duplikat produk),"]
+                    <i class="bi bi-pencil"></i> <strong>@T["Edit"]</strong>,
+                    @T["dan"] <i class="bi bi-trash"></i> <strong>@T["Hapus"]</strong>.
                 </li>
 
             </ul>
 
             <div class="product-info-tip">
                 <i class="bi bi-lightbulb"></i>
-                Tips: panel ini bisa ditutup dengan mengklik judulnya.
+                @T["Tips: panel ini bisa ditutup dengan mengklik judulnya."]
             </div>
 
         </div>
@@ -88,7 +87,7 @@
 
         <div class="product-filter-title">
             <i class="bi bi-funnel"></i>
-            <span>Filter</span>
+            <span>@T["Filter"]</span>
         </div>
 
         <i class="bi bi-chevron-down"></i>
@@ -108,7 +107,7 @@
                 <div class="product-filter-row">
                     <div>
                         <label class="product-filter-label">
-                            Cari
+                            @T["Cari"]
                         </label>
 
                         <input type="text" class="form-control"
@@ -124,7 +123,7 @@
                         </label>
 
                         <select name="brandId" class="form-select">
-                            <option value="">-- Semua --</option> 
+                            <option value="">@T["-- Semua --"]</option> 
                             @foreach (var brand in brands)
                             {
                                 <option value="@brand.Id"
@@ -138,14 +137,14 @@
 
                     <div>
                         <label class="product-filter-label">
-                            Kategori
+                            @T["Kategori"]
                         </label>
 
                         <select name="categoryId"
                                 class="form-select"
                                 id="categoryId">
 
-                            <option value="">-- Semua --</option>
+                            <option value="">@T["-- Semua --"]</option>
 
                             @foreach (var category in (IEnumerable<DropdownItemViewModel>)ViewBag.Categories)
                             {
@@ -159,14 +158,14 @@
 
                     <div>
                         <label class="product-filter-label">
-                            Sub-Kategori
+                            @T["Sub-Kategori"]
                         </label>
 
                         <select name="subCategoryId"
                                 class="form-select"
                                 id="subCategoryId">
 
-                            <option value="">-- Semua Sub-Kategori --</option>
+                            <option value="">@T["-- Semua Sub-Kategori --"]</option>
 
                             @foreach (var subCategory in subCategories)
                             {
@@ -179,26 +178,26 @@
                         </select>
 
                         <div class="product-filter-help">
-                           Pilih Kategori dulu; sub menyesuaikan.
+                           @T["Pilih Kategori dulu; sub menyesuaikan."]
                         </div>
                     </div>
 
                     <div>
                         <label class="product-filter-label">
-                            Jenis Produk
+                            @T["Jenis Produk"]
                         </label>
 
                         <select name="productType" class="form-select"> 
 
-                            <option value="">-- Semua --</option> 
+                            <option value="">@T["-- Semua --"]</option> 
                             <option value="RAW_MATERIAL"
                                     selected="@(Context.Request.Query["productType"] == "RAW_MATERIAL")">
-                                Bahan Baku
+                                @T["Bahan Baku"]
                             </option>
 
                             <option value="FINISHED_GOOD"
                                     selected="@(Context.Request.Query["productType"] == "FINISHED_GOOD")">
-                                Barang Jadi
+                                @T["Barang Jadi"]
                             </option>
 
                         </select>
@@ -216,7 +215,7 @@
                                 id="unitId"
                                 name="unitId">
 
-                            <option value="">-- Semua --</option>
+                            <option value="">@T["-- Semua --"]</option>
 
                             @foreach (var unit in units)
                             {
@@ -236,15 +235,15 @@
 
                        <select name="trackStock" class="form-select"> 
 
-                            <option value="">-- Semua --</option> 
+                            <option value="">@T["-- Semua --"]</option> 
                             <option value="true"
                                     selected="@(Context.Request.Query["trackStock"] == "true")">
-                                Ya
+                                @T["Ya"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["trackStock"] == "false")">
-                                Tidak
+                                @T["Tidak"]
                             </option>
 
                         </select>
@@ -257,16 +256,16 @@
                         </label>
 
                         <select name="isActive" class="form-select"> 
-                            <option value="">-- Semua --</option>
+                            <option value="">@T["-- Semua --"]</option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["isActive"] == "true")">
-                                Aktif
+                                @T["Aktif"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["isActive"] == "false")">
-                                Nonaktif
+                                @T["Nonaktif"]
                             </option>
 
                         </select>
@@ -275,7 +274,7 @@
                     <div>
 
                         <label class="product-filter-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
                         <select name="pageSize"
                                 class="form-select"
@@ -301,7 +300,7 @@
                                    @(isShowVariant ? "checked" : "")>
 
                             <label class="form-check-label" for="showVariant">
-                                Tampilkan Varian
+                                @T["Tampilkan Varian"]
                             </label>
                         </div>
 
@@ -309,7 +308,7 @@
                                 class="btn btn-primary">
 
                             <i class="bi bi-search me-1"></i>
-                            Terapkan
+                            @T["Terapkan"]
 
                         </button>
 
@@ -318,7 +317,7 @@
                            asp-controller="Products"
                            class="btn filter-reset-btn">
                             <i class="bi bi-arrow-counterclockwise"></i>
-                            Reset
+                            @T["Reset"]
                         </a>
 
                     </div>
@@ -332,9 +331,9 @@
     <div class="product-table-header">
         <div class="product-table-heading">
 
-            <span class="product-table-title"> Produk </span>
+            <span class="product-table-title"> @T["Produk"] </span>
             <span class="badge badge-count"> @Model.TotalCount </span>
-            <span class="product-table-subtitle"> Kelola master produk / barang </span>
+            <span class="product-table-subtitle"> @T["Kelola master produk / barang"] </span>
         </div>
 
          <div class="d-flex align-items-center gap-2">
@@ -357,7 +356,7 @@
             <a asp-action="Print"
                asp-controller="Products"
                class="btn btn-light p-1 px-2 btn-custom-square text-secondary"
-               title="Cetak"
+               title="@T["Cetak"]"
                target="_blank">
                 <i class="bi bi-printer-fill"></i>
             </a>
@@ -379,9 +378,10 @@
 
             <button type="button"
                     class="btn btn-teal btn-custom-action"
+                    data-perm="create"
                     onclick="window.location.href='/Products/Create'">
                 <i class="bi bi-plus-circle"></i>
-                <span>Tambah Produk</span>
+                <span>@T["Tambah Produk"]</span>
             </button>
           </div>
     </div>
@@ -397,21 +397,21 @@
                     <tr>
                         <th class="text-center" >#</th>
                         <th class="text-center" >IMAGE</th>
-                        <th class="text-center" >NO. PRODUK</th>
+                        <th class="text-center" >@T["NO. PRODUK"]</th>
                         <th class="text-center" >SKU</th>
                         <th class="text-center" >NAME</th>
-                        <th class="text-center" >VARIAN</th>
+                        <th class="text-center" >@T["VARIAN"]</th>
                         <th class="text-center" >BRAND</th>
                         <th class="text-center" >CATEGORY</th>
-                        <th class="text-center" >SUB-KATEGORI</th>
-                        <th class="text-center">JENIS</th>
+                        <th class="text-center" >@T["SUB-KATEGORI"]</th>
+                        <th class="text-center">@T["JENIS"]</th>
                         <th class="text-center" >UNIT</th>
                         <th class="text-center">COST PRICE</th>
                         <th class="text-center"> SELL PRICE </th>
                         <th class="text-center"> MIN STOCK </th>
                         <th class="text-center"> TRACK STOCK </th>
                         <th class="text-center"> IS ACTIVE </th>
-                        <th class="text-center"> AKSI </th>
+                        <th class="text-center"> @T["AKSI"] </th>
                     </tr>
                 </thead>
 
@@ -495,14 +495,14 @@
                                     {
                                         <span class="variant-badge">
                                             <i class="bi bi-tag"></i>
-                                            Varian
+                                            @T["Varian"]
                                         </span>
                                     }
                                     else if (item.VariantCount > 0)
                                     {
                                         <span class="variant-count-badge">
                                             <i class="bi bi-diagram-3"></i>
-                                            <span>@item.VariantCount varian</span>
+                                            <span>@T["{0} varian", item.VariantCount]</span>
                                         </span>
                                     }
                                     else
@@ -566,8 +566,8 @@
                                     @{
                                         var typeText = item.ProductType switch
                                         {
-                                            "RAW_MATERIAL" => "Bahan Baku",
-                                            "FINISHED_GOOD" => "Barang Jadi",
+                                            "RAW_MATERIAL" => T["Bahan Baku"],
+                                            "FINISHED_GOOD" => T["Barang Jadi"],
                                             "SUPPLY" => "Supply",
                                             "SPAREPART" => "Sparepart",
                                             "ASSET" => "Asset",
@@ -611,7 +611,7 @@
                                     @if (item.TrackStock)
                                     {
                                         <span class="product-badge product-badge-stock">
-                                            Ya
+                                            @T["Ya"]
                                         </span>
 
                                         @if (item.TrackSerial)
@@ -627,7 +627,7 @@
                                     else
                                     {
                                         <span class="product-badge product-badge-no-stock">
-                                            Tidak
+                                            @T["Tidak"]
                                         </span>
                                     }
 
@@ -637,24 +637,24 @@
                                     @if (item.IsActive)
                                     {
                                         <span class="product-badge product-badge-stock">
-                                            Aktif
+                                            @T["Aktif"]
                                         </span>
                                     }
                                     else
                                     {
                                         <span class="product-badge product-badge-no-stock">
-                                            Nonaktif
+                                            @T["Nonaktif"]
                                         </span>
                                     } 
                                 </td>
                                  
-                                <td> 
-                                    <div class="product-actions"> 
+                                <td class="text-center">
+                                    <div class="row-actions"> 
                                         <a asp-action="Index"
                                            asp-controller="ProductUnits"
-                                           asp-route-id="@item.Id"
-                                           class="product-action-btn product-action-copy"
-                                           title="Satuan & Konversi">
+                                           asp-route-uid="@item.Uid"
+                                           class="act-btn act-other"
+                                           title="@T["Satuan & Konversi"]">
 
                                             <i class="bi bi-rulers"></i>
 
@@ -668,9 +668,9 @@
 
                                             <a asp-action="Index"
                                                asp-controller="ProductVariants"
-                                               asp-route-id="@item.Id"
-                                               class="product-action-btn product-action-variant @(hasVariants ? "product-action-variant-active" : "")"
-                                               title="@(hasVariants ? "Kelola Varian - Sudah memiliki varian" : "Kelola Varian")">
+                                               asp-route-uid="@item.Uid"
+                                               class="act-btn @(hasVariants ? "act-view" : "act-other")"
+                                               title="@(hasVariants ? T["Kelola Varian - Sudah memiliki varian"] : T["Kelola Varian"])">
 
                                                 <i class="bi bi-diagram-3"></i>
 
@@ -679,17 +679,18 @@
 
                                         <a asp-action="Copy"
                                            asp-controller="Products"
-                                           asp-route-id="@item.Id"
-                                           class="product-action-btn product-action-copy"
-                                           title="Salin Produk">
+                                           asp-route-uid="@item.Uid"
+                                           class="act-btn act-other"
+                                           data-perm="create"
+                                           title="@T["Salin Produk"]">
 
                                             <i class="bi bi-files"></i>
 
                                         </a>
                                          
                                         <button type="button"
-                                                class="product-action-btn product-action-qr"
-                                                title="QR Code"
+                                                class="act-btn act-other"
+                                                title="@T["QR Code"]"
                                                 onclick='openQrModal(
                                                     @Html.Raw(
                                                         System.Text.Json.JsonSerializer.Serialize(item.Uid)
@@ -708,11 +709,12 @@
                                          
                                         <a asp-action="Edit"
                                            asp-controller="Products"
-                                           asp-route-id="@item.Id"
-                                           class="product-action-btn product-action-edit"
-                                           title="Edit">
+                                           asp-route-uid="@item.Uid"
+                                           class="act-btn act-edit"
+                                           data-perm="update"
+                                           title="@T["Edit"]">
 
-                                            <i class="bi bi-pencil-square"></i>
+                                            <i class="bi bi-pencil"></i>
 
                                         </a>
                                          
@@ -720,17 +722,18 @@
                                               asp-action="Delete"
                                               asp-controller="Products"
                                               class="d-inline"
+                                              data-perm="delete"
                                               onsubmit="return confirmDeleteProduct();">
 
                                             @Html.AntiForgeryToken()
 
                                             <input type="hidden"
-                                                   name="id"
-                                                   value="@item.Id" />
+                                                   name="uid"
+                                                   value="@item.Uid" />
 
                                             <button type="submit"
-                                                    class="product-action-btn product-action-delete"
-                                                    title="Hapus">
+                                                    class="act-btn act-delete"
+                                                    title="@T["Hapus"]">
 
                                                 <i class="bi bi-trash"></i> 
                                             </button> 
@@ -746,7 +749,7 @@
                             <td colspan="17"
                                 class="product-empty"> 
                                 <i class="bi bi-box-seam"></i> 
-                                Tidak ada data produk. 
+                                @T["Tidak ada data produk."]
                             </td> 
                         </tr>
                     }
@@ -761,7 +764,7 @@
              var startItem = Model.TotalCount == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1;
              var endItem = Math.Min(Model.Page * Model.PageSize, Model.TotalCount);
           }
-          <span class="menu-description small"> Menampilkan <strong>@startItem – @endItem</strong> dari <strong>@Model.TotalCount</strong> data </span>
+          <span class="menu-description small"> @T["Menampilkan"] <strong>@startItem – @endItem</strong> @T["dari"] <strong>@Model.TotalCount</strong> @T["data"] </span>
           @{
              var currentPage = Model.Page;
              var totalPages = Model.TotalPage;
@@ -783,7 +786,7 @@
                                 isActive = Context.Request.Query["isActive"].ToString(),
                                 showVariant = Context.Request.Query["showVariant"].ToString()
                             })">
-                             Sebelumnya
+                             @T["Sebelumnya"]
                        </a>
                     </li>
 
@@ -831,7 +834,7 @@
                                    showVariant = Context.Request.Query["showVariant"].ToString()
                                })">
 
-                                Berikutnya
+                                @T["Berikutnya"]
 
                             </a>
 
@@ -859,7 +862,7 @@
                     <i class="bi bi-qr-code"></i>
 
                     <span id="qrLabelModalLabel">
-                        Cetak Label QR
+                        @T["Cetak Label QR"]
                     </span>
                 </div>
 
@@ -867,14 +870,14 @@
                         class="btn-close qr-modal-close"
                         data-bs-dismiss="modal"
                         aria-label="Close">
-                </button> 
+                </button>
             </div>
 
              
             <div class="modal-body qr-label-modal-body"> 
                 <div class="qr-product-info"> 
                     <div class="qr-product-label">
-                        Produk:
+                        @T["Produk:"]
                     </div>
 
                     <div class="qr-product-value">
@@ -893,7 +896,7 @@
                 <div class="row g-2"> 
                     <div class="col-6"> 
                         <label class="qr-input-label">
-                            Isi per label (pcs)
+                            @T["Isi per label (pcs)"]
                         </label>
 
                         <input type="number"
@@ -907,7 +910,7 @@
 
                     <div class="col-6"> 
                         <label class="qr-input-label">
-                            Jumlah label
+                            @T["Jumlah label"]
                         </label>
 
                         <input type="number"
@@ -922,7 +925,7 @@
                 <div class="qr-total-info"> 
                     Total = <strong id="qrTotalPcs">
                         10
-                    </strong> pcs. QR berisi SKU produk. 
+                    </strong> @T["pcs. QR berisi SKU produk."]
                 </div> 
             </div>
 
@@ -943,7 +946,7 @@
                         onclick="printQrLabel()">
 
                     <i class="bi bi-printer me-1"></i>
-                    Cetak
+                    @T["Cetak"]
 
                 </button>
 
@@ -960,7 +963,7 @@
     <script>
         function confirmDeleteProduct() {
             return confirm(
-                'Apakah Anda yakin ingin menghapus produk ini?'
+                @Json.Serialize(T["Apakah Anda yakin ingin menghapus produk ini?"])
             );
         }
 
@@ -995,14 +998,14 @@
 
                     // Kosongkan dropdown terlebih dahulu
                     subCategorySelect.innerHTML =
-                        '<option value="">-- Semua Sub-Kategori --</option>';
+                        '<option value="">' + @Json.Serialize(T["-- Semua Sub-Kategori --"]) + '</option>';
 
                     if (!categoryId) {
 
                         if (subCategoryHelp) {
                             subCategoryHelp.innerHTML =
                                 '<i class="bi bi-info-circle me-1"></i> ' +
-                                'Pilih Kategori terlebih dahulu.';
+                                @Json.Serialize(T["Pilih Kategori terlebih dahulu."]);
                         }
 
                         return;
@@ -1011,7 +1014,7 @@
                     if (subCategoryHelp) {
                         subCategoryHelp.innerHTML =
                             '<i class="bi bi-hourglass-split me-1"></i> ' +
-                            'Memuat subkategori...';
+                            @Json.Serialize(T["Memuat subkategori..."]);
                     }
 
                     try {
@@ -1021,7 +1024,7 @@
                         );
 
                         if (!response.ok) {
-                            throw new Error("Gagal mengambil subkategori.");
+                            throw new Error(@Json.Serialize(T["Gagal mengambil subkategori."]));
                         }
 
                         const subCategories = await response.json();
@@ -1031,7 +1034,7 @@
                             if (subCategoryHelp) {
                                 subCategoryHelp.innerHTML =
                                     '<i class="bi bi-info-circle me-1"></i> ' +
-                                    'Kategori ini belum memiliki subkategori.';
+                                    @Json.Serialize(T["Kategori ini belum memiliki subkategori."]);
                             }
 
                             return;
@@ -1058,7 +1061,7 @@
                         if (subCategoryHelp) {
                             subCategoryHelp.innerHTML =
                                 '<i class="bi bi-check-circle me-1"></i> ' +
-                                'Subkategori menyesuaikan dengan kategori yang dipilih.';
+                                @Json.Serialize(T["Subkategori menyesuaikan dengan kategori yang dipilih."]);
                         }
 
                     }
@@ -1072,7 +1075,7 @@
                         if (subCategoryHelp) {
                             subCategoryHelp.innerHTML =
                                 '<i class="bi bi-exclamation-triangle me-1"></i> ' +
-                                'Gagal memuat subkategori.';
+                                @Json.Serialize(T["Gagal memuat subkategori."]);
                         }
                     }
                 }

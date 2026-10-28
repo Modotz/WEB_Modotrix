@@ -1,0 +1,156 @@
+@model ERP.Web.Models.JournalsIndexViewModel
+
+@{
+    ViewData["Title"] = T["Jurnal Umum"];
+    var f = Model.Filter;
+    var list = Model.Journals;
+    var query = f.ToQueryString();
+    var qs = query.Length > 0 ? "?" + query : "";
+    var header = new ListHeaderModel
+    {
+        Title = T["Jurnal Umum"],
+        Count = list.TotalCount,
+        Description = T["Daftar jurnal manual & jurnal otomatis dari dokumen"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        AddUrl = Url.Action("Create"),
+        AddText = T["Jurnal Baru"]
+    };
+    string PageUrl(int p) => Url.Action("Index") + "?" + (query.Length > 0 ? query + "&" : "") + $"page={p}&pageSize={f.PageSize}";
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Jurnal Umum"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@f.Q" placeholder="@T["No. jurnal, referensi, keterangan"]" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="dateFrom">@T["Dari"]</label>
+                        <input type="date" class="form-control" id="dateFrom" name="dateFrom" value="@f.DateFrom?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="dateTo">@T["Sampai"]</label>
+                        <input type="date" class="form-control" id="dateTo" name="dateTo" value="@f.DateTo?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="status">@T["Status"]</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">@T["-- Semua --"]</option>
+                            <option value="draft" selected="@(f.Status == "draft")">@T["Draft"]</option>
+                            <option value="posted" selected="@(f.Status == "posted")">@T["Posted"]</option>
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="source">@T["Sumber"]</label>
+                        <select class="form-select" id="source" name="source">
+                            <option value="">@T["-- Semua --"]</option>
+                            <option value="manual" selected="@(f.Source == "manual")">@T["Manual"]</option>
+                            <option value="system" selected="@(f.Source == "system")">@T["Sistem (dokumen)"]</option>
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="pageSize">@T["Per Halaman"]</label>
+                        <select class="form-select" id="pageSize" name="pageSize">
+                            @foreach (var size in new[] { 10, 25, 50, 100 })
+                            {
+                                <option value="@size" selected="@(f.PageSize == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4 text-start" style="width: 140px;">@T["NO. JURNAL"]</th>
+                        <th style="width: 100px;">@T["TANGGAL"]</th>
+                        <th style="width: 160px;">@T["REFERENSI"]</th>
+                        <th>@T["KETERANGAN"]</th>
+                        <th style="width: 90px;">@T["SUMBER"]</th>
+                        <th class="text-end" style="width: 140px;">@T["TOTAL"]</th>
+                        <th style="width: 110px;">@T["STATUS"]</th>
+                        <th class="text-center" style="width: 70px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (list.Data.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada jurnal."]</td></tr>
+                    }
+
+                    @foreach (var j in list.Data)
+                    {
+                        var (label, css) = j.StatusBadge;
+                        <tr>
+                            <td class="ps-4 text-start"><a asp-action="Details" asp-route-uid="@j.Uid" class="text-info text-decoration-none">@j.JournalNo</a></td>
+                            <td class="text-white small">@Acc.Date(j.JournalDate)</td>
+                            <td class="text-white small">@(j.Reference ?? "-")</td>
+                            <td class="text-white">@(j.Description ?? "-")</td>
+                            <td class="small">
+                                @if (j.Source == "manual")
+                                {
+                                    <span class="text-white">@T["Manual"]</span>
+                                }
+                                else
+                                {
+                                    <span class="text-white-50">@T["Sistem"]</span>
+                                }
+                            </td>
+                            <td class="text-end text-white">@Acc.Money(j.TotalDebit)</td>
+                            <td>
+                                <span class="badge @css">@T[label]</span>
+                                @if (j.ReversalDate != null && j.ReversedByNo == null && j.Status == "posted")
+                                {
+                                    <span class="badge bg-info text-dark" title="@T["Jurnal akrual, balik pada {0}", Acc.Date(j.ReversalDate)]">@T["Akrual"]</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <div class="row-actions">
+                                    <a asp-action="Details" asp-route-uid="@j.Uid" class="act-btn act-view" title="@T["Lihat"]"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_ListPagination" model="new ListPaginationModel { Page = list.Page, PageSize = list.PageSize, TotalCount = list.TotalCount, PageUrl = PageUrl }" />
+        </div>
+    </div>
+</div>

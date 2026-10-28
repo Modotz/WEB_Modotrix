@@ -150,13 +150,13 @@
 
         <div class="print-button">
             <button type="button" onclick="window.print()">
-                Cetak
+                @T["Cetak"]
             </button>
 
             <button type="button"
                     class="close-button"
                     onclick="window.close()">
-                Tutup
+                @T["Tutup"]
             </button>
         </div>
 
@@ -168,13 +168,13 @@
                 <span>Work Center</span>
                 <span>•</span>
                 <span>
-                    Dicetak:
+                    @T["Dicetak"]:
                     @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
                 </span>
                 <span>•</span>
                 <span>
                     Total:
-                    @Model.TotalData data
+                    @Model.TotalData @T["data"]
                 </span>
             </div>
 
@@ -185,9 +185,9 @@
             <thead>
                 <tr>
                     <th style="width: 5%;">No</th>
-                    <th style="width: 15%;">Kode</th>
-                    <th style="width: 40%;">Nama</th>
-                    <th style="width: 20%;">Tarif / Jam</th>
+                    <th style="width: 15%;">@T["Kode"]</th>
+                    <th style="width: 40%;">@T["Nama"]</th>
+                    <th style="width: 20%;">@T["Tarif / Jam"]</th>
                     <th style="width: 20%;">Status</th>
                 </tr>
             </thead>
@@ -205,7 +205,7 @@
                             <td>@item.Name</td>
                             <td style="text-align:right;">@item.CostPerHour.ToString("N0")</td>
                             <td>
-                                @(item.IsActive ? "Aktif" : "Nonaktif")
+                                @(item.IsActive ? T["Aktif"] : T["Nonaktif"])
                             </td>
                         </tr>
 
@@ -216,7 +216,7 @@
                 {
                     <tr>
                         <td colspan="5" style="text-align-center;">
-                            Tidak ada data Work Center.
+                            @T["Tidak ada data Work Center."]
                         </td>
                     </tr>
                 }
@@ -225,7 +225,7 @@
         </table>
 
         <div class="footer">
-            Dokumen dihasilkan otomatis oleh sistem.
+            @T["Dokumen dihasilkan otomatis oleh sistem."]
         </div>
 
     </div>

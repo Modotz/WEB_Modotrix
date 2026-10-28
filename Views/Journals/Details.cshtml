@@ -1,0 +1,187 @@
+@model ERP.Web.Models.JournalViewModel
+
+@{
+    ViewData["Title"] = T["Jurnal {0}", Model.JournalNo];
+    var (label, css) = Model.StatusBadge;
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="px-2">
+
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T["Jurnal {0}", Model.JournalNo]</h3>
+        <span class="badge @css me-auto">@T[label]</span>
+
+        @if (Model.CanEdit)
+        {
+            <a asp-action="Edit" asp-route-uid="@Model.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil me-1"></i>@T["Ubah"]</a>
+            <form method="post" asp-action="Post" asp-route-uid="@Model.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T["Posting jurnal {0}? Setelah posted, jurnal tidak bisa diubah.", Model.JournalNo]));'>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i>@T["Posting"]</button>
+            </form>
+            <form method="post" asp-action="Delete" asp-route-uid="@Model.Uid" class="d-inline" data-perm="delete"
+                  onsubmit='return confirm(@Json.Serialize(T["Hapus draft {0}?", Model.JournalNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus Draft"]</button>
+            </form>
+        }
+
+        @if (Model.CanReverseAccrual)
+        {
+            <form method="post" asp-action="ReverseAccrual" asp-route-uid="@Model.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T["Buat jurnal balik akrual bertanggal {0}?", Acc.Date(Model.ReversalDate)]));'>
+                <button type="submit" class="btn btn-info btn-sm"><i class="bi bi-arrow-repeat me-1"></i>@T["Jurnal Balik Akrual"]</button>
+            </form>
+        }
+
+        @if (Model.CanVoid)
+        {
+            <a asp-action="Revise" asp-route-uid="@Model.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil-square me-1"></i>@T["Revisi"]</a>
+            <button type="button" class="btn btn-outline-danger btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#voidModal">
+                <i class="bi bi-x-circle me-1"></i>@T["Batalkan"]
+            </button>
+        }
+
+        <a asp-action="Print" asp-route-uid="@Model.Uid" target="_blank" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i>@T["Cetak"]</a>
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    @if (Model.Source == "system")
+    {
+        <div class="alert alert-info small">
+            <i class="bi bi-gear me-1"></i>
+            @T["Jurnal ini dibuat otomatis dari"] <strong>@(T[Model.SourceLabel ?? "dokumen lain"])</strong>. @T["Koreksi dilakukan lewat dokumen sumbernya, bukan di Jurnal Umum."]
+            @if (Model.RefDocUid != null && Model.RefType is "asset_acquisition" or "asset_disposal" or "asset_maintenance" or "asset_adjustment")
+            {
+                <a asp-controller="Assets" asp-action="Details" asp-route-uid="@Model.RefDocUid" class="alert-link ms-1"><i class="bi bi-box-arrow-up-right me-1"></i>@T["Buka aset"]</a>
+            }
+            else if (Model.RefDocUid != null && Model.RefType == "depreciation")
+            {
+                <a href="@Url.Action("Index", "AssetDepreciation")#run-@Model.RefDocUid" class="alert-link ms-1"><i class="bi bi-box-arrow-up-right me-1"></i>@T["Buka proses penyusutan"]</a>
+            }
+            else if (Model.RefDocUid != null && Model.RefType == "asset_receipt")
+            {
+                <a asp-controller="AssetPurchaseOrders" asp-action="Details" asp-route-uid="@Model.RefDocUid" class="alert-link ms-1"><i class="bi bi-box-arrow-up-right me-1"></i>@T["Buka PO Aset"]</a>
+            }
+            else if (Model.RefType == "deferral_recognition")
+            {
+                <a asp-controller="DeferralRecognition" asp-action="Index" class="alert-link ms-1"><i class="bi bi-box-arrow-up-right me-1"></i>@T["Buka Proses Rekognisi"]</a>
+            }
+            else if (Model.RefType == "allowance_estimate")
+            {
+                <a asp-controller="DoubtfulReceivables" asp-action="Index" class="alert-link ms-1"><i class="bi bi-box-arrow-up-right me-1"></i>@T["Buka Cadangan Kerugian Piutang"]</a>
+            }
+            else if (Model.RefDocUid != null && Model.RefType == "receivable_write_off")
+            {
+                <a asp-controller="SalesInvoices" asp-action="Details" asp-route-uid="@Model.RefDocUid" class="alert-link ms-1"><i class="bi bi-box-arrow-up-right me-1"></i>@T["Buka faktur penjualan"]</a>
+            }
+        </div>
+    }
+    @if (Model.ReversesNo != null)
+    {
+        <div class="alert alert-warning small">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>
+            @T["Jurnal pembalik dari"] <a asp-action="Details" asp-route-uid="@Model.ReversesUid">@Model.ReversesNo</a>.
+            @if (!string.IsNullOrEmpty(Model.VoidReason))
+            {
+                <span>@T["Alasan:"] @Model.VoidReason</span>
+            }
+        </div>
+    }
+    @if (Model.ReversedByUid != null)
+    {
+        <div class="alert alert-danger small">
+            <i class="bi bi-x-octagon me-1"></i>
+            @T["Jurnal ini sudah dibatalkan oleh"] <a asp-action="Details" asp-route-uid="@Model.ReversedByUid">@Model.ReversedByNo</a>.
+        </div>
+    }
+
+    <div class="card custom-card mb-3">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 text-white small">
+                <div class="col-md-3"><div class="text-white-50">@T["Tanggal"]</div>@Acc.Date(Model.JournalDate)</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Referensi"]</div>@(Model.Reference ?? "-")</div>
+                <div class="col-md-6"><div class="text-white-50">@T["Keterangan"]</div>@(Model.Description ?? "-")</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Sumber"]</div>@(Model.Source == "manual" ? T["Manual"] : $"{T["Sistem"]} — {T[Model.SourceLabel]}")</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Dibuat"]</div>@(Model.CreatedByName ?? "-") · @Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm")</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Diposting"]</div>@(Model.PostedAt == null ? "-" : $"{Model.PostedByName ?? "-"} · {Model.PostedAt:dd/MM/yyyy HH:mm}")</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Tanggal balik (akrual)"]</div>@Acc.Date(Model.ReversalDate)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card custom-card">
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="fw-bold" style="width: 120px;">@T["KODE"]</th>
+                        <th class="fw-bold">@T["AKUN"]</th>
+                        <th class="fw-bold">@T["KETERANGAN"]</th>
+                        <th class="fw-bold text-end" style="width: 160px;">@T["DEBIT"]</th>
+                        <th class="fw-bold text-end" style="width: 160px;">@T["KREDIT"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in Model.Lines)
+                    {
+                        <tr>
+                            <td class="text-white">@l.AccountCode</td>
+                            <td class="text-white @(l.Credit > 0 ? "ps-5" : "")">
+                                @l.AccountName
+                                @if (l.CostCenterCode != null)
+                                {
+                                    <span class="badge bg-secondary ms-1" title="@T["Cost center"]">@l.CostCenterCode</span>
+                                }
+                                @if (l.ProjectCode != null)
+                                {
+                                    <span class="badge bg-primary ms-1" title="@T["Project"]">@l.ProjectCode</span>
+                                }
+                            </td>
+                            <td class="text-white-50 small">@l.Description</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(l.Debit)</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(l.Credit)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td colspan="3" class="text-end text-white">@T["TOTAL"]</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Lines.Sum(l => l.Debit))</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Lines.Sum(l => l.Credit))</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (Model.CanVoid)
+{
+    <div class="modal fade" id="voidModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="Void" asp-route-uid="@Model.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batalkan Jurnal {0}", Model.JournalNo]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">
+                        @T["Jurnal posted tidak dihapus. Sistem membuat jurnal pembalik (debit dan kredit ditukar) sehingga pengaruhnya ke saldo menjadi nol, dan keduanya tetap tercatat sebagai jejak audit."]
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label" for="voidDate">@T["Tanggal jurnal pembalik"]</label>
+                        <input type="date" class="form-control" name="date" id="voidDate" value="@today"
+                               min="@Model.JournalDate.ToString("yyyy-MM-dd")" required />
+                        <div class="form-text">@T["Harus di periode yang masih open."]</div>
+                    </div>
+                    <label class="form-label" for="voidReason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="voidReason" rows="3" maxlength="200" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i>@T["Batalkan Jurnal"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

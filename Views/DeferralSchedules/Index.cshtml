@@ -1,0 +1,110 @@
+@model ERP.Web.Models.DeferralSchedulesIndexViewModel
+@{
+    ViewData["Title"] = T["Jadwal Prepaid/Deferred"];
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Jadwal Prepaid/Deferred"]</h3>
+
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+        <div>
+            <label class="form-label text-white small mb-1" for="fAsOf">@T["Per tanggal"]</label>
+            <input type="date" class="form-control form-control-sm" name="asOf" id="fAsOf" value="@Model.AsOf.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label text-white small mb-1" for="fSide">@T["Jenis"]</label>
+            <select class="form-select form-select-sm" name="side" id="fSide">
+                <option value="">@T["-- Semua --"]</option>
+                <option value="prepaid" selected="@(Model.Side == "prepaid")">@T["Prepaid (biaya dibayar di muka)"]</option>
+                <option value="deferred" selected="@(Model.Side == "deferred")">@T["Diterima di muka (pendapatan)"]</option>
+            </select>
+        </div>
+        <div>
+            <label class="form-label text-white small mb-1" for="fStatus">@T["Status"]</label>
+            <select class="form-select form-select-sm" name="status" id="fStatus">
+                <option value="">@T["-- Semua --"]</option>
+                @foreach (var s in new[] { "active", "completed", "cancelled" })
+                {
+                    <option value="@s" selected="@(s == Model.Status)">@T[ERP.Web.Models.DeferralScheduleViewModel.Badge(s).Label]</option>
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>@T["Terapkan"]</button>
+        <a asp-controller="DeferralRecognition" asp-action="Index" class="btn btn-outline-info btn-sm ms-auto"><i class="bi bi-calendar-check me-1"></i>@T["Proses Rekognisi"]</a>
+    </form>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Faktur pembelian beban yang ditandai Prepaid dijurnal ke 1-1700 Biaya Dibayar di Muka; faktur penjualan yang ditandai Diterima di muka ke 2-1700 Pendapatan Diterima di Muka. Jadwal bulanan dibuat saat posting, jurnalnya baru dibuat lewat Proses Rekognisi (per bulan, bertanggal akhir bulan)."]
+    </div>
+
+    <div class="row g-3 mb-3">
+        @foreach (var c in Model.Checks)
+        {
+            <div class="col-md-6">
+                <div class="card supplier-card h-100">
+                    <div class="card-body py-3 px-4">
+                        <div class="fw-semibold text-white mb-2">@c.AccountCode @T[c.AccountName]</div>
+                        <div class="d-flex justify-content-between small"><span class="text-white-50">@T["Saldo buku besar"]</span><span class="text-white">@Acc.Money(c.LedgerBalance)</span></div>
+                        <div class="d-flex justify-content-between small"><span class="text-white-50">@T["Σ jadwal (nilai − diakui)"]</span><span class="text-white">@Acc.Money(c.SubledgerTotal)</span></div>
+                        <div class="d-flex justify-content-between small mt-1">
+                            <span class="text-white-50">@T["Selisih"]</span>
+                            <span class="@(c.IsReconciled ? "text-success" : "text-warning fw-semibold")">
+                                <i class="bi @(c.IsReconciled ? "bi-check-circle" : "bi-exclamation-triangle") me-1"></i>@Acc.Money(c.Difference)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["FAKTUR"]</th>
+                        <th>@T["JENIS"]</th>
+                        <th>@T["AKUN TUJUAN"]</th>
+                        <th>@T["PERIODE"]</th>
+                        <th class="text-end">@T["NILAI"]</th>
+                        <th class="text-end">@T["DIAKUI"]</th>
+                        <th class="text-end">@T["SISA"]</th>
+                        <th class="pe-4">@T["STATUS"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Schedules.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada jadwal prepaid/deferred."]</td></tr>
+                    }
+                    @foreach (var s in Model.Schedules)
+                    {
+                        var badge = ERP.Web.Models.DeferralScheduleViewModel.Badge(s.Status);
+                        <tr>
+                            <td class="ps-4 small">
+                                <a asp-action="Details" asp-route-uid="@s.Uid" class="text-info text-nowrap">@s.SourceNo</a>
+                                <div class="text-white-50">@s.PartyName</div>
+                            </td>
+                            <td><span class="badge @(s.IsPrepaid ? "bg-primary" : "bg-info text-dark")">@T[s.SideLabel]</span></td>
+                            <td class="text-white small">
+                                @s.TargetAccountCode @s.TargetAccountName
+                                @if (s.CostCenterCode != null || s.ProjectCode != null)
+                                {
+                                    <div class="text-white-50">@string.Join(" · ", new[] { s.CostCenterCode, s.ProjectCode }.Where(x => x != null))</div>
+                                }
+                            </td>
+                            <td class="text-white small text-nowrap">@s.StartPeriod – @s.EndPeriod<div class="text-white-50">@T["{0}/{1} bulan", s.RecognizedMonths, s.Months]</div></td>
+                            <td class="text-end text-white">@Acc.Money(s.TotalAmount)</td>
+                            <td class="text-end text-white">@Acc.Money(s.RecognizedAmount)</td>
+                            <td class="text-end text-white fw-semibold">@Acc.Money(s.RemainingAmount)</td>
+                            <td class="pe-4"><span class="badge @badge.Css">@T[badge.Label]</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

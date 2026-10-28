@@ -1,0 +1,407 @@
+@model ERP.Web.Models.AssetPurchaseOrderDetailsPageViewModel
+@{
+    var o = Model.Order;
+    ViewData["Title"] = $"{T["PO Aset"]} {o.ApoNo}";
+    var needsApproval = Model.Approval?.RequiresApproval == true;
+    var cancelNeedsApproval = Model.CancelApproval?.Preview.Required == true;
+    var canRequestCancel = o.Status == "ordered" && !o.CancelPending && !o.HasReceipts;
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T["PO Aset"] @o.ApoNo</h3>
+        <span class="badge @AssetPurchaseLabels.Css(o.Status)">@T[AssetPurchaseLabels.Label(AssetPurchaseLabels.OrderStatuses, o.Status)]</span>
+        @if (o.CancelPending)
+        {
+            <span class="badge bg-warning text-dark">@T["Pembatalan menunggu persetujuan"]</span>
+        }
+        <span class="me-auto"></span>
+
+        @if (o.Status == "draft")
+        {
+            <a asp-action="Edit" asp-route-uid="@o.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil me-1"></i>@T["Ubah"]</a>
+            <form method="post" asp-action="Submit" asp-route-uid="@o.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(needsApproval ? T["Ajukan PO Aset {0} untuk persetujuan?", o.ApoNo] : T["Setujui PO Aset {0}? Tidak ada alur persetujuan untuk nominal ini.", o.ApoNo]));'>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi @(needsApproval ? "bi-send-check" : "bi-check2-circle") me-1"></i>@(needsApproval ? T["Ajukan Persetujuan"] : T["Setujui"])
+                </button>
+            </form>
+            <form method="post" asp-action="Cancel" asp-route-uid="@o.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T["Batalkan PO Aset {0}?", o.ApoNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-octagon me-1"></i>@T["Batalkan PO"]</button>
+            </form>
+        }
+        @if (o.CanReceive)
+        {
+            <a href="#receiveCard" class="btn btn-success btn-sm" data-perm="update" data-bs-toggle="collapse"><i class="bi bi-box-arrow-in-down me-1"></i>@T["Terima Aset"]</a>
+        }
+        @if (Model.CanCreateInvoice)
+        {
+            <a asp-controller="PurchaseInvoices" asp-action="Create" asp-route-apoUid="@o.Uid" class="btn btn-outline-info btn-sm"><i class="bi bi-receipt me-1"></i>@T["Buat Faktur Pembelian"]</a>
+        }
+        @if (canRequestCancel)
+        {
+            <button type="button" class="btn btn-outline-danger btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#cancelReqModal">
+                <i class="bi bi-x-octagon me-1"></i>@(cancelNeedsApproval ? T["Ajukan Pembatalan"] : T["Batalkan PO"])
+            </button>
+        }
+        @if (o.Status is "draft" or "cancelled" && !o.HasReceipts && o.Receipts.Count == 0)
+        {
+            <form method="post" asp-action="Delete" asp-route-uid="@o.Uid" class="d-inline" data-perm="delete"
+                  onsubmit='return confirm(@Json.Serialize(T["Hapus PO Aset {0}?", o.ApoNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus"]</button>
+            </form>
+        }
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Total PO (termasuk PPN)"]</div>
+            <div class="fs-5 fw-semibold text-white">@Acc.Money(o.TotalAmount)</div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Unit diterima"]</div>
+            <div class="fs-5 fw-semibold text-white">@o.UnitsReceived / @o.UnitsOrdered</div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Diterima belum difakturkan (DPP)"]</div>
+            <div class="fs-5 fw-semibold text-info">@Acc.Money(o.UninvoicedAmount)</div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Faktur pembelian"]</div>
+            @if (o.Invoices.Count == 0)
+            {
+                <div class="text-white">-</div>
+            }
+            @foreach (var i in o.Invoices)
+            {
+                <div class="small">
+                    <a asp-controller="PurchaseInvoices" asp-action="Details" asp-route-uid="@i.Uid" class="text-info">@i.No</a>
+                    <span class="badge @AssetPurchaseLabels.Css(i.Status)">@T[AssetPurchaseLabels.AnyStatus(i.Status)]</span>
+                    <span class="text-white">@Acc.Money(i.Amount)</span>
+                </div>
+            }
+        </div></div></div>
+    </div>
+
+    <div class="card custom-card mb-3">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 text-white small">
+                <div class="col-md-2"><div class="text-white-50">@T["Tanggal PO"]</div>@Acc.Date(o.ApoDate)</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Supplier"]</div>@(o.SupplierName ?? "-")</div>
+                <div class="col-md-2">
+                    <div class="text-white-50">@T["PR Aset"]</div>
+                    @if (o.Request != null)
+                    {
+                        <a asp-controller="AssetPurchaseRequests" asp-action="Details" asp-route-uid="@o.Request.Uid" class="text-info">@o.Request.No</a>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </div>
+                <div class="col-md-2">
+                    <div class="text-white-50">@T["RFQ Aset"]</div>
+                    @if (o.Rfq != null)
+                    {
+                        <a asp-controller="AssetRfqs" asp-action="Details" asp-route-uid="@o.Rfq.Uid" class="text-info">@o.Rfq.No</a>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </div>
+                <div class="col-md-3"><div class="text-white-50">@T["Dibuat oleh"]</div>@(o.CreatedByName ?? "-")</div>
+                <div class="col-md-6"><div class="text-white-50">@T["Catatan"]</div>@(string.IsNullOrWhiteSpace(o.Note) ? "-" : o.Note)</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Tanggal terima terakhir"]</div>@Acc.Date(o.ReceivedDate)</div>
+                @if (!string.IsNullOrWhiteSpace(o.CancelReason))
+                {
+                    <div class="col-md-12"><div class="text-white-50">@T["Alasan pembatalan"]</div>@o.CancelReason</div>
+                }
+                @if (o.Returns.Count > 0)
+                {
+                    <div class="col-md-12">
+                        <div class="text-white-50">@T["Retur Aset"]</div>
+                        @foreach (var x in o.Returns)
+                        {
+                            <a asp-controller="AssetPurchaseReturns" asp-action="Details" asp-route-uid="@x.Uid" class="text-info me-1">@x.No</a>
+                            <span class="badge @AssetPurchaseLabels.Css(x.Status) me-3">@T[AssetPurchaseLabels.Label(AssetPurchaseLabels.ReturnStatuses, x.Status)]</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card custom-card mb-3">
+        <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Aset dipesan"]</span></div>
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="fw-bold">@T["NAMA ASET"]</th>
+                        <th class="fw-bold">@T["KATEGORI"]</th>
+                        <th class="fw-bold text-end">@T["QTY"]</th>
+                        <th class="fw-bold text-end">@T["DITERIMA"]</th>
+                        <th class="fw-bold text-end">@T["HARGA SATUAN"]</th>
+                        <th class="fw-bold text-end">@T["DISK %"]</th>
+                        <th class="fw-bold text-end">@T["SUBTOTAL"]</th>
+                        <th class="fw-bold text-end">@T["NILAI PEROLEHAN / UNIT"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var i in o.Items)
+                    {
+                        <tr>
+                            <td class="text-white">@i.Name<div class="text-white-50 small">@i.Description</div></td>
+                            <td class="text-white">@(i.CategoryName ?? "-")</td>
+                            <td class="text-end text-white">@i.Quantity</td>
+                            <td class="text-end text-white">@i.ReceivedQty</td>
+                            <td class="text-end text-white">@Acc.Money(i.Price)</td>
+                            <td class="text-end text-white">@i.DiscPercent.ToString("0.##")</td>
+                            <td class="text-end text-white fw-semibold">@Acc.Money(i.Subtotal)</td>
+                            <td class="text-end text-white-50">@Acc.Money(i.UnitCost)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr><td colspan="6" class="text-end text-white">@T["Subtotal"]</td><td class="text-end text-white">@Acc.Money(o.SubtotalAmount)</td><td></td></tr>
+                    @if (o.DiscountAmount > 0)
+                    {
+                        <tr><td colspan="6" class="text-end text-white">@T["Diskon"]</td><td class="text-end text-white">- @Acc.Money(o.DiscountAmount)</td><td></td></tr>
+                    }
+                    <tr><td colspan="6" class="text-end text-white">@T["PPN ({0}%)", o.TaxPercent.ToString("0.##")]</td><td class="text-end text-white">@Acc.Money(o.TaxAmount)</td><td></td></tr>
+                    <tr><th colspan="6" class="text-end text-white">@T["Total"]</th><th class="text-end text-white">@Acc.Money(o.TotalAmount)</th><td></td></tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    @if (o.CanReceive)
+    {
+        <div class="collapse mb-3" id="receiveCard">
+            <form method="post" asp-action="Receive" asp-route-uid="@o.Uid" class="card custom-card"
+                  onsubmit='return confirm(@Json.Serialize(T["Posting penerimaan? Aset dibuat & jurnal Dr Aset / Cr GR/IR diposting."]));'>
+                <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white"><i class="bi bi-box-arrow-in-down me-1"></i>@T["Penerimaan Aset"]</span></div>
+                <div class="card-body px-4 py-3">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-2">
+                            <label class="form-label text-white small mb-1" for="receiptDate">@T["Tanggal terima"]</label>
+                            <input type="date" class="form-control form-control-sm" name="receiptDate" id="receiptDate" value="@today" max="@today" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-white small mb-1" for="location">@T["Lokasi"]</label>
+                            <input type="text" class="form-control form-control-sm" name="location" id="location" maxlength="150" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-white small mb-1" for="note">@T["Catatan"]</label>
+                            <input type="text" class="form-control form-control-sm" name="note" id="note" maxlength="500" />
+                        </div>
+                    </div>
+                    <table class="table custom-table align-middle mb-2">
+                        <thead>
+                            <tr>
+                                <th class="fw-bold">@T["NAMA ASET"]</th>
+                                <th class="fw-bold text-end">@T["SISA"]</th>
+                                <th class="fw-bold text-end" style="width: 140px;">@T["DITERIMA SEKARANG"]</th>
+                                <th class="fw-bold text-end">@T["NILAI PEROLEHAN / UNIT"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var i in o.Items.Where(i => i.Remaining > 0))
+                            {
+                                <tr>
+                                    <td class="text-white">@i.Name <span class="text-white-50 small">(@i.CategoryName)</span></td>
+                                    <td class="text-end text-white">@i.Remaining</td>
+                                    <td><input type="number" class="form-control form-control-sm text-end" name="qty[@i.Uid]" value="@i.Remaining" min="0" max="@i.Remaining" step="1" /></td>
+                                    <td class="text-end text-white">@Acc.Money(i.UnitCost)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="small text-white-50 mb-2">@T["Setiap unit dicatat sebagai satu aset aktif (umur, metode & residu dari kategori) dan langsung masuk jadwal penyusutan."]</div>
+                    <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check2 me-1"></i>@T["Posting Penerimaan"]</button>
+                </div>
+            </form>
+        </div>
+    }
+
+    <div class="card custom-card mb-3">
+        <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white"><i class="bi bi-pc-display me-1"></i>@T["Penerimaan & Aset Tercatat"] (@o.Receipts.Count)</span></div>
+        <div class="card-body px-4 py-3">
+            @if (o.Receipts.Count == 0)
+            {
+                <div class="text-white-50 small">@T["Belum ada penerimaan."]</div>
+            }
+            @foreach (var r in o.Receipts)
+            {
+                <div class="border rounded p-3 mb-3 @(r.Status == "cancelled" ? "border-danger opacity-75" : "border-secondary")">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2 text-white small">
+                        <strong class="fs-6">@r.ReceiptNo</strong>
+                        <span class="badge @(r.Status == "posted" ? "bg-success" : "bg-danger")">@(r.Status == "posted" ? T["Diposting"] : T["Dibatalkan"])</span>
+                        <span>@Acc.Date(r.ReceiptDate)</span>
+                        <span>· @Acc.Money(r.TotalAmount)</span>
+                        @if (r.JournalUid != null)
+                        {
+                            <span>· @T["Jurnal"] <a asp-controller="Journals" asp-action="Details" asp-route-uid="@r.JournalUid" class="text-info">@r.JournalNo</a></span>
+                        }
+                        @if (r.InvoiceUid != null)
+                        {
+                            <span>· @T["Faktur"] <a asp-controller="PurchaseInvoices" asp-action="Details" asp-route-uid="@r.InvoiceUid" class="text-info">@r.InvoiceNo</a></span>
+                        }
+                        else if (r.Status == "posted")
+                        {
+                            <span class="badge bg-warning text-dark">@T["Belum difakturkan"]</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(r.Location))
+                        {
+                            <span>· @T["Lokasi"]: @r.Location</span>
+                        }
+                        <span class="text-white-50">· @r.CreatedByName</span>
+                        @if (r.CanCancel)
+                        {
+                            <button type="button" class="btn btn-outline-danger btn-sm ms-auto" data-perm="update" data-bs-toggle="modal" data-bs-target="#cancelReceiptModal"
+                                    data-receipt-uid="@r.Uid" data-receipt-no="@r.ReceiptNo">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>@T["Batalkan Penerimaan"]
+                            </button>
+                        }
+                    </div>
+                    @if (r.Status == "cancelled")
+                    {
+                        <div class="small text-danger mb-2">@T["Dibatalkan {0}: {1}", Acc.Date(r.CancelDate), r.CancelReason ?? ""]</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(r.Note))
+                    {
+                        <div class="small text-white-50 mb-2">@r.Note</div>
+                    }
+                    <div class="table-responsive">
+                        <table class="table custom-table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="fw-bold">@T["NO. ASET"]</th>
+                                    <th class="fw-bold">@T["NAMA"]</th>
+                                    <th class="fw-bold text-end">@T["NILAI PEROLEHAN"]</th>
+                                    <th class="fw-bold">@T["STATUS"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in r.Assets)
+                                {
+                                    <tr>
+                                        <td><a asp-controller="Assets" asp-action="Details" asp-route-uid="@a.Uid" class="text-info text-decoration-none">@a.AssetNo</a></td>
+                                        <td class="text-white">@a.Name</td>
+                                        <td class="text-end text-white">@Acc.Money(a.AcquisitionCost)</td>
+                                        <td>
+                                            <span class="badge @AssetLabels.StatusCss(a.Status)">@T[AssetLabels.Status(a.Status)]</span>
+                                            @if (a.DisposalType == "return")
+                                            {
+                                                <span class="badge bg-secondary">@T["Diretur"]</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (Model.Approval != null)
+    {
+        <partial name="_ApprovalPanel" model="Model.Approval" />
+    }
+    @if (Model.CancelApproval != null)
+    {
+        <partial name="_ApprovalPanel" model="Model.CancelApproval" />
+    }
+</div>
+
+@if (o.Receipts.Any(r => r.CanCancel))
+{
+    <div class="modal fade" id="cancelReceiptModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="post" asp-action="CancelReceipt" asp-route-uid="@o.Uid" class="modal-content">
+                <input type="hidden" name="receiptUid" id="cancelReceiptUid" />
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise me-1"></i>@T["Batalkan Penerimaan"] <span id="cancelReceiptNo"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Tutup"]"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-white-50">@T["Jurnal penerimaan dibalik dan aset dari penerimaan ini dibatalkan (void). Hanya bila belum difakturkan dan belum ada penyusutan/pelepasan."]</p>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1" for="cancelReceiptDate">@T["Tanggal pembatalan"]</label>
+                        <input type="date" class="form-control form-control-sm" name="date" id="cancelReceiptDate" value="@today" />
+                    </div>
+                    <div>
+                        <label class="form-label small mb-1" for="cancelReceiptReason">@T["Alasan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="reason" id="cancelReceiptReason" maxlength="255" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@T["Tutup"]</button>
+                    <button type="submit" class="btn btn-danger btn-sm">@T["Batalkan Penerimaan"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        document.getElementById('cancelReceiptModal').addEventListener('show.bs.modal', e => {
+            const b = e.relatedTarget;
+            document.getElementById('cancelReceiptUid').value = b.dataset.receiptUid;
+            document.getElementById('cancelReceiptNo').textContent = b.dataset.receiptNo;
+        });
+    </script>
+}
+
+@if (canRequestCancel)
+{
+    <div class="modal fade" id="cancelReqModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="post" asp-action="RequestCancel" asp-route-uid="@o.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-x-octagon text-danger me-1"></i>@(cancelNeedsApproval ? T["Ajukan Pembatalan PO Aset"] : T["Batalkan PO Aset"])</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Tutup"]"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-white-50 mb-2">@T["Jelaskan alasan pembatalan PO Aset {0}. Wajib minimal 2 kalimat (tiap kalimat diakhiri titik).", o.ApoNo]</p>
+                    @if (cancelNeedsApproval)
+                    {
+                        <p class="small mb-2"><i class="bi bi-diagram-2 me-1"></i>@T["Pembatalan memerlukan persetujuan lewat alur"] <strong>@Model.CancelApproval!.Preview.WorkflowName</strong>.</p>
+                    }
+                    <textarea name="cancelReason" id="cancelReason" class="form-control form-control-sm" rows="4" required
+                              placeholder="@T["Contoh: Spesifikasi aset tidak sesuai kebutuhan. Pengadaan ditunda ke tahun anggaran berikutnya."]"></textarea>
+                    <div class="d-flex justify-content-between small mt-1">
+                        <span>@T["Jumlah kalimat"]: <strong id="sentCount">0</strong> / 2</span>
+                        <span id="sentHint" class="text-danger">@T["Belum cukup"]</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@T["Tutup"]</button>
+                    <button type="submit" class="btn btn-danger btn-sm" id="cancelSubmit" disabled><i class="bi bi-send me-1"></i>@(cancelNeedsApproval ? T["Ajukan Pembatalan"] : T["Batalkan PO Aset"])</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const ta = document.getElementById('cancelReason');
+            const out = document.getElementById('sentCount');
+            const hint = document.getElementById('sentHint');
+            const btn = document.getElementById('cancelSubmit');
+            const ok = @Json.Serialize(T["Cukup"]), notOk = @Json.Serialize(T["Belum cukup"]);
+            const count = t => (t || '').split(/[.!?\n]+/).map(s => s.trim()).filter(s => s !== '' && s.split(/\s+/).length >= 2).length;
+            function update() {
+                const n = count(ta.value);
+                out.textContent = n;
+                btn.disabled = n < 2;
+                hint.textContent = n >= 2 ? ok : notOk;
+                hint.className = n >= 2 ? 'text-success' : 'text-danger';
+            }
+            ta.addEventListener('input', update);
+            update();
+        })();
+    </script>
+}

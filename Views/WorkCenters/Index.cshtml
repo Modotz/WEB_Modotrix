@@ -21,7 +21,7 @@ ViewData["Title"] = "Work Center";
 
             <strong>
                 <i class="bi bi-funnel me-1"></i>
-                Filter
+                @T["Filter"]
             </strong>
 
             <i class="bi bi-chevron-down"></i>
@@ -41,14 +41,14 @@ ViewData["Title"] = "Work Center";
                     <div class="col-md-4">
 
                         <label class="form-label">
-                            Cari (Kode/Nama)
+                            @T["Cari (Kode/Nama)"]
                         </label>
 
                         <input type="text"
                                name="search"
                                value="@ViewBag.Search"
                                class="form-control"
-                               placeholder="Cari work center..." />
+                               placeholder="@T["Cari work center..."]" />
 
                     </div>
 
@@ -57,7 +57,7 @@ ViewData["Title"] = "Work Center";
                     <div class="col-md-2">
 
                         <label class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select name="pageSize"
@@ -97,7 +97,7 @@ ViewData["Title"] = "Work Center";
                                     class="btn attribute-apply-btn">
 
                                 <i class="bi bi-search me-1"></i>
-                                Terapkan
+                                @T["Terapkan"]
 
                             </button>
 
@@ -145,7 +145,7 @@ ViewData["Title"] = "Work Center";
                 </span>
 
                 <small class="attribute-card-description d-none d-md-inline">
-                    Stasiun kerja &amp; tarif per jam
+                    @T["Stasiun kerja & tarif per jam"]
                 </small>
 
            </div>
@@ -170,7 +170,7 @@ ViewData["Title"] = "Work Center";
                  <a asp-action="Print" 
                     asp-controller="WorkCenters"
                     class="btn btn-light btn-custom-square text-secondary" 
-                    title="Cetak" target="_blank">
+                    title="@T["Cetak"]" target="_blank">
                  <i class="bi bi-printer-fill"></i>
                  </a>
 
@@ -198,12 +198,12 @@ ViewData["Title"] = "Work Center";
 
 
                 <!-- TAMBAH WORK CENTER -->
-                <button type="button"
+                <button data-perm="create" type="button"
                         class="btn btn-primary btn-sm attribute-add-btn"
                         onclick="openCreateWorkCenter()">
 
                     <i class="bi bi-plus-circle me-1"></i>
-                    Tambah Work Center
+                    @T["Tambah Work Center"]
 
                 </button>
 
@@ -230,24 +230,24 @@ ViewData["Title"] = "Work Center";
                             </th>
 
                             <th style="width: 20%;">
-                                KODE
+                                @T["KODE"]
                             </th>
 
                             <th style="width: 30%;">
-                                NAMA
+                                @T["NAMA"]
                             </th>
 
                             <th class="text-center"
                                 style="width: 20%;">
-                                TARIF / JAM
+                                @T["TARIF / JAM"]
                             </th>
 
                             <th style="width: 16%;">
-                                STATUS
+                                @T["STATUS"]
                             </th>
 
-                            <th style="width: 140px;">
-                                AKSI
+                            <th class="text-center" style="width: 140px;">
+                                @T["AKSI"]
                             </th>
 
                         </tr>
@@ -308,13 +308,13 @@ ViewData["Title"] = "Work Center";
                                         @if (item.IsActive)
                                         {
                                             <span class="badge bg-success">
-                                                Aktif
+                                                @T["Aktif"]
                                             </span>
                                         }
                                         else
                                         {
                                             <span class="badge bg-danger">
-                                                Tidak Aktif
+                                                @T["Tidak Aktif"]
                                             </span>
                                         }
 
@@ -322,37 +322,37 @@ ViewData["Title"] = "Work Center";
 
 
                                     <!-- AKSI -->
-                                    <td class="attribute-action-cell">
+                                    <td class="text-center">
 
-                                        <div class="attribute-actions">
+                                        <div class="row-actions">
 
                                             <!-- EDIT -->
-                                            <button type="button"
-                                                    class="attribute-btn attribute-btn-edit"
-                                                    title="Edit"
-                                                    onclick="openEditWorkCenter(@item.Id)">
+                                            <button data-perm="update" type="button"
+                                                    class="act-btn act-edit"
+                                                    title="@T["Edit"]"
+                                                    onclick="openEditWorkCenter('@item.Uid')">
 
-                                                <i class="bi bi-pencil-square"></i>
+                                                <i class="bi bi-pencil"></i>
 
                                             </button>
 
 
                                             <!-- DELETE -->
-                                            <form asp-controller="WorkCenters"
+                                            <form data-perm="delete" asp-controller="WorkCenters"
                                                   asp-action="Delete"
                                                   method="post"
                                                   class="d-inline"
-                                                  onsubmit="return confirm('Yakin ingin menghapus Work Center ini?');">
+                                                  onsubmit='return confirm(@Json.Serialize(T["Yakin ingin menghapus Work Center ini?"]));'>
 
                                                 @Html.AntiForgeryToken()
 
                                                 <input type="hidden"
-                                                       name="id"
-                                                       value="@item.Id" />
+                                                       name="uid"
+                                                       value="@item.Uid" />
 
                                                 <button type="submit"
-                                                        class="attribute-btn attribute-btn-delete"
-                                                        title="Delete">
+                                                        class="act-btn act-delete"
+                                                        title="@T["Hapus"]">
 
                                                     <i class="bi bi-trash"></i>
 
@@ -376,7 +376,7 @@ ViewData["Title"] = "Work Center";
                                 <td colspan="6"
                                     class="text-center text-muted py-4">
 
-                                    Tidak ada data Work Center.
+                                    @T["Tidak ada data Work Center."]
 
                                 </td>
 
@@ -414,11 +414,11 @@ ViewData["Title"] = "Work Center";
     }
 
     <span class="menu-description small">
-        Menampilkan
+        @T["Menampilkan"]
         <strong>@startItem – @endItem</strong>
-        dari
+        @T["dari"]
         <strong>@totalData</strong>
-        data
+        @T["data"]
     </span>
 
     <nav aria-label="Pagination">
@@ -431,7 +431,7 @@ ViewData["Title"] = "Work Center";
                 @if (currentPage <= 1)
                 {
                     <span class="page-link">
-                        Sebelumnya
+                        @T["Sebelumnya"]
                     </span>
                 }
                 else
@@ -443,7 +443,7 @@ ViewData["Title"] = "Work Center";
                            page = currentPage - 1,
                            pageSize = pageSize
                        })">
-                        Sebelumnya
+                        @T["Sebelumnya"]
                     </a>
                 }
 
@@ -475,7 +475,7 @@ ViewData["Title"] = "Work Center";
                 @if (currentPage >= totalPages || totalPages == 0)
                 {
                     <span class="page-link">
-                        Berikutnya
+                        @T["Berikutnya"]
                     </span>
                 }
                 else
@@ -487,7 +487,7 @@ ViewData["Title"] = "Work Center";
                            page = currentPage + 1,
                            pageSize = pageSize
                        })">
-                        Berikutnya
+                        @T["Berikutnya"]
                     </a>
                 }
 
@@ -526,7 +526,7 @@ ViewData["Title"] = "Work Center";
             <div class="modal-header">
 
                 <h5 class="modal-title">
-                    Tambah Work Center
+                    @T["Tambah Work Center"]
                 </h5>
 
                 <button type="button"
@@ -542,7 +542,7 @@ ViewData["Title"] = "Work Center";
                 <div class="mb-3">
 
                     <label class="form-label">
-                        Kode
+                        @T["Kode"]
                     </label>
 
                     <input type="text"
@@ -558,7 +558,7 @@ ViewData["Title"] = "Work Center";
                 <div class="mb-3">
 
                     <label class="form-label">
-                        Nama
+                        @T["Nama"]
                     </label>
 
                     <input type="text"
@@ -574,7 +574,7 @@ ViewData["Title"] = "Work Center";
                 <div class="mb-3">
 
                     <label class="form-label">
-                        Tarif Biaya per Jam
+                        @T["Tarif Biaya per Jam"]
                     </label>
 
                     <input type="text"
@@ -591,7 +591,7 @@ ViewData["Title"] = "Work Center";
                 
 
                 <span class="menu-description small ms-1">
-                    Dipakai menghitung biaya tenaga kerja Work Order (menit ÷ 60 × tarif).
+                    @T["Dipakai menghitung biaya tenaga kerja Work Order (menit ÷ 60 × tarif)."]
                 </span>
 
                 </div>
@@ -613,7 +613,7 @@ ViewData["Title"] = "Work Center";
                     <label class="form-check-label"
                            for="createWorkCenterActive">
 
-                        Aktif
+                        @T["Aktif"]
 
                     </label>
 
@@ -628,7 +628,7 @@ ViewData["Title"] = "Work Center";
                         class="btn btn-secondary"
                         data-bs-dismiss="modal">
 
-                    Batal
+                    @T["Batal"]
 
                 </button>
 
@@ -636,7 +636,7 @@ ViewData["Title"] = "Work Center";
                         class="btn btn-primary">
 
                     <i class="bi bi-save"></i>
-                    Simpan
+                    @T["Simpan"]
 
                 </button>
 
@@ -669,8 +669,8 @@ ViewData["Title"] = "Work Center";
             @Html.AntiForgeryToken()
 
             <input type="hidden"
-                   name="Id"
-                   id="editWorkCenterId" />
+                   name="Uid"
+                   id="editWorkCenterUid" />
 
 
             <div class="modal-header">
@@ -692,7 +692,7 @@ ViewData["Title"] = "Work Center";
                 <div class="mb-3">
 
                     <label class="form-label">
-                        Kode
+                        @T["Kode"]
                     </label>
 
                     <input type="text"
@@ -708,7 +708,7 @@ ViewData["Title"] = "Work Center";
                 <div class="mb-3">
 
                     <label class="form-label">
-                        Nama
+                        @T["Nama"]
                     </label>
 
                     <input type="text"
@@ -724,7 +724,7 @@ ViewData["Title"] = "Work Center";
                 <div class="mb-3">
 
                     <label class="form-label">
-                        Biaya per Jam
+                        @T["Biaya per Jam"]
                     </label>
 
                     <input type="number"
@@ -737,7 +737,7 @@ ViewData["Title"] = "Work Center";
 
                 
                 <span class="menu-description small ms-1">
-                    Dipakai menghitung biaya tenaga kerja Work Order (menit ÷ 60 × tarif).
+                    @T["Dipakai menghitung biaya tenaga kerja Work Order (menit ÷ 60 × tarif)."]
                 </span>
                 
                 </div>
@@ -758,7 +758,7 @@ ViewData["Title"] = "Work Center";
                     <label class="form-check-label"
                            for="editWorkCenterActive">
 
-                        Aktif
+                        @T["Aktif"]
 
                     </label>
 
@@ -773,7 +773,7 @@ ViewData["Title"] = "Work Center";
                         class="btn btn-secondary"
                         data-bs-dismiss="modal">
 
-                    Batal
+                    @T["Batal"]
 
                 </button>
 
@@ -781,7 +781,7 @@ ViewData["Title"] = "Work Center";
                         class="btn btn-primary">
 
                     <i class="bi bi-save"></i>
-                    Simpan Perubahan
+                    @T["Simpan Perubahan"]
 
                 </button>
 
@@ -890,19 +890,19 @@ if (costInput) {
     // EDIT
     // =========================
 
-    async function openEditWorkCenter(id) {
+    async function openEditWorkCenter(uid) {
 
         try {
 
             const response =
                 await fetch(
-                    `/WorkCenters/GetById?id=${id}`
+                    `/WorkCenters/GetById?uid=${encodeURIComponent(uid)}`
                 );
 
             if (!response.ok) {
 
                 alert(
-                    "Data Work Center tidak ditemukan."
+                    @Json.Serialize(T["Data Work Center tidak ditemukan."])
                 );
 
                 return;
@@ -913,8 +913,8 @@ if (costInput) {
 
 
             document.getElementById(
-                "editWorkCenterId"
-            ).value = data.id;
+                "editWorkCenterUid"
+            ).value = data.uid;
 
             document.getElementById(
                 "editWorkCenterCode"
@@ -948,7 +948,7 @@ if (costInput) {
             console.error(error);
 
             alert(
-                "Terjadi kesalahan saat mengambil data Work Center."
+                @Json.Serialize(T["Terjadi kesalahan saat mengambil data Work Center."])
             );
 
         }

@@ -12,11 +12,11 @@
 
     var (statusText, statusClass) = status switch
     {
-        "draft"    => ("Draft", "bg-secondary"),
-        "sent" => ("Terkirim", "bg-info text-dark"),
-        "quoted"  => ("Ditawar", "bg-primary"),
-        "converted"  => ("Jadi PO", "bg-success"),
-        "cancelled"    => ("Batal", "bg-danger"),
+        "draft"    => (T["Draft"], "bg-secondary"),
+        "sent" => (T["Terkirim"], "bg-info text-dark"),
+        "quoted"  => (T["Ditawar"], "bg-primary"),
+        "converted"  => (T["Jadi PO"], "bg-success"),
+        "cancelled"    => (T["Batal"], "bg-danger"),
         _          => (Model.Status ?? "-", "bg-secondary")
     };
 
@@ -41,7 +41,7 @@
     @if (TempData["Error"] != null)
     {
       <div class="alert alert-danger alert-dismissible fade show">
-        <strong>Gagal:</strong> @TempData["Error"]
+        <strong>@T["Gagal:"]</strong> @T[TempData["Error"]?.ToString()]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
     }
@@ -62,48 +62,51 @@
                 @if (status == "draft")
                 {
                     <a asp-action="Edit"
-                       asp-route-id="@Model.Id"
+                       asp-route-uid="@Model.Uid"
+                       data-perm="update"
                        class="btn btn-warning btn-sm">
                         <i class="bi bi-pencil"></i>
-                        Edit
+                        @T["Edit"]
                     </a>
 
                     <button type="button"
                             class="btn btn-info btn-sm"
+                            data-perm="update"
                             data-bs-toggle="modal"
                             data-bs-target="#sendModal">
                         <i class="bi bi-send"></i>
-                        Kirim ke Supplier
+                        @T["Kirim ke Supplier"]
                     </button>
                 }
 
                 @if (status == "sent" || status == "quoted")
                 {
                     <a asp-action="Quote"
-                       asp-route-id="@Model.Id"
+                       asp-route-uid="@Model.Uid"
+                       data-perm="update"
                        class="btn btn-primary btn-sm">
                         <i class="bi bi-cash-coin"></i>
-                        Input Penawaran
+                        @T["Input Penawaran"]
                     </a>
                 }
 
                 @if (status == "quoted")
                 {
-                   <a asp-action="ConvertToPo" asp-route-id="@Model.Id"
+                   <a asp-action="ConvertToPo" asp-route-uid="@Model.Uid" data-perm="update"
                       class="btn btn-success btn-sm">
                       <i class="bi bi-cart-check"></i>
-                      Jadikan PO
+                      @T["Jadikan PO"]
                   </a>
                 }
 
                 <!-- selalu ada -->
-               <a asp-action="Print" asp-route-id="@Model.Id" target="_blank"
-                  class="btn btn-light btn-sm" title="Cetak">
+               <a asp-action="Print" asp-route-uid="@Model.Uid" target="_blank"
+                  class="btn btn-light btn-sm" title="@T["Cetak"]">
                   <i class="bi bi-printer"></i>
                </a>
 
-              <a asp-action="ExportPdf" asp-route-id="@Model.Id" 
-                 class="btn btn-danger btn-sm" title="Export PDF">
+              <a asp-action="ExportPdf" asp-route-uid="@Model.Uid" 
+                 class="btn btn-danger btn-sm" title="@T["Export PDF"]">
                  <i class="bi bi-file-pdf"></i> 
              </a>
 
@@ -111,17 +114,18 @@
                 {
                     <button type="button"
                             class="btn btn-outline-danger btn-sm"
+                            data-perm="update"
                             data-bs-toggle="modal"
                             data-bs-target="#cancelModal">
                         <i class="bi bi-x-circle"></i>
-                        Batal
+                        @T["Batal"]
                     </button>
                 }
 
 
                 <a asp-action="Index"
                    class="btn btn-secondary btn-sm"
-                   title="Kembali">
+                   title="@T["Kembali"]">
                     <i class="bi bi-arrow-left"></i>
                 </a>
 
@@ -133,17 +137,17 @@
             <div class="po-info-column">
 
                 <div class="po-info-row">
-                    <strong>Supplier</strong>
+                    <strong>@T["Supplier"]</strong>
                     <span>@(Model.SupplierName ?? "-")</span>
                 </div>
 
                 <div class="po-info-row">
-                    <strong>Berlaku s/d</strong>
+                    <strong>@T["Berlaku s/d"]</strong>
                     <span>@(Model.ValidUntil?.ToString("yyyy-MM-dd") ?? "-")</span>
                 </div>
 
                 <div class="po-info-row">
-                    <strong>Catatan</strong>
+                    <strong>@T["Catatan"]</strong>
                     <span>
                         @(string.IsNullOrWhiteSpace(Model.Note) ? "-" : Model.Note)
                     </span>
@@ -154,12 +158,12 @@
             <div class="po-info-column">
 
                 <div class="po-info-row">
-                    <strong>Tanggal</strong>
+                    <strong>@T["Tanggal"]</strong>
                     <span>@Model.RfqDate.ToString("yyyy-MM-dd")</span>
                 </div>
 
                <div class="po-info-row">
-                   <strong>Dari PR</strong>
+                   <strong>@T["Dari PR"]</strong>
                    <span>@(Model.PrId?.ToString() ?? "-")</span>
               </div>
 
@@ -173,7 +177,7 @@
     <section class="po-view-card po-items-card">
 
         <div class="po-view-card-header">
-            <strong>Item</strong>
+            <strong>@T["Item"]</strong>
         </div>
 
         <div class="po-table-wrapper">
@@ -182,11 +186,11 @@
                 <thead>
                     <tr>
                         <th class="po-number-col">#</th>
-                        <th class="text-start">Produk</th>
-                        <th>Qty</th>
-                        <th>Est. Harga</th>
-                        <th>Harga Penawaran</th>
-                        <th class="text-end">Subtotal</th>
+                        <th class="text-start">@T["Produk"]</th>
+                        <th>@T["Qty"]</th>
+                        <th>@T["Est. Harga"]</th>
+                        <th>@T["Harga Penawaran"]</th>
+                        <th class="text-end">@T["Subtotal"]</th>
                     </tr>
                 </thead>
 
@@ -241,7 +245,7 @@
                         <tr>
                             <td colspan="6" class="po-empty">
                                 <i class="bi bi-inbox"></i>
-                                Belum ada item RFQ.
+                                @T["Belum ada item RFQ."]
                             </td>
                         </tr>
                     }
@@ -251,7 +255,7 @@
                 @if (!hasQuote)
                     { 
                     <tr class="po-subtotal-row">
-                        <td colspan="5" class="text-end">Estimasi Total</td>
+                        <td colspan="5" class="text-end">@T["Estimasi Total"]</td>
                         <td class="text-end po-money">
                             @estimateTotal.ToString("N0", culture)
                         </td>
@@ -261,7 +265,7 @@
                     @if (hasQuote)
                     {
                         <tr class="po-subtotal-row">
-                            <td colspan="5" class="text-end">Total Penawaran</td>
+                            <td colspan="5" class="text-end">@T["Total Penawaran"]</td>
                             <td class="text-end po-money">
                                 @quoteTotal.ToString("N0", culture)
                             </td>
@@ -277,7 +281,7 @@
     <section class="po-view-card po-related-card">
 
         <div class="po-view-card-header">
-            <strong>PO Terkait</strong>
+            <strong>@T["PO Terkait"]</strong>
         </div>
 
         <div class="po-table-wrapper">
@@ -285,15 +289,15 @@
 
                 <thead>
                     <tr>
-                        <th class="text-start" style="width:220px;">No. PO</th>
-                        <th class="text-start">Status</th>
+                        <th class="text-start" style="width:220px;">@T["No. PO"]</th>
+                        <th class="text-start">@T["Status"]</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     <tr>
                         <td colspan="2" class="po-empty">
-                            Belum ada PO.
+                            @T["Belum ada PO."]
                         </td>
                     </tr>
                 </tbody>
@@ -308,25 +312,24 @@
 <div class="modal fade" id="sendModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form asp-action="Send" asp-route-id="@Model.Id" method="post">
+            <form asp-action="Send" asp-route-uid="@Model.Uid" method="post">
                 <div class="modal-header">
-                    <h5 class="modal-title">Kirim RFQ ke Supplier</h5>
+                    <h5 class="modal-title">@T["Kirim RFQ ke Supplier"]</h5>
                     <button type="button" class="btn-close btn-close-white"
                             data-bs-dismiss="modal"></button>
                 </div>
 
                 <div class="modal-body">
-                    Kirim RFQ <strong>@Model.RfqNo</strong> ke
+                    @T["Kirim RFQ"] <strong>@Model.RfqNo</strong> @T["ke"]
                     <strong>@Model.SupplierName</strong>?
-                    Setelah dikirim, status berubah menjadi <strong>Terkirim</strong>
-                    dan RFQ tidak bisa diedit lagi.
+                    @Html.Raw(T["Setelah dikirim, status berubah menjadi <strong>Terkirim</strong> dan RFQ tidak bisa diedit lagi."])
                 </div>
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">Batal</button>
+                            data-bs-dismiss="modal">@T["Batal"]</button>
                     <button type="submit" class="btn btn-info">
-                        <i class="bi bi-send"></i> Ya, Kirim
+                        <i class="bi bi-send"></i> @T["Ya, Kirim"]
                     </button>
                 </div>
             </form>
@@ -338,23 +341,23 @@
 <div class="modal fade" id="cancelModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form asp-action="Cancel" asp-route-id="@Model.Id" method="post">
+            <form asp-action="Cancel" asp-route-uid="@Model.Uid" method="post">
                 <div class="modal-header">
-                    <h5 class="modal-title">Batalkan RFQ</h5>
+                    <h5 class="modal-title">@T["Batalkan RFQ"]</h5>
                     <button type="button" class="btn-close btn-close-white"
                             data-bs-dismiss="modal"></button>
                 </div>
 
                 <div class="modal-body">
-                    Batalkan RFQ <strong>@Model.RfqNo</strong>?
-                    Status akan menjadi <strong>Batal</strong>.
+                    @T["Batalkan RFQ"] <strong>@Model.RfqNo</strong>?
+                    @Html.Raw(T["Status akan menjadi <strong>Batal</strong>."])
                 </div>
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">Tidak</button>
+                            data-bs-dismiss="modal">@T["Tidak"]</button>
                     <button type="submit" class="btn btn-danger">
-                        Ya, Batalkan
+                        @T["Ya, Batalkan"]
                     </button>
                 </div>
             </form>
@@ -366,20 +369,20 @@
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+            <form asp-action="Delete" asp-route-uid="@Model.Uid" method="post">
                 <div class="modal-header">
-                    <h5 class="modal-title">Hapus RFQ</h5>
+                    <h5 class="modal-title">@T["Hapus RFQ"]</h5>
                     <button type="button" class="btn-close btn-close-white"
                             data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    Hapus RFQ <strong>@Model.RfqNo</strong> beserta semua itemnya?
-                    Tindakan ini tidak bisa dibatalkan.
+                    @T["Hapus RFQ"] <strong>@Model.RfqNo</strong> @T["beserta semua itemnya?"]
+                    @T["Tindakan ini tidak bisa dibatalkan."]
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">Tidak</button>
-                    <button type="submit" class="btn btn-danger">Ya, Hapus</button>
+                            data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Ya, Hapus"]</button>
                 </div>
             </form>
         </div>

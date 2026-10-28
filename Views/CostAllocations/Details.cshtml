@@ -1,0 +1,156 @@
+@model ERP.Web.Models.CostAllocationViewModel
+@{
+    ViewData["Title"] = $"{T["Alokasi Biaya"]} {Model.AllocationNo}";
+    var (label, css) = Model.Status switch
+    {
+        "posted" => ("Posted", "bg-success"),
+        "void" => ("Dibatalkan", "bg-danger"),
+        _ => ("Draft", "bg-secondary")
+    };
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T["Alokasi Biaya"] @Model.AllocationNo</h3>
+        <span class="badge @css me-auto">@T[label]</span>
+
+        @if (Model.Status == "draft")
+        {
+            <a asp-action="Edit" asp-route-uid="@Model.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil me-1"></i>@T["Ubah"]</a>
+            <form method="post" asp-action="Post" asp-route-uid="@Model.Uid" class="d-inline" data-perm="create"
+                  onsubmit='return confirm(@Json.Serialize(T["Posting alokasi {0}?", Model.AllocationNo]));'>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i>@T["Posting"]</button>
+            </form>
+            <form method="post" asp-action="Delete" asp-route-uid="@Model.Uid" class="d-inline" data-perm="delete"
+                  onsubmit='return confirm(@Json.Serialize(T["Hapus draft {0}?", Model.AllocationNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus Draft"]</button>
+            </form>
+        }
+        @if (Model.Status == "posted")
+        {
+            <button type="button" class="btn btn-outline-danger btn-sm" data-perm="delete" data-bs-toggle="modal" data-bs-target="#voidModal">
+                <i class="bi bi-x-circle me-1"></i>@T["Batalkan"]
+            </button>
+        }
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    @if (Model.Status == "void")
+    {
+        <div class="alert alert-danger small"><i class="bi bi-x-octagon me-1"></i>@T["Dibatalkan. Alasan: {0}", Model.VoidReason ?? "-"]</div>
+    }
+    @if (Model.Status == "draft")
+    {
+        <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i>@T["Draft: angka di bawah dihitung dari saldo saat ini dan bisa berubah sampai diposting."]</div>
+    }
+
+    <div class="card custom-card mb-3">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 small">
+                <div class="col-md-4"><div class="text-white-50">@T["Nama"]</div><div class="text-white">@Model.Name</div></div>
+                <div class="col-md-2"><div class="text-white-50">@T["Tanggal"]</div><div class="text-white">@Acc.Date(Model.AllocationDate)</div></div>
+                <div class="col-md-3"><div class="text-white-50">@T["Basis"]</div><div class="text-white">@Acc.Date(Model.BasisFrom) – @Acc.Date(Model.AllocationDate)</div></div>
+                <div class="col-md-3"><div class="text-white-50">@T["Jurnal"]</div>
+                    <div>
+                        @if (Model.JournalUid != null)
+                        {
+                            <a asp-controller="Journals" asp-action="Details" asp-route-uid="@Model.JournalUid" class="text-info text-decoration-none">@Model.JournalNo</a>
+                        }
+                        else
+                        {
+                            <span class="text-white">-</span>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-4"><div class="text-white-50">@T["Dari (pengirim)"]</div><div class="text-white">@Model.FromCostCenterCode @Model.FromCostCenterName</div></div>
+                <div class="col-md-5"><div class="text-white-50">@T["Ke (penerima)"]</div>
+                    <div class="text-white">@string.Join(" · ", Model.Lines.Select(l => $"{l.CostCenterCode} {l.Percentage.ToString("0.####", Acc.Culture)}%"))</div>
+                </div>
+                <div class="col-md-3"><div class="text-white-50">@T["Dibuat oleh"]</div><div class="text-white">@(Model.CreatedByName ?? "-")</div></div>
+                @if (!string.IsNullOrEmpty(Model.Description))
+                {
+                    <div class="col-12"><div class="text-white-50">@T["Keterangan"]</div><div class="text-white">@Model.Description</div></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card custom-card mb-3">
+        <div class="card-header custom-card-header py-3 px-4">
+            <span class="fw-semibold text-white fs-6">@T["Rincian per akun beban"]</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4 text-white-50 small">@T["AKUN"]</th>
+                        <th class="text-end text-white-50 small">@Model.FromCostCenterCode</th>
+                        @foreach (var l in Model.Lines)
+                        {
+                            <th class="text-end text-white-50 small">@l.CostCenterCode (@l.Percentage.ToString("0.##", Acc.Culture)%)</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="@(Model.Lines.Count + 2)" class="text-center text-muted py-4">@T["Tidak ada saldo beban ber-tag pengirim pada rentang ini."]</td></tr>
+                    }
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white">@r.AccountCode @r.AccountName</td>
+                            <td class="text-end text-danger">− @Acc.Money(r.Basis)</td>
+                            @foreach (var s in r.Shares)
+                            {
+                                <td class="text-end text-success">+ @Acc.Money(s)</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.Rows.Count > 0)
+                {
+                    <tfoot>
+                        <tr>
+                            <td class="ps-4 fw-bold text-white">@T["TOTAL"]</td>
+                            <td class="text-end fw-bold text-danger">− @Acc.Money(Model.Rows.Sum(r => r.Basis))</td>
+                            @for (var i = 0; i < Model.Lines.Count; i++)
+                            {
+                                <td class="text-end fw-bold text-success">+ @Acc.Money(Model.Rows.Sum(r => r.Shares.ElementAtOrDefault(i)))</td>
+                            }
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (Model.Status == "posted")
+{
+    <div class="modal fade" id="voidModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="Void" asp-route-uid="@Model.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batalkan {0}", Model.AllocationNo]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Jurnal pembalik dibuat (tag cost center ikut terbalik); jurnal alokasi asli tidak diubah."]</p>
+                    <div class="mb-3">
+                        <label class="form-label" for="voidDate">@T["Tanggal pembalik"]</label>
+                        <input type="date" class="form-control" name="date" id="voidDate" value="@today" required />
+                    </div>
+                    <div>
+                        <label class="form-label" for="voidReason">@T["Alasan"]</label>
+                        <input type="text" class="form-control" name="reason" id="voidReason" maxlength="255" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i>@T["Batalkan"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

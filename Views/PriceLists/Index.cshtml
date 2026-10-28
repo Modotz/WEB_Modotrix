@@ -39,7 +39,7 @@
 
                     <div class="col-md-3">
                         <label for="search" class="form-label">
-                            Cari
+                            @T["Cari"]
                         </label>
 
                         <input type="text"
@@ -60,17 +60,17 @@
 
                             <option value=""
                                     selected="@(Context.Request.Query["isActive"] == "")">
-                                -- Semua --
+                                -- @T["Semua"] --
                             </option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["isActive"] == "true")">
-                                Aktif
+                                @T["Aktif"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["isActive"] == "false")">
-                                Non-Aktif
+                                @T["Non-Aktif"]
                             </option>
 
                         </select>
@@ -78,7 +78,7 @@
 
                     <div class="col-md-2">
                         <label for="pageSize" class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select class="form-select"
@@ -99,13 +99,13 @@
                                 class="btn btn-primary d-flex align-items-center gap-2">
 
                             <i class="bi bi-search"></i>
-                            Terapkan
+                            @T["Terapkan"]
 
                         </button>
 
                         <a asp-action="Index"
                            class="btn btn-outline-secondary"
-                           title="Reset Filter">
+                           title="@T["Reset Filter"]">
 
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </a> 
@@ -135,7 +135,7 @@
                 </span>
 
                 <span class="menu-description small ms-1">
-                    Daftar harga jual per customer/kelompok
+                    @T["Daftar harga jual per customer/kelompok"]
                 </span>
 
             </div>
@@ -159,7 +159,7 @@
                  <a asp-action="Print" 
                     asp-controller="PriceLists"
                     class="btn btn-light btn-custom-square text-secondary" 
-                    title="Cetak" target="_blank">
+                    title="@T["Cetak"]" target="_blank">
                  <i class="bi bi-printer-fill"></i>
                  </a>
                 
@@ -183,13 +183,13 @@
                 </button>
 
                 <!-- TAMBAH PRICE LIST -->
-                <button type="button"
+                <button data-perm="create" type="button"
                         class="btn btn-teal btn-custom-action"
                         id="btnAddPriceList"
                         onclick="openCreatePriceList()">
 
                     <i class="bi bi-plus-circle"></i>
-                    <span>Tambah Price List</span>
+                    <span>@T["Tambah Price List"]</span>
 
                 </button>
 
@@ -214,23 +214,23 @@
                             </th>
 
                             <th style="width: 200px;">
-                                KODE
+                                @T["KODE"]
                             </th>
 
                             <th>
-                                NAMA
+                                @T["NAMA"]
                             </th>
 
                             <th class="text-center" style="width: 200px;">
-                                JUMLAH PRODUK
+                                @T["JUMLAH PRODUK"]
                             </th>
 
                             <th style="width: 220px;">
-                                STATUS
+                                @T["STATUS"]
                             </th>
 
                             <th class="text-center" style="width: 140px;">
-                                AKSI
+                                @T["AKSI"]
                             </th>
                         </tr>
                     </thead>
@@ -284,13 +284,13 @@
                                         @if (item.IsActive)
                                         {
                                             <span class="badge bg-success">
-                                                Aktif
+                                                @T["Aktif"]
                                             </span>
                                         }
                                         else
                                         {
                                             <span class="badge bg-secondary">
-                                                Tidak Aktif
+                                                @T["Tidak Aktif"]
                                             </span>
                                         }
 
@@ -299,20 +299,20 @@
                                     <!-- AKSI -->
                                     <td class="text-center">
 
-                                        <div class="d-flex justify-content-center gap-1">
+                                        <div class="row-actions">
 
                                             <!-- EDIT -->
-                                            <a asp-action="Edit"
-                                               asp-route-id="@item.Id"
-                                               class="btn btn-sm menu-action-edit"
-                                               title="Edit">
+                                            <a data-perm="update" asp-action="Edit"
+                                               asp-route-uid="@item.Uid"
+                                               class="act-btn act-edit"
+                                               title="@T["Edit"]">
 
                                                 <i class="bi bi-pencil"></i>
 
                                             </a>
 
                                             <!-- DELETE -->
-                                            <form asp-action="Delete"
+                                            <form data-perm="delete" asp-action="Delete"
                                                   method="post"
                                                   class="d-inline"
                                                   onsubmit="return confirmDeletePriceList();">
@@ -320,12 +320,12 @@
                                                 @Html.AntiForgeryToken()
 
                                                 <input type="hidden"
-                                                       name="id"
-                                                       value="@item.Id" />
+                                                       name="uid"
+                                                       value="@item.Uid" />
 
                                                 <button type="submit"
-                                                        class="btn btn-sm menu-action-delete"
-                                                        title="Hapus">
+                                                        class="act-btn act-delete"
+                                                        title="@T["Hapus"]">
 
                                                     <i class="bi bi-trash"></i>
 
@@ -346,7 +346,7 @@
                                 <td colspan="6" class="text-center py-4">
 
                                     <span class="menu-description">
-                                        Belum ada data Price List.
+                                        @T["Belum ada data Price List."]
                                     </span>
 
                                 </td>
@@ -385,11 +385,11 @@
                 }
 
                 <span class="menu-description small">
-                    Menampilkan
+                    @T["Menampilkan"]
                     <strong>@startItem – @endItem</strong>
-                    dari
+                    @T["dari"]
                     <strong>@totalData</strong>
-                    data
+                    @T["data"]
                 </span>
 
                 <nav aria-label="Pagination">
@@ -400,7 +400,7 @@
 
                             @if (currentPage <= 1)
                             {
-                                <span class="page-link">Sebelumnya</span>
+                                <span class="page-link">@T["Sebelumnya"]</span>
                             }
                             else
                             {
@@ -411,7 +411,7 @@
                                        page = currentPage - 1,
                                        pageSize = pageSize
                                    })">
-                                    Sebelumnya
+                                    @T["Sebelumnya"]
                                 </a>
                             }
 
@@ -440,7 +440,7 @@
 
                             @if (currentPage >= totalPages || totalPages == 0)
                             {
-                                <span class="page-link">Berikutnya</span>
+                                <span class="page-link">@T["Berikutnya"]</span>
                             }
                             else
                             {
@@ -451,7 +451,7 @@
                                        page = currentPage + 1,
                                        pageSize = pageSize
                                    })">
-                                    Berikutnya
+                                    @T["Berikutnya"]
                                 </a>
                             }
 
@@ -484,7 +484,7 @@
             <div class="modal-header">
 
                 <h5 class="modal-title" id="createPriceListTitle">
-                    Tambah Price List
+                    @T["Tambah Price List"]
                 </h5>
 
                 <button type="button"
@@ -510,7 +510,7 @@
                         <div class="col-md-6">
 
                             <label for="createPriceListCode" class="form-label">
-                                Kode Price List
+                                @T["Kode Price List"]
                                 <span class="text-danger">*</span>
                             </label>
 
@@ -518,7 +518,7 @@
                                    name="Code"
                                    id="createPriceListCode"
                                    class="form-control"
-                                   placeholder="Masukkan kode"
+                                   placeholder="@T["Masukkan kode"]"
                                    required />
 
                         </div>
@@ -527,7 +527,7 @@
                         <div class="col-md-6">
 
                             <label for="createPriceListName" class="form-label">
-                                Nama Price List
+                                @T["Nama Price List"]
                                 <span class="text-danger">*</span>
                             </label>
 
@@ -535,7 +535,7 @@
                                    name="Name"
                                    id="createPriceListName"
                                    class="form-control"
-                                   placeholder="Masukkan nama"
+                                   placeholder="@T["Masukkan nama"]"
                                    required />
 
                         </div>
@@ -544,14 +544,14 @@
                         <div class="col-md-12">
 
                             <label for="createPriceListNote" class="form-label">
-                                Catatan
+                                @T["Catatan"]
                             </label>
 
                             <textarea name="Note"
                                       id="createPriceListNote"
                                       class="form-control"
                                       rows="3"
-                                      placeholder="Mis. Harga Grosir / Reseller"></textarea>
+                                      placeholder="@T["Mis. Harga Grosir / Reseller"]"></textarea>
 
                         </div>
 
@@ -575,7 +575,7 @@
 
                                 <label class="form-check-label ms-2"
                                        for="createPriceListActive">
-                                    Aktif
+                                    @T["Aktif"]
                                 </label>
 
                             </div>
@@ -592,12 +592,12 @@
                     <button type="button"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
-                        Batal
+                        @T["Batal"]
                     </button>
 
                     <button type="submit"
                             class="btn btn-primary">
-                        Simpan
+                        @T["Simpan"]
                     </button>
 
                 </div>
@@ -702,7 +702,7 @@
         function confirmDeletePriceList() {
 
             return confirm(
-                'Yakin ingin menghapus Price List ini?'
+                @Json.Serialize(T["Yakin ingin menghapus Price List ini?"])
             );
 
         }

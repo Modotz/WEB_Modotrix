@@ -3,7 +3,7 @@
 @model PagedResult<MenuViewModel>
 
 @{
-    ViewData["Title"] = "Master Menu";
+    ViewData["Title"] = T["Master Menu"];
 }
 
 <style>
@@ -14,7 +14,7 @@
 <div class="menu-page">
 
     <div class="page-heading mb-4">
-        <h1>Master Menu</h1>
+        <h1>@T["Master Menu"]</h1>
     </div>
 
     <div class="card menu-card shadow-sm">
@@ -25,28 +25,28 @@
             <div class="menu-card-header">
 
                 <h5 class="menu-section-title m-0">
-                    Struktur Menu
+                    @T["Struktur Menu"]
                 </h5>
 
                 <div class="menu-header-actions">
 
-                    <button type="button"
+                    <button data-perm="update" type="button"
                             id="btnSaveOrder"
                             data-allow-unsaved="true"
                             class="btn btn-save-order d-flex align-items-center gap-1"
                             onclick="saveOrder()">
 
                         <i class="bi bi-box-arrow-down"></i>
-                        Simpan Urutan
+                        @T["Simpan Urutan"]
                     </button>
 
-                    <button type="button"
+                    <button data-perm="create" type="button"
                             class="btn btn-teal btn-custom-action"
                             id="btnAddMenu"
                             onclick="openCreateModal()">
 
                         <i class="bi bi-plus-lg"></i>
-                        <span>Tambah Menu</span>
+                        <span>@T["Tambah Menu"]</span>
                     </button>
 
                 </div>
@@ -56,10 +56,9 @@
             <!-- DESKRIPSI -->
             <p class="menu-description">
                 <i class="bi bi-info-circle me-1"></i>
-                Seret ikon
+                @T["Seret ikon"]
                 <i class="bi bi-three-dots-vertical"></i>
-                untuk mengubah urutan. Tarik sebuah item ke dalam area sub-menu item lain
-                untuk menjadikannya anak menu (maksimal 2 tingkat).
+                @T["untuk mengubah urutan. Tarik sebuah item ke dalam area sub-menu item lain untuk menjadikannya anak menu (maksimal 2 tingkat)."]
             </p>
 
             @* MENU DRAG & DROP *@
@@ -78,15 +77,22 @@
 
                                 <div class="d-flex align-items-center gap-2">
 
-                                    <span class="drag-handle" title="Geser menu">
+                                    <span class="drag-handle" title="@T["Geser menu"]">
                                         <i class="bi bi-three-dots-vertical"></i>
                                     </span>
 
                                     <i class="@parent.Icon menu-icon"></i>
 
                                     <span class="menu-item-title">
-                                        @parent.Title
+                                        @T.Menu(parent.Title, parent.TitleEn)
                                     </span>
+
+                                    @if (!string.IsNullOrWhiteSpace(parent.TitleEn))
+                                    {
+                                        <small class="text-muted fst-italic" title="@T["Judul (English)"]">
+                                            (@parent.TitleEn)
+                                        </small>
+                                    }
 
                                     <small class="menu-item-UrlSlug ms-1">
                                         @parent.UrlSlug
@@ -95,49 +101,50 @@
                                     @if (!parent.IsActive)
                                     {
                                         <span class="badge bg-danger ms-2">
-                                            Nonaktif
+                                            @T["Nonaktif"]
                                         </span>
                                     }
 
                                 </div>
 
-                                <div class="d-flex gap-1">
+                                <div class="row-actions">
 
-                                    <button type="button"
-                                            class="btn btn-sm menu-action-edit"
-                                            title="Edit"
+                                    <button data-perm="update" type="button"
+                                            class="act-btn act-edit"
+                                            title="@T["Edit"]"
+                                            data-title-en="@parent.TitleEn"
                                             onclick="openEditModal(
-                                                '@parent.Id',
+                                                '@parent.Uid',
                                                 '@parent.Title',
                                                 '@parent.UrlSlug',
                                                 '@parent.Icon',
                                                 '@parent.ParentId',
                                                 '@parent.SortOrder',
-                                                '@parent.IsActive'
+                                                '@parent.IsActive',
+                                                this.dataset.titleEn
                                             )">
 
                                         <i class="bi bi-pencil"></i>
 
                                     </button>
 
-                                    <form method="post"
+                                    <form data-perm="delete" method="post"
                                           asp-action="Delete"
-                                          class="d-inline"
                                           onsubmit="return confirmDeleteMenu(this);">
 
                                         @Html.AntiForgeryToken()
 
                                         <input type="hidden"
-                                               name="id"
-                                               value="@parent.Id" />
+                                               name="uid"
+                                               value="@parent.Uid" />
 
                                         <input type="hidden"
                                                name="hasChildren"
                                                value="@(Model.Data.Any(x => x.ParentId == parent.Id) ? "true" : "false")" />
 
                                         <button type="submit"
-                                                class="btn btn-sm menu-action-delete"
-                                                title="Hapus">
+                                                class="act-btn act-delete"
+                                                title="@T["Hapus"]">
 
                                             <i class="bi bi-trash"></i>
 
@@ -163,15 +170,22 @@
 
                                                 <div class="d-flex align-items-center gap-2">
 
-                                                    <span class="drag-handle" title="Geser menu">
+                                                    <span class="drag-handle" title="@T["Geser menu"]">
                                                         <i class="bi bi-three-dots-vertical"></i>
                                                     </span>
 
                                                     <i class="@child.Icon menu-icon"></i>
 
                                                     <span class="menu-item-title">
-                                                        @child.Title
+                                                        @T.Menu(child.Title, child.TitleEn)
                                                     </span>
+
+                                                    @if (!string.IsNullOrWhiteSpace(child.TitleEn))
+                                                    {
+                                                        <small class="text-muted fst-italic" title="@T["Judul (English)"]">
+                                                            (@child.TitleEn)
+                                                        </small>
+                                                    }
 
                                                     <small class="menu-item-UrlSlug ms-1">
                                                         @child.UrlSlug
@@ -180,42 +194,43 @@
                                                     @if (!child.IsActive)
                                                     {
                                                         <span class="badge bg-danger ms-2">
-                                                            Nonaktif
+                                                            @T["Nonaktif"]
                                                         </span>
                                                     }
 
                                                 </div>
 
-                                                <div class="d-flex gap-1">
+                                                <div class="row-actions">
 
-                                                    <button type="button"
-                                                            class="btn btn-sm menu-action-edit"
-                                                            title="Edit"
+                                                    <button data-perm="update" type="button"
+                                                            class="act-btn act-edit"
+                                                            title="@T["Edit"]"
+                                                            data-title-en="@child.TitleEn"
                                                             onclick="openEditModal(
-                                                                '@child.Id',
+                                                                '@child.Uid',
                                                                 '@child.Title',
                                                                 '@child.UrlSlug',
                                                                 '@child.Icon',
                                                                 '@child.ParentId',
                                                                 '@child.SortOrder',
-                                                                '@child.IsActive'
+                                                                '@child.IsActive',
+                                                                this.dataset.titleEn
                                                             )">
 
                                                         <i class="bi bi-pencil"></i>
 
                                                     </button>
 
-                                                    <form method="post"
+                                                    <form data-perm="delete" method="post"
                                                           asp-action="Delete"
-                                                          asp-route-id="@child.Id"
-                                                          class="d-inline"
-                                                          onsubmit="return confirm('Hapus menu ini?')">
+                                                          asp-route-uid="@child.Uid"
+                                                          onsubmit='return confirm(@Json.Serialize(T["Hapus menu ini?"]))'>
 
                                                         @Html.AntiForgeryToken()
 
                                                         <button type="submit"
-                                                                class="btn btn-sm menu-action-delete"
-                                                                title="Hapus">
+                                                                class="act-btn act-delete"
+                                                                title="@T["Hapus"]">
 
                                                             <i class="bi bi-trash"></i>
 
@@ -264,27 +279,27 @@
                 <div class="modal-header menu-modal-header">
 
                     <h5 class="modal-title menu-modal-title" id="modalTitle">
-                        Tambah Menu
+                        @T["Tambah Menu"]
                     </h5>
 
                     <button type="button"
                             class="btn-close btn-close-white"
                             data-bs-dismiss="modal"
-                            aria-label="Close">
+                            aria-label="@T["Tutup"]">
                     </button>
 
                 </div>
 
                 <div class="modal-body menu-modal-body">
 
-                    <input type="hidden" id="Id" name="Id" />
+                    <input type="hidden" id="Uid" name="Uid" />
 
                     <div class="row g-4">
 
                         <div class="col-md-6">
 
                             <label for="Title" class="menu-form-label">
-                                Judul Menu <span class="required-mark">*</span>
+                                @T["Judul Menu"] <span class="required-mark">*</span>
                             </label>
 
                             <input type="text"
@@ -297,8 +312,27 @@
 
                         <div class="col-md-6">
 
+                            <label for="TitleEn" class="menu-form-label">
+                                @T["Judul (English)"]
+                            </label>
+
+                            <input type="text"
+                                   class="form-control menu-form-control"
+                                   id="TitleEn"
+                                   name="TitleEn"
+                                   maxlength="100"
+                                   placeholder="@T["Opsional, mis. Customers"]" />
+
+                            <div class="menu-form-help">
+                                @T["Ditampilkan di sidebar saat bahasa English dipilih. Kosongkan untuk memakai judul Indonesia."]
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-6">
+
                             <label for="ParentId" class="menu-form-label">
-                                Menu Induk
+                                @T["Menu Induk"]
                             </label>
 
                             <select class="form-select menu-form-control"
@@ -306,13 +340,13 @@
                                     name="ParentId">
 
                                 <option value="">
-                                    -- Root / Tanpa Induk --
+                                    @T["-- Root / Tanpa Induk --"]
                                 </option>
 
                                 @foreach (var parent in Model.Data.Where(m => m.ParentId == null))
                                 {
                                     <option value="@parent.Id">
-                                        @parent.Title
+                                        @T.Menu(parent.Title, parent.TitleEn)
                                     </option>
                                 }
 
@@ -323,18 +357,18 @@
                         <div class="col-md-6">
 
                             <label for="UrlSlug" class="menu-form-label">
-                                Url / Slug
+                                @T["Url / Slug"]
                             </label>
 
                             <input type="text"
                                    class="form-control menu-form-control"
                                    id="UrlSlug"
                                    name="UrlSlug"
-                                   placeholder="contoh: users atau # untuk parent" />
+                                   placeholder="@T["contoh: users atau # untuk parent"]" />
 
                             <div class="menu-form-help">
-                                Slug relatif tanpa base UrlSlug.
-                                Gunakan <strong>#</strong> untuk menu induk.
+                                @T["Slug relatif tanpa base UrlSlug."]
+                                @T["Gunakan"] <strong>#</strong> @T["untuk menu induk."]
                             </div>
 
                         </div>
@@ -342,7 +376,7 @@
                         <div class="col-md-6">
 
                             <label for="Icon" class="menu-form-label">
-                                Ikon (Bootstrap Icons)
+                                @T["Ikon (Bootstrap Icons)"]
                             </label>
 
                             <div class="icon-input-wrapper">
@@ -360,7 +394,7 @@
                             </div>
 
                             <div class="menu-form-help">
-                                Lihat ikon di
+                                @T["Lihat ikon di"]
                                 <a href="https://icons.getbootstrap.com/"
                                    target="_blank"
                                    rel="noopener noreferrer">
@@ -373,7 +407,7 @@
                         <div class="col-md-6">
 
                             <label for="SortOrder" class="menu-form-label">
-                                Urutan
+                                @T["Urutan"]
                             </label>
 
                             <input type="number"
@@ -402,7 +436,7 @@
                                        value="false" />
 
                                 <label class="form-check-label" for="IsActive">
-                                    Menu Aktif
+                                    @T["Menu Aktif"]
                                 </label>
 
                             </div>
@@ -417,13 +451,13 @@
 
                     <button type="submit" class="btn menu-btn-save">
                         <i class="bi bi-box-arrow-down me-1"></i>
-                        Simpan
+                        @T["Simpan"]
                     </button>
 
                     <button type="button"
                             class="btn menu-btn-cancel"
                             data-bs-dismiss="modal">
-                        Batal
+                        @T["Batal"]
                     </button>
 
                 </div>
@@ -552,11 +586,12 @@
 
         function openCreateModal() {
 
-            document.getElementById('modalTitle').innerText = 'Tambah Menu';
+            document.getElementById('modalTitle').innerText = @Json.Serialize(T["Tambah Menu"]);
             document.getElementById('menuForm').action = '@Url.Action("Create", "Menus")';
-            document.getElementById('Id').value = '';
+            document.getElementById('Uid').value = '';
             document.getElementById('ParentId').value = '';
             document.getElementById('Title').value = '';
+            document.getElementById('TitleEn').value = '';
             document.getElementById('UrlSlug').value = '';
             document.getElementById('Icon').value = '';
             document.getElementById('SortOrder').value = 0;
@@ -571,20 +606,22 @@
         /* Edit */
 
         function openEditModal(
-            id,
+            uid,
             title,
             urlSlug,
             icon,
             parentId,
             sortOrder,
-            isActive
+            isActive,
+            titleEn
         ) {
 
-            document.getElementById('modalTitle').innerText = 'Edit Menu';
+            document.getElementById('modalTitle').innerText = @Json.Serialize(T["Edit Menu"]);
             document.getElementById('menuForm').action = '@Url.Action("Edit", "Menus")';
-            document.getElementById('Id').value = id;
+            document.getElementById('Uid').value = uid;
             document.getElementById('ParentId').value = parentId || '';
             document.getElementById('Title').value = title || '';
+            document.getElementById('TitleEn').value = titleEn || '';
             document.getElementById('UrlSlug').value = urlSlug || '';
             document.getElementById('Icon').value = icon || '';
             document.getElementById('iconPreview').className = icon || '';
@@ -604,7 +641,7 @@
             const orderData = getMenuOrder();
 
             if (orderData.length === 0) {
-                alert('Data urutan menu kosong.');
+                alert(@Json.Serialize(T["Data urutan menu kosong."]));
                 return;
             }
 
@@ -618,7 +655,7 @@
 
                 $('#btnSaveOrder')
                     .prop('disabled', true)
-                    .text('Menyimpan...');
+                    .text(@Json.Serialize(T["Menyimpan..."]));
 
                 const response = await fetch(
                     '@Url.Action("SaveOrder", "Menus")',
@@ -649,7 +686,7 @@
                 if (!response.ok) {
                     throw new Error(
                         result.message ||
-                        'Gagal menyimpan perubahan urutan menu.'
+                        @Json.Serialize(T["Gagal menyimpan perubahan urutan menu."])
                     );
                 }
 
@@ -669,7 +706,7 @@
                 $('#btnSaveOrder')
                     .prop('disabled', false)
                     .html(
-                        '<i class="bi bi-save"></i> Simpan Perubahan'
+                        '<i class="bi bi-save"></i> ' + @Json.Serialize(T["Simpan Perubahan"])
                     );
 
             }
@@ -700,9 +737,9 @@
             }
 
             const confirmLeave = confirm(
-                'Perubahan urutan menu belum disimpan.\n\n' +
-                'Apakah Anda yakin ingin meninggalkan halaman?\n' +
-                'Perubahan yang belum disimpan akan dibatalkan.'
+                @Json.Serialize(T["Perubahan urutan menu belum disimpan."]) + '\n\n' +
+                @Json.Serialize(T["Apakah Anda yakin ingin meninggalkan halaman?"]) + '\n' +
+                @Json.Serialize(T["Perubahan yang belum disimpan akan dibatalkan."])
             );
 
             if (!confirmLeave) {
@@ -730,17 +767,17 @@
             if (hasChildren) {
 
                 return confirm(
-                    "Menu induk ini memiliki anak menu.\n\n" +
-                    "Jika menu induk dihapus:\n" +
-                    "- Anak menu pertama akan menjadi menu induk baru.\n" +
-                    "- Anak menu berikutnya akan menjadi anak dari menu tersebut.\n\n" +
-                    "Apakah Anda yakin ingin melanjutkan?"
+                    @Json.Serialize(T["Menu induk ini memiliki anak menu."]) + "\n\n" +
+                    @Json.Serialize(T["Jika menu induk dihapus:"]) + "\n" +
+                    "- " + @Json.Serialize(T["Anak menu pertama akan menjadi menu induk baru."]) + "\n" +
+                    "- " + @Json.Serialize(T["Anak menu berikutnya akan menjadi anak dari menu tersebut."]) + "\n\n" +
+                    @Json.Serialize(T["Apakah Anda yakin ingin melanjutkan?"])
                 );
 
             }
 
             return confirm(
-                "Apakah Anda yakin ingin menghapus menu ini?"
+                @Json.Serialize(T["Apakah Anda yakin ingin menghapus menu ini?"])
             );
 
         }

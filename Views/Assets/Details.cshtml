@@ -1,0 +1,909 @@
+@model ERP.Web.Models.AssetDetailsPageViewModel
+@{
+    var a = Model.Asset;
+    ViewData["Title"] = $"{T["Aset"]} {a.AssetNo}";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+    var activeAssignment = a.Assignments.FirstOrDefault(x => x.Status == "active");
+    // Saldo menurun: tampilkan kedua kandidat + angka terpakai (titik changeover).
+    var declining = a.Schedule.Any(s => s.DecliningCandidate != null);
+    var scheduleCols = 7 + (declining ? 2 : 0) + (a.IsUnits ? 1 : 0);
+    var currentPeriod = DateTime.Today.ToString("yyyy-MM");
+    var idc = new System.Globalization.CultureInfo("id-ID");
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@a.AssetNo · @a.Name</h3>
+        <span class="badge @AssetLabels.StatusCss(a.Status) me-auto">@T[AssetLabels.Status(a.Status)]</span>
+
+        @if (a.CanEdit)
+        {
+            <a asp-action="Edit" asp-route-uid="@a.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil me-1"></i>@T["Ubah"]</a>
+        }
+        @if (a.CanActivate)
+        {
+            <form method="post" asp-action="Activate" asp-route-uid="@a.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T["Aktifkan aset {0}? Jurnal perolehan dibuat.", a.AssetNo]));'>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i>@T["Aktifkan"]</button>
+            </form>
+        }
+        @if (a.CanChangeSchedule)
+        {
+            <button type="button" class="btn btn-outline-light btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#scheduleModal">
+                <i class="bi bi-calendar2-range me-1"></i>@T["Ubah Jadwal"]
+            </button>
+        }
+        @if (a.CanAdjust)
+        {
+            <div class="dropdown d-inline-block" data-perm="update">
+                <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="btnAdjust">
+                    <i class="bi bi-sliders me-1"></i>@T["Penyesuaian Nilai"]
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    @if (a.DepreciationMethod != "sum_of_years")
+                    {
+                        <li><button type="button" class="dropdown-item btn-adjust" data-kind="capex"><i class="bi bi-plus-square me-2"></i>@T["Tambah Biaya ke Aset"]</button></li>
+                    }
+                    <li><button type="button" class="dropdown-item btn-adjust" data-kind="revaluation"><i class="bi bi-arrow-down-up me-2"></i>@T["Revaluasi Aset"]</button></li>
+                    <li><button type="button" class="dropdown-item btn-adjust" data-kind="impairment"><i class="bi bi-graph-down-arrow me-2"></i>@T["Impairment Aset"]</button></li>
+                </ul>
+            </div>
+            @if (a.IsUnits)
+            {
+                <a href="#usage" class="btn btn-outline-light btn-sm" data-perm="update" onclick="bootstrap.Tab.getOrCreateInstance(document.getElementById('btn-tab-usage')).show()">
+                    <i class="bi bi-speedometer2 me-1"></i>@T["Catat Unit Produksi"]
+                </a>
+            }
+        }
+        @if (a.CanDispose)
+        {
+            <button type="button" class="btn btn-outline-danger btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#disposeModal">
+                <i class="bi bi-box-arrow-right me-1"></i>@T["Lepas Aset"]
+            </button>
+        }
+        @if (a.CanCancelDisposal)
+        {
+            <button type="button" class="btn btn-outline-warning btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#cancelDisposalModal">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>@T["Batal Pelepasan"]
+            </button>
+        }
+        @if (a.CanDelete)
+        {
+            <form method="post" asp-action="Delete" asp-route-uid="@a.Uid" class="d-inline" data-perm="delete"
+                  onsubmit='return confirm(@Json.Serialize(T["Hapus draft {0}?", a.AssetNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus Draft"]</button>
+            </form>
+        }
+        @if (a.CanVoid)
+        {
+            <button type="button" class="btn btn-outline-danger btn-sm" data-perm="delete" data-bs-toggle="modal" data-bs-target="#voidModal">
+                <i class="bi bi-x-circle me-1"></i>@T["Batalkan Perolehan"]
+            </button>
+        }
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Harga perolehan"]</div>
+            <div class="fs-5 fw-semibold text-white">@Acc.Money(a.Status == "draft" ? a.AcquisitionCost : a.GlCost)</div>
+            @if (a.CapexTotal != 0 || a.RevaluationNet != 0)
+            {
+                <div class="small text-white-50">@T["awal {0} + biaya {1} + revaluasi {2}", Acc.Money(a.OriginalCost), Acc.Money(a.CapexTotal), Acc.Money(a.RevaluationNet)]</div>
+            }
+        </div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Akumulasi penyusutan (GL)"]</div>
+            <div class="fs-5 fw-semibold text-white">@Acc.Money(a.GlAccumulated)</div>
+            @if (a.ImpairmentNet != 0)
+            {
+                <div class="small text-white-50">@T["termasuk impairment {0}", Acc.Money(a.ImpairmentNet)]</div>
+            }
+        </div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Nilai buku"]</div>
+            <div class="fs-5 fw-semibold text-info">@Acc.Money(a.BookValue)</div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Penyusutan terposting / rencana"]</div>
+            <div class="fs-6 fw-semibold text-white">@Acc.Money(a.PostedTotal + a.OpeningAccumulated) / @Acc.Money(a.PlannedTotal + a.OpeningAccumulated)</div>
+        </div></div></div>
+    </div>
+
+    @if (a.MissingUsagePeriod != null)
+    {
+        <div class="alert alert-warning small py-2">
+            <i class="bi bi-speedometer2 me-1"></i>@T["Unit produksi bulan {0} belum dicatat — penyusutan bulan itu dan sesudahnya menunggu.", AssetLabels.Period(a.MissingUsagePeriod)]
+        </div>
+    }
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-data" type="button" id="btn-tab-data">@T["Data"]</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-schedule" type="button" id="btn-tab-schedule">@T["Jadwal Penyusutan"] (@a.Schedule.Count)</button></li>
+        @if (a.IsUnits)
+        {
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-usage" type="button" id="btn-tab-usage">@T["Unit Produksi"] (@a.UsageRecords.Count)</button></li>
+        }
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-adjustments" type="button" id="btn-tab-adjustments">@T["Revaluasi & Impairment"] (@a.Adjustments.Count)</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-assignments" type="button" id="btn-tab-assignments">@T["Serah Terima"] (@a.Assignments.Count)</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-maintenance" type="button" id="btn-tab-maintenance">@T["Maintenance"] (@a.Maintenances.Count)</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-journals" type="button" id="btn-tab-journals">@T["Jurnal"] (@a.Journals.Count)</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="tab-data">
+            <div class="card custom-card">
+                <div class="card-body px-4 py-3">
+                    <div class="row g-3 text-white small">
+                        <div class="col-md-3"><div class="text-white-50">@T["Kategori"]</div>@(a.CategoryName ?? "-")</div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Sumber perolehan"]</div>@T[AssetLabels.Source(a.AcquisitionSource)]</div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Tanggal perolehan"]</div>@Acc.Date(a.AcquisitionDate)</div>
+                        <div class="col-md-3">
+                            <div class="text-white-50">@T["Jurnal perolehan"]</div>
+                            @if (a.AcquisitionJournalUid != null)
+                            {
+                                <a asp-controller="Journals" asp-action="Details" asp-route-uid="@a.AcquisitionJournalUid" class="text-info">@a.AcquisitionJournalNo</a>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </div>
+                        @if (a.AcquisitionSource == "cash")
+                        {
+                            <div class="col-md-3"><div class="text-white-50">@T["Dibayar dari rekening"]</div>@(a.CashAccountName ?? "-")</div>
+                        }
+                        @if (a.AcquisitionSource == "stock")
+                        {
+                            <div class="col-md-3"><div class="text-white-50">@T["Produk"]</div>@(a.ProductName ?? "-")</div>
+                            <div class="col-md-3"><div class="text-white-50">@T["Gudang asal"]</div>@(a.WarehouseName ?? "-")</div>
+                        }
+                        @if (a.AcquisitionSource == "opening")
+                        {
+                            <div class="col-md-3"><div class="text-white-50">@T["Tanggal mulai pencatatan"]</div>@Acc.Date(a.OpeningDate)</div>
+                            <div class="col-md-3"><div class="text-white-50">@T["Akumulasi saldo awal"]</div>@Acc.Money(a.OpeningAccumulated)</div>
+                            <div class="col-md-3"><div class="text-white-50">@T["Akun lawan"]</div>@(a.CounterAccountLabel ?? "-")</div>
+                        }
+                        <div class="col-md-3"><div class="text-white-50">@T["Nomor serial"]</div>@(a.SerialNo ?? "-")</div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Supplier"]</div>@(a.SupplierName ?? "-")</div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Garansi s/d"]</div>@Acc.Date(a.WarrantyUntil)</div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Pemegang"]</div>@(a.HolderName ?? "-") @(a.HolderDepartment != null ? $"({a.HolderDepartment})" : "")</div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Lokasi"]</div>@(a.Location ?? "-")</div>
+                        <div class="col-md-3">
+                            <div class="text-white-50">@T["Metode"]</div>
+                            @T[AssetLabels.Method(a.DepreciationMethod)]
+                            @if (a.DepreciationMethod == "declining_balance")
+                            {
+                                <span>× @a.DecliningFactor?.ToString("0.##", inv)</span>
+                            }
+                            @if (a.IsUnits)
+                            {
+                                <div class="text-white-50">@T["estimasi {0} unit · terpakai {1}", a.TotalEstimatedUnits?.ToString("N0", idc) ?? "-", a.UnitsUsed.ToString("N0", idc)]</div>
+                            }
+                        </div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Umur manfaat"]</div>@T["{0} bulan", a.UsefulLifeMonths]@(a.IsUnits ? $" ({T["estimasi"]})" : "")</div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Nilai residu"]</div>@Acc.Money(a.SalvageValue)</div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Mulai penyusutan"]</div>@(a.DepreciationStart?.ToString("MM/yyyy") ?? "-")</div>
+                        <div class="col-md-4"><div class="text-white-50">@T["Akun aset"]</div>@(a.AssetAccountLabel ?? "-")</div>
+                        <div class="col-md-4"><div class="text-white-50">@T["Akun akumulasi"]</div>@(a.AccumAccountLabel ?? "-")</div>
+                        <div class="col-md-4"><div class="text-white-50">@T["Akun beban penyusutan"]</div>@(a.ExpenseAccountLabel ?? "-")</div>
+                        @if (a.DisposalType != null)
+                        {
+                            <div class="col-md-3"><div class="text-white-50">@T["Pelepasan"]</div>@T[AssetLabels.Disposal(a.DisposalType)] · @Acc.Date(a.DisposalDate)</div>
+                            <div class="col-md-3"><div class="text-white-50">@T["Hasil pelepasan"]</div>@Acc.Money(a.DisposalProceeds ?? 0) @(a.DisposalCashAccountName != null ? $"({a.DisposalCashAccountName})" : "")</div>
+                            <div class="col-md-3">
+                                <div class="text-white-50">@T["Jurnal pelepasan"]</div>
+                                @if (a.DisposalJournalUid != null)
+                                {
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@a.DisposalJournalUid" class="text-info">@a.DisposalJournalNo</a>
+                                }
+                            </div>
+                            <div class="col-md-3"><div class="text-white-50">@T["Catatan pelepasan"]</div>@(a.DisposalNote ?? "-")</div>
+                        }
+                        @if (a.VoidReason != null)
+                        {
+                            <div class="col-md-6"><div class="text-white-50">@T["Alasan pembatalan"]</div>@a.VoidReason</div>
+                        }
+                        <div class="col-md-6"><div class="text-white-50">@T["Catatan"]</div>@(a.Note ?? "-")</div>
+                        <div class="col-md-3"><div class="text-white-50">@T["Dibuat"]</div>@(a.CreatedByName ?? "-") · @a.CreatedAt?.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-schedule">
+            <div class="card custom-card">
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="fw-bold">@T["PERIODE"]</th>
+                                @if (declining)
+                                {
+                                    <th class="fw-bold text-end">@T["KANDIDAT SALDO MENURUN"]</th>
+                                    <th class="fw-bold text-end">@T["KANDIDAT GARIS LURUS"]</th>
+                                }
+                                @if (a.IsUnits)
+                                {
+                                    <th class="fw-bold text-end">@T["UNIT"]</th>
+                                }
+                                <th class="fw-bold text-end">@(declining ? T["ANGKA TERPAKAI"] : T["PENYUSUTAN"])</th>
+                                <th class="fw-bold text-end">@T["AKUMULASI"]</th>
+                                <th class="fw-bold text-end">@T["NILAI BUKU"]</th>
+                                <th class="fw-bold">@T["STATUS"]</th>
+                                <th class="fw-bold">@T["JURNAL"]</th>
+                                <th class="fw-bold">@T["CATATAN"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (a.Schedule.Count == 0)
+                            {
+                                <tr><td colspan="@scheduleCols" class="text-center text-white-50 py-4">@(a.Status == "draft" ? T["Jadwal dibuat saat aset diaktifkan."] : a.IsUnits ? T["Units of production: baris dibuat saat unit produksi bulan itu dicatat."] : T["Tidak ada jadwal penyusutan."])</td></tr>
+                            }
+                            @foreach (var s in a.Schedule)
+                            {
+                                var straightWins = declining && s.StraightLineCandidate > s.DecliningCandidate;
+                                var changeover = straightWins && s == a.Schedule.First(x => x.StraightLineCandidate > x.DecliningCandidate);
+                                <tr class="@(changeover ? "table-success-soft" : "")">
+                                    <td class="text-white">
+                                        @AssetLabels.Period(s.Period)
+                                        @if (changeover)
+                                        {
+                                            <span class="badge bg-success ms-1" title="@T["Mulai bulan ini kandidat garis lurus lebih besar"]">@T["changeover"]</span>
+                                        }
+                                    </td>
+                                    @if (declining)
+                                    {
+                                        <td class="text-end @(straightWins ? "text-white-50" : "text-white")">@(s.DecliningCandidate is { } dc ? Acc.Money(dc) : "-")</td>
+                                        <td class="text-end @(straightWins ? "text-white" : "text-white-50")">@(s.StraightLineCandidate is { } sc ? Acc.Money(sc) : "-")</td>
+                                    }
+                                    @if (a.IsUnits)
+                                    {
+                                        <td class="text-end text-white">@(s.Units?.ToString("N2", idc) ?? "-")</td>
+                                    }
+                                    <td class="text-end text-white @(declining ? "fw-semibold" : "")">@Acc.Money(s.Amount)</td>
+                                    <td class="text-end text-white">@Acc.Money(s.AccumulatedAfter)</td>
+                                    <td class="text-end text-white">@Acc.Money(s.BookValueAfter)</td>
+                                    <td><span class="badge @(s.Posted ? "bg-success" : "bg-secondary")">@(s.Posted ? T["Terposting"] : T["Rencana"])</span></td>
+                                    <td class="small">
+                                        @if (s.JournalUid != null)
+                                        {
+                                            <a asp-controller="Journals" asp-action="Details" asp-route-uid="@s.JournalUid" class="text-info">@s.JournalNo</a>
+                                            <span class="text-white-50">@s.RunNo</span>
+                                        }
+                                    </td>
+                                    <td class="text-white-50 small">@s.RebaseNote</td>
+                                </tr>
+                            }
+                        </tbody>
+                        @if (a.Schedule.Count > 0)
+                        {
+                            <tfoot>
+                                <tr class="fw-bold">
+                                    <td class="text-white" colspan="@(1 + (declining ? 2 : 0) + (a.IsUnits ? 1 : 0))">@T["TOTAL"]</td>
+                                    <td class="text-end text-white">@Acc.Money(a.PlannedTotal)</td>
+                                    <td colspan="5" class="text-white-50 small">@T["Terposting {0}", Acc.Money(a.PostedTotal)]</td>
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @if (a.IsUnits)
+        {
+            <div class="tab-pane fade" id="tab-usage">
+                <div class="card custom-card">
+                    @if (a.CanAdjust)
+                    {
+                        <div class="card-body px-4 py-3 border-bottom border-secondary">
+                            <form method="post" asp-action="RecordUsage" asp-route-uid="@a.Uid" class="row g-2 align-items-end" data-perm="update">
+                                <div class="col-md-3">
+                                    <label class="form-label text-white small mb-1" for="usPeriod">@T["Bulan"]</label>
+                                    <input type="month" class="form-control form-control-sm" name="period" id="usPeriod" value="@(a.MissingUsagePeriod ?? currentPeriod)" max="@currentPeriod" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-white small mb-1" for="usUnits">@T["Unit diproduksi"]</label>
+                                    <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" name="units" id="usUnits" required />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-white small mb-1" for="usNote">@T["Catatan"]</label>
+                                    <input type="text" class="form-control form-control-sm" name="note" id="usNote" maxlength="255" />
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+                                </div>
+                                <div class="col-12 form-text text-white-50">
+                                    @T["Penyusutan = sisa dasar ÷ sisa unit × unit bulan itu (estimasi {0} unit). 0 unit = bulan dilewati tanpa jurnal. Bulan tanpa catatan membuat bulan-bulan sesudahnya menunggu. Bulan yang sudah diposting tidak bisa diubah.", a.TotalEstimatedUnits?.ToString("N0", idc) ?? "-"]
+                                </div>
+                            </form>
+                        </div>
+                    }
+                    <div class="table-responsive">
+                        <table class="table custom-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="fw-bold">@T["BULAN"]</th>
+                                    <th class="fw-bold text-end">@T["UNIT"]</th>
+                                    <th class="fw-bold text-end">@T["PENYUSUTAN"]</th>
+                                    <th class="fw-bold">@T["STATUS"]</th>
+                                    <th class="fw-bold">@T["CATATAN"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (a.UsageRecords.Count == 0)
+                                {
+                                    <tr><td colspan="5" class="text-center text-white-50 py-4">@T["Belum ada catatan unit produksi."]</td></tr>
+                                }
+                                @foreach (var u in a.UsageRecords)
+                                {
+                                    var (ul, uc) = u.Status switch
+                                    {
+                                        "posted" => ("Terposting", "bg-success"),
+                                        "planned" => ("Rencana", "bg-secondary"),
+                                        "zero" => ("0 unit — tanpa jurnal", "bg-dark"),
+                                        _ => ("Menunggu bulan sebelumnya", "bg-warning text-dark")
+                                    };
+                                    <tr>
+                                        <td class="text-white">@AssetLabels.Period(u.Period)</td>
+                                        <td class="text-end text-white">@u.Units.ToString("N2", idc)</td>
+                                        <td class="text-end text-white">@(u.Amount is { } am ? Acc.Money(am) : "-")</td>
+                                        <td><span class="badge @uc">@T[ul]</span></td>
+                                        <td class="text-white-50 small">@u.Note</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="tab-pane fade" id="tab-adjustments">
+            <div class="row g-3 mb-3">
+                <div class="col-lg-5">
+                    <div class="card custom-card h-100">
+                        <div class="card-body px-4 py-3 small">
+                            <div class="fw-semibold text-white mb-2">@T["Rincian harga perolehan"]</div>
+                            <div class="d-flex justify-content-between"><span class="text-white-50">@T["Harga perolehan awal"]</span><span class="text-white">@Acc.Money(a.OriginalCost)</span></div>
+                            <div class="d-flex justify-content-between"><span class="text-white-50">+ @T["Tambah biaya (capex)"]</span><span class="text-white">@Acc.Money(a.CapexTotal)</span></div>
+                            <div class="d-flex justify-content-between"><span class="text-white-50">± @T["Revaluasi bersih"]</span><span class="text-white">@Acc.Money(a.RevaluationNet)</span></div>
+                            <div class="d-flex justify-content-between border-top border-secondary mt-1 pt-1"><span class="text-white">@T["Harga perolehan terkini"]</span><span class="text-white fw-semibold">@Acc.Money(a.Status == "draft" ? a.AcquisitionCost : a.OriginalCost + a.CapexTotal + a.RevaluationNet)</span></div>
+                            <div class="d-flex justify-content-between mt-2"><span class="text-white-50">@T["Impairment bersih (di akumulasi)"]</span><span class="text-white">@Acc.Money(a.ImpairmentNet)</span></div>
+                            <div class="d-flex justify-content-between"><span class="text-white-50">@T["Saldo Surplus Revaluasi (3-4000) aset ini"]</span><span class="text-info fw-semibold">@Acc.Money(a.RevaluationSurplus)</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card custom-card h-100">
+                        <div class="card-body px-4 py-3 small text-white-50">
+                            <div>@T["Tambah biaya: D aset / K kas — harga perolehan naik. Revaluasi naik: D aset / K 3-4000; turun: D 3-4000 / K aset, maksimal saldo surplus aset ini (kelebihannya dicatat sebagai Impairment). Impairment: D 5-4200 / K akumulasi; pembalikan: D akumulasi / K 4-2500, sekali per impairment."]</div>
+                            <div class="mt-2">@T["Keempatnya me-rebase jadwal: baris terposting tetap, sisa nilai buku − residu dibagi ulang ke sisa umur (umur tidak diperpanjang) mulai bulan transaksi. Syarat: penyusutan bulan sebelumnya sudah diposting dan belum ada penyusutan terposting sesudah tanggal transaksi."]</div>
+                            <div class="mt-2">@T["Surplus revaluasi tidak dipindahkan ke Laba Ditahan (IAS 16.41), dan batas pembalikan impairment IAS 36 / larangan US GAAP tidak ditegakkan sistem — kebijakan akuntansi perusahaan."]</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card custom-card">
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="fw-bold">@T["NO."]</th>
+                                <th class="fw-bold">@T["TANGGAL"]</th>
+                                <th class="fw-bold">@T["JENIS"]</th>
+                                <th class="fw-bold text-end">@T["NOMINAL"]</th>
+                                <th class="fw-bold">@T["KETERANGAN"]</th>
+                                <th class="fw-bold">@T["JURNAL"]</th>
+                                <th class="fw-bold text-center">@T["AKSI"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (a.Adjustments.Count == 0)
+                            {
+                                <tr><td colspan="7" class="text-center text-white-50 py-4">@T["Belum ada penyesuaian nilai."]</td></tr>
+                            }
+                            @foreach (var x in a.Adjustments)
+                            {
+                                var voided = x.Status == "void";
+                                <tr>
+                                    <td class="text-white small text-nowrap">@x.AdjustmentNo</td>
+                                    <td class="text-white small">@Acc.Date(x.AdjustmentDate)</td>
+                                    <td>
+                                        <span class="badge @AssetLabels.AdjustmentCss(x.Kind)">@T[AssetLabels.Adjustment(x.Kind, x.Direction)]</span>
+                                        @if (voided)
+                                        {
+                                            <span class="badge bg-secondary" title="@x.VoidReason">@T["Dibatalkan"]</span>
+                                        }
+                                    </td>
+                                    <td class="text-end @(voided ? "text-white-50 text-decoration-line-through" : "text-white")">@Acc.Money(x.Amount)</td>
+                                    <td class="text-white small">
+                                        @x.Note
+                                        @if (x.CashAccountName != null)
+                                        {
+                                            <div class="text-white-50">@T["dibayar dari {0}", x.CashAccountName]</div>
+                                        }
+                                        @if (x.ReversesNo != null)
+                                        {
+                                            <div class="text-white-50">@T["membalik {0}", x.ReversesNo]</div>
+                                        }
+                                        @if (x.ReversedByNo != null)
+                                        {
+                                            <div class="text-white-50">@T["dibalik oleh {0}", x.ReversedByNo]</div>
+                                        }
+                                    </td>
+                                    <td class="small">
+                                        @if (x.JournalUid != null)
+                                        {
+                                            <a asp-controller="Journals" asp-action="Details" asp-route-uid="@x.JournalUid" class="text-info">@x.JournalNo</a>
+                                        }
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        @if (x.CanReverse)
+                                        {
+                                            <button type="button" class="btn btn-outline-success btn-sm btn-adjust" data-perm="update" data-kind="impairment-reversal"
+                                                    data-reverses="@x.Uid" data-max="@x.Amount.ToString(inv)" data-label="@x.AdjustmentNo">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i>@T["Balik"]
+                                            </button>
+                                        }
+                                        @if (x.CanVoid)
+                                        {
+                                            <form method="post" asp-action="VoidAdjustment" asp-route-uid="@a.Uid" class="d-inline" data-perm="update"
+                                                  onsubmit='const r = prompt(@Json.Serialize(T["Alasan pembatalan {0} (jurnal pembalik, jadwal dihitung ulang):", x.AdjustmentNo])); if (!r) return false; this.reason.value = r; return true;'>
+                                                <input type="hidden" name="adjustmentUid" value="@x.Uid" />
+                                                <input type="hidden" name="reason" />
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="@T["Batalkan (hanya penyesuaian terakhir)"]"><i class="bi bi-x-circle"></i></button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-assignments">
+            <div class="card custom-card">
+                <div class="card-header custom-card-header d-flex justify-content-between align-items-center py-3 px-4">
+                    <span class="fw-semibold text-white">@T["Riwayat Pemegang"]</span>
+                    @if (a.Status is "active" or "in_repair")
+                    {
+                        <a asp-controller="AssetAssignments" asp-action="Index" asp-route-assetUid="@a.Uid" class="btn btn-primary btn-sm"><i class="bi bi-person-plus me-1"></i>@T["Serah Terima Baru"]</a>
+                    }
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="fw-bold">@T["PEMEGANG"]</th>
+                                <th class="fw-bold">@T["LOKASI"]</th>
+                                <th class="fw-bold">@T["TANGGAL"]</th>
+                                <th class="fw-bold">@T["STATUS"]</th>
+                                <th class="fw-bold">@T["CATATAN"]</th>
+                                <th class="fw-bold text-center">@T["AKSI"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (a.Assignments.Count == 0)
+                            {
+                                <tr><td colspan="6" class="text-center text-white-50 py-4">@T["Belum ada serah terima."]</td></tr>
+                            }
+                            @foreach (var x in a.Assignments)
+                            {
+                                <tr>
+                                    <td class="text-white">@x.HolderName<div class="text-white-50 small">@x.HolderDepartment</div></td>
+                                    <td class="text-white small">@(x.Location ?? "-")</td>
+                                    <td class="text-white small">@Acc.Date(x.AssignedDate) – @(x.ReturnedDate == null ? "" : Acc.Date(x.ReturnedDate))</td>
+                                    <td><span class="badge @(x.Status == "active" ? "bg-success" : "bg-secondary")">@(x.Status == "active" ? T["Aktif"] : T["Kembali"])</span></td>
+                                    <td class="text-white-50 small">@x.Note @x.ReturnNote</td>
+                                    <td class="text-center">
+                                        @if (x == activeAssignment)
+                                        {
+                                            <div class="row-actions">
+                                            <form method="post" asp-controller="AssetAssignments" asp-action="ReturnAsset" asp-route-uid="@x.Uid"
+                                                  onsubmit='return confirm(@Json.Serialize(T["Tandai aset dikembalikan dari {0}?", x.HolderName]));'>
+                                                <input type="hidden" name="returnTo" value="asset" />
+                                                <input type="hidden" name="assetUid" value="@a.Uid" />
+                                                <input type="hidden" name="returnedDate" value="@today" />
+                                                <button type="submit" class="act-btn act-other" title="@T["Kembalikan"]"><i class="bi bi-arrow-return-left"></i></button>
+                                            </form>
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-maintenance">
+            <div class="card custom-card">
+                <div class="card-header custom-card-header d-flex justify-content-between align-items-center py-3 px-4">
+                    <span class="fw-semibold text-white">@T["Riwayat Maintenance"]</span>
+                    @if (a.Status is "active" or "in_repair")
+                    {
+                        <a asp-controller="AssetMaintenance" asp-action="Index" asp-route-assetUid="@a.Uid" class="btn btn-primary btn-sm"><i class="bi bi-tools me-1"></i>@T["Catat Maintenance"]</a>
+                    }
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="fw-bold">@T["TANGGAL"]</th>
+                                <th class="fw-bold">@T["JENIS"]</th>
+                                <th class="fw-bold">@T["KETERANGAN"]</th>
+                                <th class="fw-bold">@T["VENDOR"]</th>
+                                <th class="fw-bold text-end">@T["BIAYA"]</th>
+                                <th class="fw-bold">@T["JURNAL"]</th>
+                                <th class="fw-bold">@T["JADWAL BERIKUT"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (a.Maintenances.Count == 0)
+                            {
+                                <tr><td colspan="7" class="text-center text-white-50 py-4">@T["Belum ada catatan maintenance."]</td></tr>
+                            }
+                            @foreach (var m in a.Maintenances)
+                            {
+                                <tr>
+                                    <td class="text-white small">@Acc.Date(m.MaintenanceDate)</td>
+                                    <td class="text-white small">@T[AssetLabels.MaintenanceType(m.Type)]</td>
+                                    <td class="text-white">@(m.Description ?? "-")</td>
+                                    <td class="text-white small">@(m.Vendor ?? "-")</td>
+                                    <td class="text-end text-white">@Acc.Money(m.Cost)</td>
+                                    <td class="small">
+                                        @if (m.JournalUid != null)
+                                        {
+                                            <a asp-controller="Journals" asp-action="Details" asp-route-uid="@m.JournalUid" class="text-info">@m.JournalNo</a>
+                                            <div class="text-white-50">@m.CashAccountName</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-white-50">@T["Hanya catatan"]</span>
+                                        }
+                                    </td>
+                                    <td class="text-white small">@Acc.Date(m.NextDueDate)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-journals">
+            <div class="card custom-card">
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="fw-bold">@T["NO. JURNAL"]</th>
+                                <th class="fw-bold">@T["TANGGAL"]</th>
+                                <th class="fw-bold">@T["JENIS"]</th>
+                                <th class="fw-bold">@T["KETERANGAN"]</th>
+                                <th class="fw-bold text-end">@T["DEBIT"]</th>
+                                <th class="fw-bold text-end">@T["KREDIT"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (a.Journals.Count == 0)
+                            {
+                                <tr><td colspan="6" class="text-center text-white-50 py-4">@T["Belum ada jurnal."]</td></tr>
+                            }
+                            @foreach (var j in a.Journals)
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-controller="Journals" asp-action="Details" asp-route-uid="@j.Uid" class="text-info text-decoration-none">@j.JournalNo</a>
+                                        @if (j.IsReversal)
+                                        {
+                                            <span class="badge bg-warning text-dark ms-1">@T["Pembalik"]</span>
+                                        }
+                                        else if (j.IsReversed)
+                                        {
+                                            <span class="badge bg-secondary ms-1">@T["Dibalik"]</span>
+                                        }
+                                    </td>
+                                    <td class="text-white small">@Acc.Date(j.JournalDate)</td>
+                                    <td class="text-white small">@T[AssetLabels.RefType(j.RefType)]</td>
+                                    <td class="text-white small">@j.Description</td>
+                                    <td class="text-end text-white">@Acc.MoneyOrBlank(j.Debit)</td>
+                                    <td class="text-end text-white">@Acc.MoneyOrBlank(j.Credit)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer text-white-50 small px-4 py-2">@T["Baris jurnal yang menyentuh aset ini (akun aset, akumulasi, beban)."]</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (a.CanChangeSchedule)
+{
+    <div class="modal fade" id="scheduleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="ChangeSchedule" asp-route-uid="@a.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Ubah Jadwal Penyusutan"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Prospektif: baris yang sudah diposting tetap; sisa nilai buku dikurangi residu baru dibagi ulang ke sisa umur mulai bulan setelah penyusutan terakhir."]</p>
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label" for="chMethod">@T["Metode"]</label>
+                            <select class="form-select" name="depreciationMethod" id="chMethod">
+                                @foreach (var (value, label) in AssetLabels.Methods)
+                                {
+                                    <option value="@value" selected="@(value == a.DepreciationMethod)">@T[label]</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label" for="chFactor">@T["Faktor"]</label>
+                            <input type="number" step="0.01" min="0.01" max="10" class="form-control" name="decliningFactor" id="chFactor" value="@((a.DecliningFactor ?? 2m).ToString(inv))" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="chLife">@T["Umur manfaat total (bulan)"]</label>
+                            <input type="number" min="0" max="1200" class="form-control" name="usefulLifeMonths" id="chLife" value="@a.UsefulLifeMonths" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="chSalvage">@T["Nilai residu"]</label>
+                            <input type="number" step="0.01" min="0" class="form-control" name="salvageValue" id="chSalvage" value="@a.SalvageValue.ToString(inv)" required />
+                        </div>
+                        <div class="col-md-6" id="chUnitsBox">
+                            <label class="form-label" for="chUnits">@T["Estimasi total unit"]</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control" name="totalEstimatedUnits" id="chUnits" value="@a.TotalEstimatedUnits?.ToString(inv)" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="chReason">@T["Alasan (wajib)"]</label>
+                            <textarea class="form-control" name="reason" id="chReason" rows="2" maxlength="200" required></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                    <button type="submit" class="btn btn-primary">@T["Hitung Ulang Jadwal"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (a.CanAdjust)
+{
+    <div class="modal fade" id="adjustModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="AdjustValue" asp-route-uid="@a.Uid" class="modal-content">
+                <input type="hidden" name="kind" id="adKind" />
+                <input type="hidden" name="reversesUid" id="adReverses" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="adTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small" id="adHelp"></p>
+                    <div class="row g-3">
+                        <div class="col-md-6 ad-revaluation">
+                            <label class="form-label" for="adDirection">@T["Arah"]</label>
+                            <select class="form-select" name="direction" id="adDirection">
+                                <option value="up">@T["Naik (D aset / K 3-4000)"]</option>
+                                <option value="down">@T["Turun (D 3-4000 / K aset)"]</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="adDate">@T["Tanggal"]</label>
+                            <input type="date" class="form-control" name="date" id="adDate" value="@today" max="@today" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="adAmount">@T["Nominal"]</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control text-end" name="amount" id="adAmount" required />
+                        </div>
+                        <div class="col-md-6 ad-capex">
+                            <label class="form-label" for="adCash">@T["Dibayar dari rekening"]</label>
+                            <select class="form-select" name="cashAccountId" id="adCash">
+                                <option value="">@T["— Pilih —"]</option>
+                                @foreach (var c in Model.CashAccounts)
+                                {
+                                    <option value="@c.Id">@c.Name (@Acc.Money(c.Balance))</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="adNote">@T["Keterangan"]</label>
+                            <input type="text" class="form-control" name="note" id="adNote" maxlength="255" />
+                        </div>
+                        <div class="col-12 small text-white-50" id="adInfo"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                    <button type="submit" class="btn btn-primary">@T["Simpan & Rebase Jadwal"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (a.CanDispose)
+{
+    <div class="modal fade" id="disposeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="DisposeAsset" asp-route-uid="@a.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Lepas Aset"] @a.AssetNo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Penyusutan dikejar s/d bulan sebelum tanggal pelepasan (bulan pelepasan ikut bila tanggal = akhir bulan), lalu jurnal pelepasan dengan laba/rugi terhadap nilai buku."]</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="dpType">@T["Jenis"]</label>
+                            <select class="form-select" name="type" id="dpType">
+                                @foreach (var (value, label) in AssetLabels.DisposalTypes)
+                                {
+                                    <option value="@value">@T[label]</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="dpDate">@T["Tanggal"]</label>
+                            <input type="date" class="form-control" name="date" id="dpDate" value="@today" max="@today" required />
+                        </div>
+                        <div class="col-md-6 dp-proceeds">
+                            <label class="form-label" for="dpProceeds">@T["Hasil pelepasan"]</label>
+                            <input type="number" step="0.01" min="0" class="form-control text-end" name="proceeds" id="dpProceeds" value="0" />
+                        </div>
+                        <div class="col-md-6 dp-proceeds">
+                            <label class="form-label" for="dpCash">@T["Diterima di rekening"]</label>
+                            <select class="form-select" name="cashAccountId" id="dpCash">
+                                <option value="">@T["— Pilih —"]</option>
+                                @foreach (var c in Model.CashAccounts)
+                                {
+                                    <option value="@c.Id">@c.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="dpNote">@T["Catatan"]</label>
+                            <input type="text" class="form-control" name="note" id="dpNote" maxlength="255" />
+                        </div>
+                        <div class="col-12 small text-muted">@T["Nilai buku saat ini: {0}", Acc.Money(a.BookValue)]</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Lepas Aset"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (a.CanCancelDisposal)
+{
+    <div class="modal fade" id="cancelDisposalModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="CancelDisposal" asp-route-uid="@a.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batal Pelepasan"] @a.AssetNo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Jurnal pelepasan dibalik, aset kembali aktif dan jadwal penyusutan dibuat ulang."]</p>
+                    <div class="mb-3">
+                        <label class="form-label" for="cdDate">@T["Tanggal jurnal pembalik"]</label>
+                        <input type="date" class="form-control" name="date" id="cdDate" value="@a.DisposalDate?.ToString("yyyy-MM-dd")" min="@a.DisposalDate?.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <label class="form-label" for="cdReason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="cdReason" rows="2" maxlength="200" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-warning">@T["Batal Pelepasan"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (a.CanVoid)
+{
+    <div class="modal fade" id="voidModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="Delete" asp-route-uid="@a.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batalkan Perolehan"] @a.AssetNo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Jurnal perolehan dibalik (aset dari stok kembali ke gudang); aset berstatus Dibatalkan dan tetap tercatat. Hanya bila belum ada penyusutan terposting."]</p>
+                    <div class="mb-3">
+                        <label class="form-label" for="vdDate">@T["Tanggal pembatalan"]</label>
+                        <input type="date" class="form-control" name="date" id="vdDate" value="@today" required />
+                    </div>
+                    <label class="form-label" for="vdReason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="vdReason" rows="2" maxlength="200" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Batalkan Perolehan"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            // Buka tab dari hash (#schedule, #usage, #adjustments, #assignments, #maintenance, #journals).
+            const hash = location.hash.replace('#', '');
+            const btn = hash && document.getElementById('btn-tab-' + hash);
+            if (btn) new bootstrap.Tab(btn).show();
+
+            const type = document.getElementById('dpType');
+            if (type) {
+                const sync = () => document.querySelectorAll('.dp-proceeds').forEach(el => el.classList.toggle('d-none', type.value === 'lost'));
+                type.addEventListener('change', sync);
+                sync();
+            }
+
+            const method = document.getElementById('chMethod');
+            if (method) {
+                const syncF = () => {
+                    document.getElementById('chFactor').disabled = method.value !== 'declining_balance';
+                    document.getElementById('chUnitsBox').classList.toggle('d-none', method.value !== 'units_of_production');
+                };
+                method.addEventListener('change', syncF);
+                syncF();
+            }
+
+            // Penyesuaian nilai: satu modal untuk tambah biaya / revaluasi / impairment / pembalikan impairment.
+            const modal = document.getElementById('adjustModal');
+            if (modal) {
+                const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const info = {
+                    book: @Json.Serialize(a.BookValue), salvage: @Json.Serialize(a.SalvageValue), surplus: @Json.Serialize(a.RevaluationSurplus)
+                };
+                const text = {
+                    capex: [@Json.Serialize(T["Tambah Biaya ke Aset"]), @Json.Serialize(T["Capital expenditure: D akun aset / K kas. Harga perolehan bertambah; sisa nilai buku − residu dibagi ulang ke sisa umur (umur tidak diperpanjang)."])],
+                    revaluation: [@Json.Serialize(T["Revaluasi Aset"]), @Json.Serialize(T["Revaluasi ke ekuitas (3-4000 Surplus Revaluasi). Turun dibatasi saldo surplus aset ini — kelebihannya catat sebagai Impairment terpisah."])],
+                    impairment: [@Json.Serialize(T["Impairment Aset"]), @Json.Serialize(T["Rugi penurunan nilai: D 5-4200 / K akumulasi penyusutan (harga perolehan tetap). Dibatasi nilai buku di atas residu."])],
+                    'impairment-reversal': [@Json.Serialize(T["Balik Impairment {0}"]), @Json.Serialize(T["Pemulihan: D akumulasi / K 4-2500 (pos pemulihan sendiri). Sekali per impairment, maksimal nilai impairment aslinya."])]
+                };
+                const t = {
+                    book: @Json.Serialize(T["Nilai buku {0} · residu {1}"]), surplus: @Json.Serialize(T["Saldo surplus revaluasi aset ini: {0}"]),
+                    max: @Json.Serialize(T["Maksimal {0}"])
+                };
+                const $ = (id) => document.getElementById(id);
+
+                function open(kind, btn) {
+                    $('adKind').value = kind;
+                    $('adReverses').value = btn.dataset.reverses ?? '';
+                    $('adTitle').textContent = text[kind][0].replace('{0}', btn.dataset.label ?? '');
+                    $('adHelp').textContent = text[kind][1];
+                    modal.querySelectorAll('.ad-capex').forEach(el => el.classList.toggle('d-none', kind !== 'capex'));
+                    modal.querySelectorAll('.ad-revaluation').forEach(el => el.classList.toggle('d-none', kind !== 'revaluation'));
+                    $('adCash').required = kind === 'capex';
+                    $('adAmount').value = kind === 'impairment-reversal' ? btn.dataset.max : '';
+                    $('adAmount').max = kind === 'impairment-reversal' ? btn.dataset.max : '';
+                    const lines = [t.book.replace('{0}', fmt.format(info.book)).replace('{1}', fmt.format(info.salvage))];
+                    if (kind === 'revaluation') lines.push(t.surplus.replace('{0}', fmt.format(info.surplus)));
+                    if (kind === 'impairment-reversal') lines.push(t.max.replace('{0}', fmt.format(Number(btn.dataset.max))));
+                    $('adInfo').textContent = lines.join(' · ');
+                    bootstrap.Modal.getOrCreateInstance(modal).show();
+                }
+
+                document.querySelectorAll('.btn-adjust').forEach(b => b.addEventListener('click', () => open(b.dataset.kind, b)));
+            }
+        })();
+    </script>
+}

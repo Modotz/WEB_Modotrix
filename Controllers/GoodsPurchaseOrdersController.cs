@@ -12,10 +12,14 @@ namespace ERP.Web.Controllers;
 public class GoodsPurchaseOrdersController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
+    private readonly AccountingApiClient _acc;
 
-    public GoodsPurchaseOrdersController(ApiClient api)
+    public GoodsPurchaseOrdersController(ApiClient api, Translator t, AccountingApiClient acc)
     {
         _api = api;
+        _t = t;
+        _acc = acc;
     }
 
     [HttpGet]
@@ -110,7 +114,7 @@ public class GoodsPurchaseOrdersController : Controller
         {
             return StatusCode(500, new
             {
-                message = "Nomor PO gagal dibuat."
+                message = _t["Nomor PO gagal dibuat."]
             });
         }
 
@@ -151,7 +155,7 @@ public class GoodsPurchaseOrdersController : Controller
         model.Status = "draft"; 
         var result = await _api.CreateGoodsPurchaseOrderAsync(model);
 
-        if (!result.Success || !result.Id.HasValue)
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Uid))
         {
             TempData["Error"] = result.Error ?? "Purchase Order gagal disimpan."; 
             await LoadCreateDropdowns(); 
@@ -161,34 +165,38 @@ public class GoodsPurchaseOrdersController : Controller
         // Berhasil disimpan: langsung buka halaman Detail PO.
         return RedirectToAction(
             "Details",
-            new { id = result.Id.Value });
+            new { uid = result.Uid });
     }
 
     //detail purchase order
     [HttpGet]
-    public async Task<IActionResult> Details(long id)
+    public async Task<IActionResult> Details(Guid uid)
     {
-        if (id <= 0)
-            return BadRequest("ID Purchase Order tidak valid.");
-
-        var model = await _api.GetGoodsPurchaseOrderAsync(id);
+        var model = uid == Guid.Empty
+            ? null
+            : await _api.GetGoodsPurchaseOrderAsync(uid);
 
         if (model == null)
-            return NotFound("Purchase Order tidak ditemukan.");
+        {
+            TempData["Error"] = "Purchase Order tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         // Pastikan collection tidak null ketika digunakan di View.
         model.Details ??= new List<GoodsPurchaseOrderItemViewModel>();
+
+        // Panel persetujuan (mesin approval): progres, riwayat, tombol aksi.
+        ViewData["Approval"] = await _acc.GetApprovalDocumentAsync("goods_purchase_orders", uid);
 
         return View(model);
     }
 
     [HttpGet]
-    public async Task<IActionResult> Edit(long id)
+    public async Task<IActionResult> Edit(Guid uid)
     {
-        if (id <= 0)
-            return BadRequest("ID Purchase Order tidak valid.");
-
-        var model = await _api.GetGoodsPurchaseOrderAsync(id);
+        var model = uid == Guid.Empty
+            ? null
+            : await _api.GetGoodsPurchaseOrderAsync(uid);
 
         if (model == null)
         {
@@ -208,8 +216,12 @@ public class GoodsPurchaseOrdersController : Controller
     public async Task<IActionResult> Update(
         GoodsPurchaseOrderViewModel model)
     {
-        if (model.Id <= 0)
-            return BadRequest("ID Purchase Order tidak valid.");
+        // UID wajib untuk update (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
+        {
+            TempData["Error"] = "Purchase Order tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         if (!ModelState.IsValid)
         {
@@ -235,19 +247,22 @@ public class GoodsPurchaseOrdersController : Controller
 
         TempData["Success"] = "Purchase Order berhasil diubah.";
 
-        return RedirectToAction(nameof(Details), new { id = model.Id });
+        return RedirectToAction(nameof(Details), new { uid = model.Uid });
     }
 
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
-        if (id <= 0)
-            return BadRequest("ID Purchase Order tidak valid.");
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] = "Purchase Order tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
 
         var result =
-            await _api.DeleteGoodsPurchaseOrderAsync(id);
+            await _api.DeleteGoodsPurchaseOrderAsync(uid);
 
         TempData[result.Success ? "Success" : "Error"] =
             result.Success
@@ -259,34 +274,32 @@ public class GoodsPurchaseOrdersController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Approve(long id)
+    public async Task<IActionResult> Approve(Guid uid)
     {
-        if (id <= 0)
-            return BadRequest("ID PO Barang tidak valid.");
-
-        // Panggil API untuk mengubah status PO menjadi ordered.
-        var success = await _api.ApproveGoodsPurchaseOrderAsync(id);
-
-        if (!success)
+        if (uid == Guid.Empty)
         {
-            TempData["Error"] = "PO Barang gagal disetujui.";
-            return RedirectToAction("Details", new { id });
+            TempData["Error"] = "PO Barang tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
         }
 
-        TempData["Success"] = "PO Barang berhasil disetujui dan berstatus ORDERED.";
+        // Ada alur persetujuan yang cocok → API mengajukan PO (pending_approval); tanpa alur → langsung ordered.
+        var result = await _acc.ApproveGoodsPurchaseOrderAsync(uid);
 
-        return RedirectToAction("Details", new { id });
+        TempData[result.Success ? "Success" : "Error"] = result.Success && result.Message == "Purchase Order berhasil disetujui."
+            ? "PO Barang berhasil disetujui dan berstatus ORDERED."
+            : result.Message;
+
+        return RedirectToAction("Details", new { uid });
     }
 
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Cancel(long id)
+    public async Task<IActionResult> Cancel(Guid uid)
     {
-        if (id <= 0)
-            return BadRequest("ID Purchase Order tidak valid.");
-
-        var model = await _api.GetGoodsPurchaseOrderAsync(id);
+        var model = uid == Guid.Empty
+            ? null
+            : await _api.GetGoodsPurchaseOrderAsync(uid);
 
         if (model == null)
         {
@@ -302,7 +315,7 @@ public class GoodsPurchaseOrdersController : Controller
             TempData["Error"] =
                 "Hanya Purchase Order berstatus draft yang dapat dibatalkan.";
 
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToAction(nameof(Details), new { uid });
         }
 
         model.Status = "cancelled";
@@ -313,22 +326,22 @@ public class GoodsPurchaseOrdersController : Controller
         {
             TempData["Error"] = result.Error ?? "Purchase Order gagal dibatalkan.";
 
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToAction(nameof(Details), new { uid });
         }
 
         TempData["Success"] = "Purchase Order berhasil dibatalkan.";
 
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectToAction(nameof(Details), new { uid });
     }
 
     // Export PDF satu PO Barang
     [HttpGet]
-    public async Task<IActionResult> ExportPdf(long id)
+    public async Task<IActionResult> ExportPdf(Guid uid)
     {
-         if (id <= 0)  return BadRequest("ID PO Barang tidak valid.");
+         if (uid == Guid.Empty)  return NotFound("PO Barang tidak ditemukan.");
 
 
-        var po = await _api.GetGoodsPurchaseOrderAsync(id);
+        var po = await _api.GetGoodsPurchaseOrderAsync(uid);
 
         if (po == null) return NotFound("PO Barang tidak ditemukan.");
 
@@ -377,7 +390,7 @@ public class GoodsPurchaseOrdersController : Controller
                         {
                             right.Item()
                                 .AlignRight()
-                                .Text("PURCHASE ORDER BARANG")
+                                .Text(_t["PURCHASE ORDER BARANG"])
                                 .Bold()
                                 .FontSize(17)
                                 .FontColor("#2864FF");
@@ -399,13 +412,13 @@ public class GoodsPurchaseOrdersController : Controller
                                     });
                             }
 
-                            Info("Nomor", po.PONo ?? "-");
-                            Info("Tanggal", Tanggal(po.PODate));
-                            Info("Perkiraan", Tanggal(po.ExpectedDate));
-                            Info("Supplier", po.SupplierName ?? "-");
-                            Info("Gudang", po.WarehouseName ?? "-");
+                            Info(_t["Nomor"], po.PONo ?? "-");
+                            Info(_t["Tanggal"], Tanggal(po.PODate));
+                            Info(_t["Perkiraan"], Tanggal(po.ExpectedDate));
+                            Info(_t["Supplier"], po.SupplierName ?? "-");
+                            Info(_t["Gudang"], po.WarehouseName ?? "-");
                             Info(
-                                "Status",
+                                _t["Status"],
                                 (po.Status ?? "-")
                                     .Replace("_", " ")
                                     .ToUpperInvariant()
@@ -452,7 +465,7 @@ public class GoodsPurchaseOrdersController : Controller
                                         .Border(1)
                                         .BorderColor("#203D63")
                                         .Padding(7)
-                                        .Text(title)
+                                        .Text(_t[title])
                                         .Bold()
                                         .FontSize(8)
                                         .FontColor("#FFFFFF");
@@ -530,7 +543,7 @@ public class GoodsPurchaseOrdersController : Controller
                                     .BorderColor("#D8E1ED")
                                     .Padding(15)
                                     .AlignCenter()
-                                    .Text("Detail barang tidak tersedia untuk PO ini.");
+                                    .Text(_t["Detail barang tidak tersedia untuk PO ini."]);
                             }
                         });
 
@@ -543,7 +556,7 @@ public class GoodsPurchaseOrdersController : Controller
                                     .Column(note =>
                                     {
                                         note.Item()
-                                            .Text("CATATAN")
+                                            .Text(_t["CATATAN"])
                                             .Bold()
                                             .FontSize(9)
                                             .FontColor("#64748B");
@@ -585,10 +598,10 @@ public class GoodsPurchaseOrdersController : Controller
                                             .Text(value);
                                     }
 
-                                    TotalRow("Subtotal", $"Rp {Rupiah(po.SubtotalAmount)}");
-                                    TotalRow("Diskon", $"- Rp {Rupiah(po.DiscountAmount)}");
+                                    TotalRow(_t["Subtotal"], $"Rp {Rupiah(po.SubtotalAmount)}");
+                                    TotalRow(_t["Diskon"], $"- Rp {Rupiah(po.DiscountAmount)}");
                                     TotalRow(
-                                        $"Pajak ({po.TaxPercent.ToString("N0", culture)}%)",
+                                        $"{_t["Pajak"]} ({po.TaxPercent.ToString("N0", culture)}%)",
                                         $"Rp {Rupiah(po.TaxAmount)}"
                                     );
 
@@ -631,7 +644,7 @@ public class GoodsPurchaseOrdersController : Controller
                                         {
                                             signature.Item()
                                                 .AlignCenter()
-                                                .Text(title)
+                                                .Text(_t[title])
                                                 .Bold();
 
                                             signature.Item()
@@ -645,7 +658,7 @@ public class GoodsPurchaseOrdersController : Controller
                                                 .Text(
                                                     title == "Dibuat oleh"
                                                         ? "Administrator"
-                                                        : "(Nama & Tanda Tangan)"
+                                                        : _t["(Nama & Tanda Tangan)"]
                                                 )
                                                 .FontSize(8)
                                                 .FontColor("#64748B");
@@ -661,7 +674,7 @@ public class GoodsPurchaseOrdersController : Controller
                     .AlignCenter()
                     .Text(
                         $"© {DateTime.Now.Year} Modotz App | " +
-                        $"Dicetak {DateTime.Now:dd/MM/yyyy HH:mm}"
+                        $"{_t["Dicetak"]} {DateTime.Now:dd/MM/yyyy HH:mm}"
                     )
                     .FontSize(8)
                     .FontColor("#94A3B8");
@@ -680,9 +693,11 @@ public class GoodsPurchaseOrdersController : Controller
 
     //print
     [HttpGet]
-    public async Task<IActionResult> Print(long id)
+    public async Task<IActionResult> Print(Guid uid)
     {
-        var po = await _api.GetGoodsPurchaseOrderAsync(id);
+        var po = uid == Guid.Empty
+            ? null
+            : await _api.GetGoodsPurchaseOrderAsync(uid);
 
         if (po == null)
         {

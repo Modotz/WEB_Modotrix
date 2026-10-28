@@ -1,0 +1,135 @@
+@model ERP.Web.Models.VatRecapViewModel
+@{
+    ViewData["Title"] = T["Rekap PPN"];
+    var years = Enumerable.Range(DateTime.Today.Year - 3, 5).Append(Model.Year).Distinct().OrderBy(y => y).ToList();
+    var qs = "?year=" + Model.Year;
+    var header = new ListHeaderModel
+    {
+        Title = T["Rekap & Tutup PPN"],
+        Count = Model.Months.Count,
+        Description = T["Tahun"] + " " + Model.Year,
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Rekap PPN"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="year">@T["Tahun"]</label>
+                        <select class="form-select" id="year" name="year">
+                            @foreach (var y in years)
+                            {
+                                <option value="@y" selected="@(y == Model.Year)">@y</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Masa pajak = 1 bulan. Tutup PPN setiap bulan (termasuk bulan nihil) secara berurutan, setelah bulannya berakhir dan"]
+        <strong>@T["sebelum"]</strong> @T["periode akuntansinya ditutup. Jurnal netting: D {0} | K {1} + K {2} (kurang bayar).", Model.OutputAccount ?? T["PPN Keluaran"], Model.InputAccount ?? T["PPN Masukan"], Model.PayableAccount ?? T["Hutang Pajak"]]
+        @T["Lebih bayar dibawa ke masa berikutnya. Masa yang sudah ditutup tidak dapat ditutup ulang — koreksi dicatat di masa berikutnya."]
+        @T["Faktur dengan PPN Keluaran tidak bisa diposting/dibatalkan di masa yang sudah ditutup; PPN Masukan yang terlambat dikreditkan di masa terbuka berikutnya. Klik nama bulan untuk rincian faktur pajak."]
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4 text-start">@T["MASA"]</th>
+                        <th class="text-end">@T["PPN MASUKAN (BULAN INI)"]</th>
+                        <th class="text-end">@T["PPN KELUARAN (BULAN INI)"]</th>
+                        <th class="text-end">@T["SALDO MASUKAN"]</th>
+                        <th class="text-end">@T["SALDO KELUARAN"]</th>
+                        <th class="text-end">@T["SELISIH"]</th>
+                        <th>@T["HASIL"]</th>
+                        <th class="text-center" style="width: 200px;">@T["TUTUP"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Months.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada data."]</td></tr>
+                    }
+                    @foreach (var m in Model.Months)
+                    {
+                        <tr>
+                            <td class="ps-4 text-start">
+                                <a asp-action="Invoices" asp-route-period="@m.Period" class="text-info text-decoration-none" title="@T["Rincian faktur pajak"]">
+                                    @m.Start.ToString("MMMM yyyy", T.IsEnglish ? System.Globalization.CultureInfo.GetCultureInfo("en-US") : Acc.Culture)
+                                </a>
+                            </td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(m.InputMovement)</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(m.OutputMovement)</td>
+                            <td class="text-end text-white-50">@(m.IsClosed ? "" : Acc.MoneyOrBlank(m.InputBalance))</td>
+                            <td class="text-end text-white-50">@(m.IsClosed ? "" : Acc.MoneyOrBlank(m.OutputBalance))</td>
+                            <td class="text-end fw-semibold @(m.Net > 0 ? "text-warning" : m.Net < 0 ? "text-info" : "text-white")">@Acc.Money(m.Net)</td>
+                            <td class="small text-white">@T[m.ResultLabel]</td>
+                            <td class="text-center">
+                                @if (m.IsClosed)
+                                {
+                                    <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>@T["Ditutup"]</span>
+                                    @if (m.JournalUid != null)
+                                    {
+                                        <a asp-controller="Journals" asp-action="Details" asp-route-uid="@m.JournalUid" class="small text-info ms-1">@m.JournalNo</a>
+                                    }
+                                }
+                                else if (m.CanClose)
+                                {
+                                    <div class="row-actions">
+                                    <form method="post" asp-action="Close" data-perm="create"
+                                          onsubmit='return confirm(@Json.Serialize(T["Tutup PPN masa {0}? ({1} {2})", m.Period, T[m.ResultLabel], Acc.Money(m.Net)]));'>
+                                        <input type="hidden" name="period" value="@m.Period" />
+                                        <button type="submit" class="act-btn act-other" title="@T["Tutup Masa"]"><i class="bi bi-lock"></i></button>
+                                    </form>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-white-50 small">@T[m.BlockReason]</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>

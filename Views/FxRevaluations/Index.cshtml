@@ -1,0 +1,183 @@
+@model ERP.Web.Models.FxRevaluationsIndexViewModel
+@{
+    ViewData["Title"] = T["Revaluasi Kurs"];
+    var p = Model.Preview;
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Revaluasi Kurs"]</h3>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["PSAK 10 / IAS 21: saldo valas yang masih terbuka di akhir periode — faktur pembelian/penjualan valas yang belum lunas dan rekening kas/bank valas — dinilai ulang dengan kurs penutupan. Selisihnya dicatat ke"]
+        <strong>4-2300 @T["Laba/Rugi Selisih Kurs Belum Terealisasi"]</strong>.
+        @T["Jurnalnya dibalik otomatis keesokan harinya, sehingga pelunasan berikutnya tetap dibandingkan dengan kurs faktur (selisihnya menjadi laba/rugi terealisasi)."]
+    </div>
+
+    <!-- PRATINJAU -->
+    <div class="card supplier-card mb-3">
+        <div class="card-header bg-transparent d-flex align-items-center gap-2">
+            <i class="bi bi-calculator"></i>
+            <span class="fw-semibold">@T["Revaluasi Baru"]</span>
+        </div>
+        <div class="card-body">
+            <form method="get" asp-action="Index" class="row g-2 align-items-end mb-3">
+                <div class="col-md-3">
+                    <label class="form-label" for="date">@T["Tanggal akhir periode"]</label>
+                    <input type="date" class="form-control" id="date" name="date" value="@p.RevalDate.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div class="col-md-auto">
+                    <button type="submit" class="btn btn-outline-light"><i class="bi bi-arrow-repeat me-1"></i>@T["Hitung"]</button>
+                </div>
+                <div class="col-md text-white-50 small">
+                    @T["Jurnal pembalik otomatis:"] <strong class="text-white">@Acc.Date(p.ReversalDate)</strong>
+                </div>
+            </form>
+
+            @if (p.Rates.Count > 0)
+            {
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    @foreach (var r in p.Rates)
+                    {
+                        if (r.Rate != null)
+                        {
+                            <span class="badge bg-secondary fw-normal">
+                                @r.CurrencyCode @Acc.Rate(r.Rate.Value)
+                                @if (r.RateDate != p.RevalDate)
+                                {
+                                    <span class="text-warning">(@Acc.Date(r.RateDate))</span>
+                                }
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger fw-normal">@r.CurrencyCode — @T["belum ada kurs"]</span>
+                        }
+                    }
+                </div>
+            }
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 90px;">@T["JENIS"]</th>
+                            <th>@T["DOKUMEN / REKENING"]</th>
+                            <th class="text-end">@T["SISA VALAS"]</th>
+                            <th class="text-end">@T["KURS BUKU → PENUTUPAN"]</th>
+                            <th class="text-end">@T["NILAI BUKU (IDR)"]</th>
+                            <th class="text-end">@T["NILAI BARU (IDR)"]</th>
+                            <th class="text-end">@T["LABA / (RUGI)"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (p.Lines.Count == 0)
+                        {
+                            <tr><td colspan="7" class="text-center text-muted py-4">@T["Tidak ada saldo valas yang perlu direvaluasi pada tanggal ini."]</td></tr>
+                        }
+                        @foreach (var l in p.Lines)
+                        {
+                            <tr>
+                                <td class="ps-4 text-white small">@T[l.SourceLabel]</td>
+                                <td class="text-white">
+                                    @l.DocNo
+                                    <div class="text-white-50 small">@l.PartyName</div>
+                                </td>
+                                <td class="text-end text-white">@Acc.Fx(l.ForeignBalance, l.CurrencyCode)</td>
+                                <td class="text-end text-white-50 small">@Acc.Rate(l.BookRate) → <span class="text-white">@Acc.Rate(l.ClosingRate)</span></td>
+                                <td class="text-end text-white">@Acc.Money(l.BookFunctional)</td>
+                                <td class="text-end text-white">@Acc.Money(l.NewFunctional)</td>
+                                <td class="text-end fw-semibold @(l.GainLoss >= 0 ? "text-success" : "text-danger")">@Acc.Money(l.GainLoss)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (p.Lines.Count > 0)
+                    {
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td colspan="6" class="text-end text-white">@T["TOTAL LABA / (RUGI) BELUM TEREALISASI"]</td>
+                                <td class="text-end @(p.TotalGainLoss >= 0 ? "text-success" : "text-danger")">@Acc.Money(p.TotalGainLoss)</td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+
+            @if (p.MissingRates.Count > 0 && p.Lines.Count > 0)
+            {
+                <div class="alert alert-warning small mt-3 mb-0">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    @T["Saldo {0} tidak ikut direvaluasi karena belum ada kurs. Isi kurs di menu Mata Uang & Kurs.", string.Join(", ", p.MissingRates)]
+                </div>
+            }
+
+            @if (!p.CanPost && p.BlockReason != null)
+            {
+                <div class="alert alert-secondary small mt-3 mb-0"><i class="bi bi-slash-circle me-1"></i>@T[p.BlockReason]</div>
+            }
+            else if (p.CanPost)
+            {
+                <form method="post" asp-action="Create" class="row g-2 align-items-end mt-3" data-perm="create"
+                      onsubmit='return confirm(@Json.Serialize(T["Posting revaluasi per {0}? Jurnal revaluasi dan pembaliknya ({1}) akan dibuat.", Acc.Date(p.RevalDate), Acc.Date(p.ReversalDate)]));'>
+                    <input type="hidden" name="revalDate" value="@p.RevalDate.ToString("yyyy-MM-dd")" />
+                    <div class="col-md-6">
+                        <label class="form-label" for="note">@T["Catatan (opsional)"]</label>
+                        <input type="text" class="form-control" id="note" name="note" maxlength="255" />
+                    </div>
+                    <div class="col-md-auto">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>@T["Posting Revaluasi"]</button>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+
+    <!-- RIWAYAT -->
+    <div class="card supplier-card supplier-table-card">
+        <div class="card-header bg-transparent d-flex align-items-center gap-2">
+            <i class="bi bi-clock-history"></i>
+            <span class="fw-semibold">@T["Riwayat Revaluasi"]</span>
+            <span class="badge bg-secondary">@Model.Revaluations.Count</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 150px;">@T["NO."]</th>
+                        <th style="width: 110px;">@T["TANGGAL"]</th>
+                        <th style="width: 110px;">@T["DIBALIK"]</th>
+                        <th>@T["MATA UANG"]</th>
+                        <th class="text-end" style="width: 70px;">@T["BARIS"]</th>
+                        <th class="text-end" style="width: 160px;">@T["LABA / (RUGI)"]</th>
+                        <th style="width: 110px;">@T["STATUS"]</th>
+                        <th class="text-center" style="width: 70px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Revaluations.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada revaluasi."]</td></tr>
+                    }
+                    @foreach (var r in Model.Revaluations)
+                    {
+                        <tr class="@(r.Status == "void" ? "opacity-50" : "")">
+                            <td class="ps-4"><a asp-action="Details" asp-route-uid="@r.Uid" class="text-info text-decoration-none">@r.RevalNo</a></td>
+                            <td class="text-white small">@Acc.Date(r.RevalDate)</td>
+                            <td class="text-white-50 small">@Acc.Date(r.ReversalDate)</td>
+                            <td class="text-white small">@r.Currencies</td>
+                            <td class="text-end text-white small">@r.LineCount</td>
+                            <td class="text-end fw-semibold @(r.TotalGainLoss >= 0 ? "text-success" : "text-danger")">@Acc.Money(r.TotalGainLoss)</td>
+                            <td><span class="badge @(r.Status == "void" ? "bg-danger" : "bg-success")">@(r.Status == "void" ? T["Dibatalkan"] : T["Posted"])</span></td>
+                            <td class="text-center">
+                                <div class="row-actions">
+                                    <a asp-action="Details" asp-route-uid="@r.Uid" class="act-btn act-view" title="@T["Lihat"]"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

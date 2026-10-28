@@ -1,0 +1,127 @@
+@model ERP.Web.Models.ProjectProfitDetailViewModel
+@{
+    var p = Model.Project;
+    ViewData["Title"] = $"{T["Profitabilitas"]} {p.Code}";
+    var invoiceRevenueJournal = Model.Sources.Where(s => s.Source == "sales_invoice").Sum(s => s.Revenue);
+    var invoiceCostJournal = Model.Sources.Where(s => s.Source == "purchase_invoice").Sum(s => s.Cost);
+    var crossOk = Math.Abs(invoiceRevenueJournal - Model.InvoiceRevenue) < 0.01m && Math.Abs(invoiceCostJournal - Model.InvoiceCost) < 0.01m;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@p.Code @p.Name</h3>
+        <span class="badge @(p.ProjectType == "client" ? "bg-primary" : "bg-secondary")">@T[ERP.Web.Models.ProjectViewModel.TypeLabel(p.ProjectType)]</span>
+        <span class="badge @ERP.Web.Models.ProjectViewModel.StatusCss(p.Status) me-auto">@T[ERP.Web.Models.ProjectViewModel.StatusLabel(p.Status)]</span>
+        <a asp-action="Index" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    <partial name="_DateRangeFilter" model="(Model.From, Model.To)" />
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body"><div class="text-white-50 small">@T["Pendapatan"]</div><div class="fs-5 text-white fw-semibold">@Acc.Money(p.Revenue)</div></div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body"><div class="text-white-50 small">@T["Biaya"]</div><div class="fs-5 text-white fw-semibold">@Acc.Money(p.Cost)</div></div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body"><div class="text-white-50 small">@T["Margin"]</div><div class="fs-5 fw-semibold @(p.Margin < 0 ? "text-danger" : "text-success")">@Acc.Money(p.Margin)</div><div class="text-white-50 small">@(p.MarginPercent == null ? "" : p.MarginPercent.Value.ToString("0.#", Acc.Culture) + "%")</div></div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body"><div class="text-white-50 small">@T["Customer"] / @T["Perkiraan nilai"]</div><div class="text-white">@(p.CustomerName ?? T["(internal)"])</div><div class="text-white-50 small">@(p.EstimatedBudget == 0 ? "-" : Acc.Money(p.EstimatedBudget))</div></div></div></div>
+    </div>
+
+    @if (p.ProjectType == "internal")
+    {
+        <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i>@T["Project internal: pendapatan selalu nol, margin negatif = total investasi project."]</div>
+    }
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-5">
+            <div class="card custom-card h-100">
+                <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white fs-6">@T["Per sumber dokumen"]</span></div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th class="ps-4 text-white-50 small">@T["SUMBER"]</th><th class="text-end text-white-50 small">@T["PENDAPATAN"]</th><th class="text-end text-white-50 small">@T["BIAYA"]</th></tr></thead>
+                        <tbody>
+                            @if (Model.Sources.Count == 0)
+                            {
+                                <tr><td colspan="3" class="text-center text-muted py-3">@T["Belum ada transaksi."]</td></tr>
+                            }
+                            @foreach (var s in Model.Sources)
+                            {
+                                <tr>
+                                    <td class="ps-4 text-white">@T[ERP.Web.Models.ProjectSourceRowViewModel.Label(s.Source)]</td>
+                                    <td class="text-end text-white">@(s.Revenue == 0 ? "-" : Acc.Money(s.Revenue))</td>
+                                    <td class="text-end text-white">@(s.Cost == 0 ? "-" : Acc.Money(s.Cost))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-body small pt-2 pb-3 px-4">
+                    <span class="@(crossOk ? "text-success" : "text-warning")">
+                        <i class="bi @(crossOk ? "bi-check-circle" : "bi-exclamation-triangle") me-1"></i>
+                        @T["Cross-check faktur posted: penjualan {0}, pembelian {1}", Acc.Money(Model.InvoiceRevenue), Acc.Money(Model.InvoiceCost)]
+                        @(crossOk ? T["— sama dengan jurnal."] : T["— berbeda dengan jurnal (periksa pembatalan lintas periode)."])
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card custom-card h-100">
+                <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white fs-6">@T["Per akun"]</span></div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th class="ps-4 text-white-50 small">@T["AKUN"]</th><th class="text-white-50 small">@T["JENIS"]</th><th class="text-end text-white-50 small">@T["NILAI"]</th></tr></thead>
+                        <tbody>
+                            @foreach (var a in Model.Accounts)
+                            {
+                                <tr>
+                                    <td class="ps-4 text-white">@a.AccountCode @a.AccountName</td>
+                                    <td class="text-white small">@(a.AccountType == "revenue" ? T["Pendapatan"] : T["Biaya"])</td>
+                                    <td class="text-end text-white">@Acc.Money(a.Amount)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card custom-card mb-3">
+        <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white fs-6">@T["Baris jurnal"]</span></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4 text-white-50 small">@T["TANGGAL"]</th>
+                        <th class="text-white-50 small">@T["JURNAL"]</th>
+                        <th class="text-white-50 small">@T["KETERANGAN"]</th>
+                        <th class="text-white-50 small">@T["AKUN"]</th>
+                        <th class="text-white-50 small">@T["CC"]</th>
+                        <th class="text-end text-white-50 small">@T["PENDAPATAN"]</th>
+                        <th class="text-end text-white-50 small">@T["BIAYA"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Lines.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada transaksi."]</td></tr>
+                    }
+                    @foreach (var l in Model.Lines)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white small">@Acc.Date(l.Date)</td>
+                            <td class="small">
+                                @if (l.JournalUid != null)
+                                {
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@l.JournalUid" class="text-info text-decoration-none">@l.JournalNo</a>
+                                }
+                                <div class="text-white-50">@l.Reference</div>
+                            </td>
+                            <td class="text-white small">@l.Description</td>
+                            <td class="text-white small">@l.AccountCode @l.AccountName</td>
+                            <td class="text-white small">@(l.CostCenterCode ?? "-")</td>
+                            <td class="text-end text-white">@(l.Revenue == 0 ? "-" : Acc.Money(l.Revenue))</td>
+                            <td class="text-end text-white">@(l.Cost == 0 ? "-" : Acc.Money(l.Cost))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -2,7 +2,7 @@
 @model ProductViewModel
 
 @{
-    ViewData["Title"] = "Tambah Produk";
+    ViewData["Title"] = T["Tambah Produk"];
 
     var allCategories = ViewBag.Categories as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
     var categories = allCategories.Where(x => x.ParentId == null).ToList();
@@ -12,7 +12,7 @@
 }
 
 <div class="product-page-title">
-   Tambah Produk
+   @T["Tambah Produk"]
 </div>
 
 
@@ -22,7 +22,7 @@
          data-bs-target="#productInfo">
         <div>
             <i class="bi bi-info-circle-fill me-2"></i>
-            <strong>Panduan Pengisian - Produk </strong>
+            <strong>@T["Panduan Pengisian - Produk"]</strong>
         </div>
         <i class="bi bi-chevron-down"></i>
     </div>
@@ -33,43 +33,43 @@
         <div class="product-info-body">
             <ol class ="ps-3 mb-0">
                 <li>
-                   <strong> Identitas : </strong>isi <strong>SKU</strong> (kode unik, wajib) dan <strong>Nama Produk</strong> 
-                    (wajib). <i>No. Produk</i> terisi otomatis (PRD-xxxxx); <i>Barcode</i> opsional.
+                   <strong>@T["Identitas :"]</strong> @T["isi"] <strong>SKU</strong> @T["(kode unik, wajib) dan"] <strong>@T["Nama Produk"]</strong>
+                    @T["(wajib)."] <i>@T["No. Produk"]</i> @T["terisi otomatis (PRD-xxxxx);"] <i>Barcode</i> @T["opsional."]
                 </li>
 
                 <li>
-                   <strong> Klasifikasi : </strong> pilih <strong>Category & Brand </strong> (opsional), <strong>Jenis Produk</strong>
-                    (wajib), dan <i>Unit </i> - satuan dasar produk (wajib). Satuan lain & konversinya diatur nanti lewat menu <i>Satuan Produk</i>.
+                   <strong>@T["Klasifikasi :"]</strong> @T["pilih"] <strong>Category & Brand</strong> @T["(opsional),"] <strong>@T["Jenis Produk"]</strong>
+                    @T["(wajib), dan"] <i>Unit</i> - @T["satuan dasar produk (wajib). Satuan lain & konversinya diatur nanti lewat menu"] <i>@T["Satuan Produk"]</i>.
                 </li>
 
                 <li>
-                    <strong> Mode Dimensi </strong> menentukan cara Qty dihitung di transaksi: pilih  <strong>"Tidak"</strong>bila qty = jumlah satuan (mis. Pcs/Lembar); pilih 
-                    <strong>Panjang/Luas/Volume</strong>bila qty dihitung dari dimensi (mis. busa/kain). Bila dimensional, isi <i>Dimensi per satuan (cm) </i> 
-                    sebagai nilai default.
+                    <strong>@T["Mode Dimensi"]</strong> @T["menentukan cara Qty dihitung di transaksi: pilih"] <strong>"@T["Tidak"]"</strong> @T["bila qty = jumlah satuan (mis. Pcs/Lembar); pilih"]
+                    <strong>@T["Panjang/Luas/Volume"]</strong> @T["bila qty dihitung dari dimensi (mis. busa/kain). Bila dimensional, isi"] <i>@T["Dimensi per satuan (cm)"]</i>
+                    @T["sebagai nilai default."]
                 </li>
 
                 <li>
-                    <strong> Mode Harga: "Harga tetap" </strong> → isi <strong>Harga Beli & Harga Jual </strong>langsung. 
-                    <strong>"Per kubikasi" </strong>→ isi <strong>Tarif Beli/Jual per m³ </strong>+ dimensi (P×L×T); harga per satuan dihitung otomatis (Beli/Jual jadi read-only).
-                    <strong>Min Stock</strong> opsional (peringatan stok menipis).
+                    <strong>@T["Mode Harga:"] "@T["Harga tetap"]"</strong> → @T["isi"] <strong>@T["Harga Beli & Harga Jual"]</strong> @T["langsung."]
+                    <strong>"@T["Per kubikasi"]"</strong> → @T["isi"] <strong>@T["Tarif Beli/Jual per m³"]</strong> + @T["dimensi (P×L×T); harga per satuan dihitung otomatis (Beli/Jual jadi read-only)."]
+                    <strong>Min Stock</strong> @T["opsional (peringatan stok menipis)."]
                 </li>
 
                 <li>
-                    <strong>Lain-lain: </strong><i>Deskripsi & Gambar </i> opsional. Sakelar: <strong>Track Stock </strong>(pantau stok),
-                    <strong>Lacak Serial </strong>(tiap unit discan nomor serial saat penerimaan), <strong>Aktif. Garansi (bulan) </strong> 
-                    berlaku untuk produk ber-serial (dihitung sejak terjual).
+                    <strong>@T["Lain-lain:"]</strong> <i>@T["Deskripsi & Gambar"]</i> @T["opsional. Sakelar:"] <strong>Track Stock</strong> @T["(pantau stok),"]
+                    <strong>@T["Lacak Serial"]</strong> @T["(tiap unit discan nomor serial saat penerimaan),"] <strong>@T["Aktif."] @T["Garansi (bulan)"]</strong>
+                    @T["berlaku untuk produk ber-serial (dihitung sejak terjual)."]
                 </li>
 
                 <li>
-                    Klik <strong>Simpan </strong>Untuk produk ber-<strong>varian </strong>(mis. beda ukuran/warna): 
-                    simpan dulu induknya, lalu kelola varian dari daftar produk (tombol <i class="bi bi-diagram-3"></i>  Varian).
+                    @T["Klik"] <strong>@T["Simpan"]</strong>. <strong>@T["Untuk produk ber-varian"]</strong> @T["(mis. beda ukuran/warna):"]
+                    @T["simpan dulu induknya, lalu kelola varian dari daftar produk (tombol"] <i class="bi bi-diagram-3"></i> @T["Varian"]).
                 </li>
 
             </ol>
 
             <div class="product-info-tip">
                 <i class="bi bi-lightbulb"></i>
-                kolom bertanda <span class="required-mark"> * </span> wajib diisi. Panel ini bisa ditutup dengan mengklik judulnya.
+                @T["kolom bertanda"] <span class="required-mark"> * </span> @T["wajib diisi. Panel ini bisa ditutup dengan mengklik judulnya."]
             </div>
 
         </div>
@@ -79,7 +79,7 @@
 
 <div class="card product-create-card">
     <div class="card-header">
-        <strong>Tambah Produk</strong>
+        <strong>@T["Tambah Produk"]</strong>
     </div>
 
     <div class="card-body">
@@ -87,7 +87,7 @@
              @if (!ViewData.ModelState.IsValid)
         {
             <div class="alert alert-danger mb-3">
-                <strong>Data belum dapat disimpan.</strong>
+                <strong>@T["Data belum dapat disimpan."]</strong>
 
                 <ul class="mb-0 mt-2">
                     @foreach (var error in ViewData.ModelState.Values
@@ -95,8 +95,8 @@
                     {
                         <li>
                             @(string.IsNullOrWhiteSpace(error.ErrorMessage)
-                                ? "Nilai yang dimasukkan tidak valid."
-                                : error.ErrorMessage)
+                                ? T["Nilai yang dimasukkan tidak valid."]
+                                : T[error.ErrorMessage])
                         </li>
                     }
                 </ul>
@@ -106,26 +106,26 @@
         @if (TempData["Error"] != null)
         {
             <div class="alert alert-danger">
-                <strong>Gagal menyimpan:</strong>
-                @TempData["Error"]
+                <strong>@T["Gagal menyimpan:"]</strong>
+                @T[TempData["Error"]?.ToString()]
             </div>
         }
                 @Html.AntiForgeryToken()
                
             <div class="section-title">
                 <i class="bi bi-card-text"></i>
-                IDENTITAS
+                @T["IDENTITAS"]
             </div> 
             <div class="row g-2">
                 <div class="col-md-4">
                     <label class="form-label">
-                        No. Produk
+                        @T["No. Produk"]
                     </label>
 
                     <input type="text"
                            class="form-control"
                            id="ProductNumber"
-                           placeholder="Otomatis (PRD-xxxx)" readonly>
+                           placeholder="@T["Otomatis (PRD-xxxx)"]" readonly>
                 </div>
 
                 <div class="col-md-4">
@@ -153,7 +153,7 @@
 
                 <div class="col-md-3">
                     <label class="form-label">
-                        Kode Internal
+                        @T["Kode Internal"]
                     </label>
 
                     <input type="text"
@@ -164,7 +164,7 @@
 
                 <div class="col-md-3">
                     <label class="form-label">
-                        Kode Eksternal 1
+                        @T["Kode Eksternal 1"]
                     </label>
 
                     <input type="text"
@@ -175,7 +175,7 @@
 
                 <div class="col-md-3">
                     <label class="form-label">
-                        Kode Eksternal 2
+                        @T["Kode Eksternal 2"]
                     </label>
 
                     <input type="text"
@@ -186,7 +186,7 @@
 
                 <div class="col-md-3">
                     <label class="form-label">
-                        Kode Eksternal 3
+                        @T["Kode Eksternal 3"]
                     </label>
 
                     <input type="text"
@@ -197,7 +197,7 @@
 
                 <div class="col-12">
                     <label class="form-label">
-                        Nama Produk <span class="text-danger">*</span>
+                        @T["Nama Produk"] <span class="text-danger">*</span>
                     </label>
 
                     <input type="text"
@@ -210,7 +210,7 @@
 
             <div class="section-title mt-3">
                 <i class="bi bi-tags"></i>
-                KLASIFIKASI
+                @T["KLASIFIKASI"]
             </div>
 
             <div class="row g-2">
@@ -224,7 +224,7 @@
                             id="BrandId"
                             name="BrandId">
 
-                        <option value="">-- Pilih --</option>
+                        <option value="">@T["-- Pilih --"]</option>
                          @foreach (var brand in (IEnumerable<DropdownItemViewModel>)ViewBag.Brands)
                         {
                             <option value="@brand.Id">
@@ -235,13 +235,13 @@
                 </div>
 
               <div class="col-md-3">
-                <label class="form-label">Kategori</label>
+                <label class="form-label">@T["Kategori"]</label>
 
                 <select class="form-select"
                         id="CategoryId"
                         name="CategoryId">
 
-                    <option value="">-- Pilih --</option>
+                    <option value="">@T["-- Pilih --"]</option>
 
                     @foreach (var category in
                         (IEnumerable<DropdownItemViewModel>)ViewBag.Categories)
@@ -255,25 +255,25 @@
             </div>
 
             <div class="col-md-3">
-                <label class="form-label">Sub-Kategori</label>
+                <label class="form-label">@T["Sub-Kategori"]</label>
 
                 <select class="form-select"
                         id="SubCategoryId"
                         name="SubCategoryId"
                         disabled>
 
-                    <option value="">-- (tanpa sub) --</option>
+                    <option value="">@T["-- (tanpa sub) --"]</option>
 
                 </select>
 
                 <div class="form-text">
-                    Pilih Kategori dulu; sub menyesuaikan.
+                    @T["Pilih Kategori dulu; sub menyesuaikan."]
                 </div>
             </div>
 
                 <div class="col-md-3">
                     <label class="form-label">
-                        Jenis Produk <span class="text-danger">*</span>
+                        @T["Jenis Produk"] <span class="text-danger">*</span>
                     </label>
 
                     <select class="form-select"
@@ -282,11 +282,11 @@
                             required>
 
                         <option value="RAW_MATERIAL">
-                            Bahan Baku (RAW_MATERIAL)
+                            @T["Bahan Baku (RAW_MATERIAL)"]
                         </option>
 
                         <option value="FINISHED_GOOD">
-                            Barang Jadi (FINISHED_GOOD)
+                            @T["Barang Jadi (FINISHED_GOOD)"]
                         </option>
 
                         @* <option value="SERVICE">
@@ -306,7 +306,7 @@
                             name="UnitId"
                             required>
 
-                        <option value="">-- Pilih --</option>
+                        <option value="">@T["-- Pilih --"]</option>
                         @foreach (var unit in units)
                         {
                             <option value="@unit.Id">
@@ -319,14 +319,14 @@
             
             <div class="section-title mt-3">
                 <i class="bi bi-rulers"></i>
-                DIMENSI & HARGA
+                @T["DIMENSI & HARGA"]
             </div>
 
             <div class="row g-2">
                 <div class="col-md-4">
                     <label class="form-label">
-                        Mode Dimensi
-                        <small class="text-muted">(Qty transaksi)</small>
+                        @T["Mode Dimensi"]
+                        <small class="text-muted">@T["(Qty transaksi)"]</small>
                     </label>
 
                     <select class="form-select"
@@ -334,31 +334,30 @@
                             name="DimMode">
 
                         <option value="none">
-                            Tidak — qty per satuan (mis. per Lembar/Pcs)
+                            @T["Tidak — qty per satuan (mis. per Lembar/Pcs)"]
                         </option>
 
                         <option value="length">
-                            Panjang (P x jml)
+                            @T["Panjang (P x jml)"]
                         </option>
 
                         <option value="area">
-                            Luas (P x L x jml)
+                            @T["Luas (P x L x jml)"]
                         </option>
 
                         <option value="volume">
-                            Volume (P x L x T x jml)
+                            @T["Volume (P x L x T x jml)"]
                         </option>
                     </select>
 
                     <small class="form-text">
-                        "Tidak" = qty diisi jumlah satuan.
-                        Lainnya = qty dari dimensi.
+                        "@T["Tidak"]" = @T["qty diisi jumlah satuan. Lainnya = qty dari dimensi."]
                     </small>
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label">
-                        Mode Harga
+                        @T["Mode Harga"]
                     </label>
 
                     <select class="form-select"
@@ -366,11 +365,11 @@
                             name="PriceMode">
 
                         <option value="fixed">
-                            Harga tetap (isi langsung)
+                            @T["Harga tetap (isi langsung)"]
                         </option>
 
                         <option value="volume">
-                            Per kubikasi — volume × tarif m³
+                            @T["Per kubikasi — volume × tarif m³"]
                         </option>
                     </select>
                 </div>
@@ -382,16 +381,16 @@
 
                  <div class="alert alert-warning cubic-warning mb-3">
                      <i class="bi bi-exclamation-triangle-fill"></i>
-                     <strong>Mode harga kubikasi aktif</strong>
-                        — Harga Beli/Jual dihitung otomatis dari
-                        <strong>Panjang × Lebar × Tebal</strong>.
-                        Pastikan ketiga dimensi (terutama Tebal) benar.
+                     <strong>@T["Mode harga kubikasi aktif"]</strong>
+                        — @T["Harga Beli/Jual dihitung otomatis dari"]
+                        <strong>@T["Panjang × Lebar × Tebal"]</strong>.
+                        @T["Pastikan ketiga dimensi (terutama Tebal) benar."]
                  </div>
 
                  <div class="row g-2">
                       <div class="col-12">
                           <label class="form-label">
-                              Dimensi per satuan
+                              @T["Dimensi per satuan"]
                               <small>(cm)</small>
                           </label>
                      </div>
@@ -399,19 +398,19 @@
                      <div class="col-md-4">
                          <input type="number" class="form-control cubic-input"
                             id="DefLength" name="DefLength" value="0"
-                             min="0" step="0.01" placeholder="Panjang">
+                             min="0" step="0.01" placeholder="@T["Panjang"]">
                      </div>
 
                       <div class="col-md-4">
                          <input type="number" class="form-control cubic-input"
                                 id="DefWidth" name="DefWidth" value="0"
-                                min="0" step="0.01" placeholder="Lebar">
+                                min="0" step="0.01" placeholder="@T["Lebar"]">
                       </div>
                      
                       <div class="col-md-4">
                            <input type="number" class="form-control cubic-input"
                                 id="DefHeight" name="DefHeight" value="0" min="0"
-                                step="0.01" placeholder="Tebal">
+                                step="0.01" placeholder="@T["Tebal"]">
  
                       </div>
                   </div>
@@ -419,19 +418,19 @@
                   <div class="row g-2 mt-1"> 
                        <div class="col-md-6"> 
                            <label class="form-label">
-                                Tarif Beli / m³
+                                @T["Tarif Beli / m³"]
                            </label>
                            <input type="number" class="form-control"
                                   id="CostPerM3" name="CostPerM3"
                                   value="0" min="0" step="0.01">
                                 <small class="form-text" id="cubicCalculationResult"> 
-                                    Volume/satuan = 0 m³ → Beli 0 / Jual 0 
+                                    @(T["Volume/satuan = {0} m³ → Beli {1} / Jual {2}", 0, 0, 0]) 
                                 </small> 
                        </div>
                        
                        <div class="col-md-6">
                             <label class="form-label">
-                                Tarif Jual / m³
+                                @T["Tarif Jual / m³"]
                             </label>
                             <input type="number"
                                    class="form-control"
@@ -449,8 +448,8 @@
 
                     <div class="col-md-4">
                         <label class="form-label">
-                            Harga Beli
-                            <small class="text-muted">(per satuan)</small>
+                            @T["Harga Beli"]
+                            <small class="text-muted">@T["(per satuan)"]</small>
                         </label>
 
                         <input type="number"
@@ -464,8 +463,8 @@
 
                     <div class="col-md-4">
                         <label class="form-label">
-                            Harga Jual
-                            <small class="text-muted">(per satuan)</small>
+                            @T["Harga Jual"]
+                            <small class="text-muted">@T["(per satuan)"]</small>
                         </label>
 
                         <input type="number"
@@ -496,7 +495,7 @@
 
                 <div class="section-title mt-3">
                     <i class="bi bi-card-list"></i>
-                    LAIN-LAIN
+                    @T["LAIN-LAIN"]
                 </div>
 
                 <div class="row g-2">
@@ -504,7 +503,7 @@
                     <div class="col-md-8">
 
                         <label class="form-label">
-                            Deskripsi
+                            @T["Deskripsi"]
                         </label>
 
                         <textarea class="form-control"
@@ -517,7 +516,7 @@
                     <div class="col-md-4">
 
                         <label class="form-label">
-                            Gambar
+                            @T["Gambar"]
                         </label>
 
                         <input type="file"
@@ -526,7 +525,7 @@
                                name="ImageFile"
                                accept="image/*">
                     <div class="form-text">
-                        Format gambar yang didukung: JPG, JPEG, PNG.
+                        @T["Format gambar yang didukung: JPG, JPEG, PNG."]
                     </div>
 
                     </div>
@@ -563,7 +562,7 @@
                            value="false">
 
                     <label class="form-check-label" for="TrackSerial">
-                        Lacak Serial
+                        @T["Lacak Serial"]
                         <small>(per unit)</small>
                     </label>
                 </div>
@@ -581,7 +580,7 @@
                            value="false">
 
                     <label class="form-check-label" for="IsActive">
-                        Aktif
+                        @T["Aktif"]
                     </label>
                 </div>
                 </div>
@@ -589,7 +588,7 @@
                 <div class="row g-2 mt-2">
                     <div class="col-md-3">
                         <label class="form-label">
-                            Garansi (bulan)
+                            @T["Garansi (bulan)"]
                         </label>
 
                         <input type="number"
@@ -600,9 +599,7 @@
                                min="0">
 
                         <div class="form-text">
-                            Untuk produk ber-serial: masa garansi dihitung
-                            sejak tanggal terjual (kirim SO).
-                            0. = tanpa garansi.
+                            @T["Untuk produk ber-serial: masa garansi dihitung sejak tanggal terjual (kirim SO). 0. = tanpa garansi."]
                         </div>
                     </div>
                 </div>
@@ -611,12 +608,12 @@
                     <button type="submit"
                             class="btn btn-primary">
                         <i class="bi bi-save"></i>
-                        Simpan
+                        @T["Simpan"]
                     </button>
 
                     <a href="/Products"
                        class="btn btn-secondary">
-                        Batal
+                        @T["Batal"]
                     </a>
 
                 </div>
@@ -651,7 +648,7 @@
         ) {
 
             subCategorySelect.innerHTML =
-                '<option value="">-- (tanpa sub) --</option>';
+                '<option value="">' + @Json.Serialize(T["-- (tanpa sub) --"]) + '</option>';
 
             if (!categoryId) {
                 subCategorySelect.disabled = true;
@@ -668,7 +665,7 @@
 
                 if (!response.ok) {
                     throw new Error(
-                        `Gagal mengambil Sub-Kategori. Status: ${response.status}`
+                        @(Json.Serialize(T["Gagal mengambil Sub-Kategori. Status: {0}"])).replace('{0}', response.status)
                     );
                 }
 
@@ -696,7 +693,7 @@
                 console.error("Error memuat Sub-Kategori:", error); 
                 subCategorySelect.disabled = true; 
                 alert(
-                    "Gagal memuat Sub-Kategori. Silakan periksa koneksi API."
+                    @Json.Serialize(T["Gagal memuat Sub-Kategori. Silakan periksa koneksi API."])
                 );
 
             }
@@ -766,9 +763,10 @@
             if (calculationResult) {
 
                 calculationResult.textContent =
-                    `Volume/satuan = ${formatNumber(volume)} m³ ` +
-                    `→ Beli ${formatNumber(calculatedCost)} ` +
-                    `/ Jual ${formatNumber(calculatedSell)}`;
+                    @Json.Serialize(T["Volume/satuan = {0} m³ → Beli {1} / Jual {2}"])
+                        .replace('{0}', formatNumber(volume))
+                        .replace('{1}', formatNumber(calculatedCost))
+                        .replace('{2}', formatNumber(calculatedSell));
 
             }
 

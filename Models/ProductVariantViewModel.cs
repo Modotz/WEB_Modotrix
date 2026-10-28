@@ -6,6 +6,9 @@ public class ProductVariantViewModel
 
     public long AttributeId { get; set; }
 
+    /// <summary>Uid atribut induk (identitas di URL/form).</summary>
+    public string? AttributeUid { get; set; }
+
     public string? Uid { get; set; }
 
     public string? Code { get; set; }

@@ -1,0 +1,73 @@
+@model ERP.Web.Models.AssetRfqFormViewModel
+@{
+    var isEdit = Model.Uid != null;
+    var title = isEdit ? T["Ubah RFQ Aset {0}", Model.RfqNo] : T["Tambah RFQ Aset"];
+    ViewData["Title"] = title;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@title</h3>
+        @if (isEdit)
+        {
+            <a asp-action="Details" asp-route-uid="@Model.Uid" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+        }
+    </div>
+
+    @if (Model.PrUid != null)
+    {
+        <div class="alert alert-info small"><i class="bi bi-link-45deg me-1"></i>@T["Dari PR Aset {0}: baris disalin dari PR (boleh disesuaikan).", Model.PrNo ?? ""]</div>
+    }
+
+    <form method="post" asp-action="@(isEdit ? "Update" : "Create")">
+        <input type="hidden" name="Uid" value="@Model.Uid" />
+        <input type="hidden" name="RfqNo" value="@Model.RfqNo" />
+        <input type="hidden" name="PrUid" value="@Model.PrUid" />
+        <input type="hidden" name="PrNo" value="@Model.PrNo" />
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Data RFQ"]</span></div>
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="RfqDate">@T["Tanggal RFQ"]</label>
+                        <input type="date" class="form-control form-control-sm" name="RfqDate" id="RfqDate" value="@Model.RfqDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="ValidUntil">@T["Berlaku s/d"]</label>
+                        <input type="date" class="form-control form-control-sm" name="ValidUntil" id="ValidUntil" value="@Model.ValidUntil?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-white small mb-1" for="SupplierId">@T["Supplier"]</label>
+                        <select class="form-select form-select-sm" name="SupplierId" id="SupplierId">
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var s in Model.Options.Suppliers)
+                            {
+                                <option value="@s.Id" selected="@(s.Id == Model.SupplierId)">@s.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-white small mb-1" for="Note">@T["Catatan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Note" id="Note" value="@Model.Note" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header d-flex justify-content-between align-items-center py-3 px-4">
+                <span class="fw-semibold text-white">@T["Aset yang diminta penawarannya"]</span>
+                <span class="text-white small">@T["Total estimasi"]: <strong id="itemsTotal">0</strong></span>
+            </div>
+            <partial name="_AssetItemsEditor" model="@(new ERP.Web.Models.AssetItemsEditorModel { Items = Model.Items, Categories = Model.Options.Categories, PriceLabel = "Est. Harga" })" />
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>@T["Simpan Draft"]</button>
+        </div>
+    </form>
+</div>

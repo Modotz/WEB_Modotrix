@@ -43,7 +43,9 @@ public class ProductViewModel
 
     public long? SubCategoryId { get; set; }
     public string? SubCategoryName { get; set; }
-    public long? ParentId { get; set; } 
+    public long? ParentId { get; set; }
+    /// <summary>Uid produk induk (navigasi varian → induk).</summary>
+    public string? ParentUid { get; set; }
     public long? UnitId { get; set; }
     public string? UnitName { get; set; } 
 

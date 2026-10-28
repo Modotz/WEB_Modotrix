@@ -14,16 +14,6 @@ public class MenusController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> IndexOld(string? search = null)
-    {
-        ViewBag.Search = search;
-
-        var menus = await _api.GetMenuAsync(search);
-
-        return View(menus);
-    }
-
-    [HttpGet]
     public async Task<IActionResult> Index(
         string? search = null,
         int page = 1,
@@ -42,9 +32,9 @@ public class MenusController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var menu = await _api.GetMenuAsync(id);
+        var menu = await _api.GetMenuAsync(uid);
 
         if (menu is null)
             return NotFound();
@@ -175,6 +165,17 @@ public class MenusController : Controller
             );
         }
 
+        // UID wajib untuk update (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
+        {
+            TempData["Error"] =
+                "Menu tidak ditemukan.";
+
+            return RedirectToAction(
+                nameof(Index)
+            );
+        }
+
         var result =
             await _api.UpdateMenuAsync(model);
 
@@ -197,10 +198,10 @@ public class MenusController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(
-        long id)
+        Guid uid)
     {
         var result =
-            await _api.DeleteMenuAsync(id);
+            await _api.DeleteMenuAsync(uid);
 
         TempData[
             result.Success

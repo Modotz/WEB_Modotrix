@@ -1,0 +1,130 @@
+@model ERP.Web.Models.SchemaMapViewModel
+
+@{
+    ViewData["Title"] = T["Peta Data"];
+    string Fmt(long n) => n.ToString("N0", new System.Globalization.CultureInfo("id-ID"));
+}
+
+<div class="px-2">
+
+    <div class="mb-3">
+        <h3 class="fw-semibold text-white mb-0">@T["Peta Data"]</h3>
+    </div>
+
+    <div class="alert alert-info d-flex align-items-center gap-2 py-2">
+        <i class="bi bi-diagram-3 fs-5"></i>
+        <div>
+            @T["Dibaca langsung dari skema database"] <code>@Model.Database</code> @T["(selalu sinkron)."]
+            <span class="badge text-bg-secondary">@Model.Tables.Count @T["tabel"]</span>
+            @T["Klik nama tabel untuk melihat kolom & relasinya."]
+        </div>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- MENU → TABEL -->
+        <div class="col-xl-6">
+            <div class="card custom-card">
+                <div class="card-header custom-card-header d-flex align-items-center gap-2 py-3 px-4">
+                    <span class="fw-semibold text-white fs-6"><i class="bi bi-signpost-2 me-1"></i>@T["Peta Menu → Tabel"]</span>
+                    <input type="text" id="menuSearch" class="form-control form-control-sm ms-auto" style="max-width: 200px;" placeholder="@T["Cari menu…"]" />
+                </div>
+                <div class="table-responsive" style="max-height: 70vh; overflow: auto;">
+                    <table class="table custom-table table-sm align-middle mb-0">
+                        <thead class="sticky-top">
+                            <tr>
+                                <th class="fw-bold">MENU</th>
+                                <th class="fw-bold">URL</th>
+                                <th class="fw-bold">@T["TABEL UTAMA"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var group in Model.MenuMap.GroupBy(m => m.Group))
+                            {
+                                <tr class="js-menu-group">
+                                    <td colspan="3" class="fw-bold small text-uppercase text-white-50">@T[group.Key]</td>
+                                </tr>
+                                @foreach (var m in group)
+                                {
+                                    <tr class="js-menurow">
+                                        <td class="text-white">@T[m.Title]</td>
+                                        <td class="small text-white-50 font-monospace">/@m.Url</td>
+                                        <td>
+                                            @if (m.Table != null)
+                                            {
+                                                <a asp-action="Table" asp-route-name="@m.Table" class="font-monospace">@m.Table</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-white-50 small">—</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEMUA TABEL -->
+        <div class="col-xl-6">
+            <div class="card custom-card">
+                <div class="card-header custom-card-header d-flex align-items-center gap-2 py-3 px-4">
+                    <span class="fw-semibold text-white fs-6"><i class="bi bi-table me-1"></i>@T["Semua Tabel"]</span>
+                    <input type="text" id="tableSearch" class="form-control form-control-sm ms-auto" style="max-width: 200px;" placeholder="@T["Cari tabel…"]" />
+                </div>
+                <div class="table-responsive" style="max-height: 70vh; overflow: auto;">
+                    <table class="table custom-table table-sm align-middle mb-0">
+                        <thead class="sticky-top">
+                            <tr>
+                                <th class="fw-bold">@T["TABEL"]</th>
+                                <th class="fw-bold text-end" title="@T["Jumlah baris"]">@T["BARIS"]</th>
+                                <th class="fw-bold text-end" title="@T["Jumlah kolom"]">@T["KOL"]</th>
+                                <th class="fw-bold text-center" title="@T["Relasi keluar / masuk (FK)"]">REL →/←</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in Model.Tables)
+                            {
+                                <tr class="js-tablerow">
+                                    <td><a asp-action="Table" asp-route-name="@t.Name" class="font-monospace fw-semibold">@t.Name</a></td>
+                                    <td class="text-end text-white-50">@Fmt(t.Rows)</td>
+                                    <td class="text-end text-white-50">@t.Columns</td>
+                                    <td class="text-center"><span class="badge text-bg-light border">@t.FkOut / @t.FkIn</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            function wire(inputId, rowSelector, groupSelector) {
+                const input = document.getElementById(inputId);
+                input.addEventListener('input', () => {
+                    const q = input.value.trim().toLowerCase();
+                    document.querySelectorAll(rowSelector).forEach(row => {
+                        row.hidden = q !== '' && !row.textContent.toLowerCase().includes(q);
+                    });
+                    // Sembunyikan judul grup bila semua barisnya tersembunyi.
+                    if (groupSelector) {
+                        document.querySelectorAll(groupSelector).forEach(groupRow => {
+                            let next = groupRow.nextElementSibling, visible = false;
+                            while (next && !next.matches(groupSelector)) { visible ||= !next.hidden; next = next.nextElementSibling; }
+                            groupRow.hidden = !visible;
+                        });
+                    }
+                });
+            }
+            wire('menuSearch', '.js-menurow', '.js-menu-group');
+            wire('tableSearch', '.js-tablerow');
+        })();
+    </script>
+}

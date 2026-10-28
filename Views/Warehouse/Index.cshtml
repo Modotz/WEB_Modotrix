@@ -2,14 +2,14 @@
 @model PagedResult<WarehouseViewModel>
 
 @{
-    ViewData["Title"] = "Gudang";
+    ViewData["Title"] = T["Gudang"];
 
     var no = ((Model.Page - 1) * Model.PageSize);
 }
 
 <div class="page-heading supplier-page">
 
-    <h3 class="fw-bold mb-3">Gudang</h3>
+    <h3 class="fw-bold mb-3">@T["Gudang"]</h3>
 
     <!-- ========================================== -->
     <!-- FILTER CARD -->
@@ -21,7 +21,7 @@
 
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-funnel"></i>
-                <span class="fw-semibold">Filter</span>
+                <span class="fw-semibold">@T["Filter"]</span>
             </div>
 
             <button class="btn btn-sm text-muted p-0"
@@ -50,7 +50,7 @@
                     <div class="col-md-3">
 
                         <label for="search" class="form-label">
-                            Cari
+                            @T["Cari"]
                         </label>
 
                         <input type="text"
@@ -74,17 +74,17 @@
 
                             <option value=""
                                     selected="@(Context.Request.Query["isDefault"] == "")">
-                                -- Semua --
+                                @T["-- Semua --"]
                             </option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["isDefault"] == "true")">
-                                Ya
+                                @T["Ya"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["isDefault"] == "false")">
-                                Tidak
+                                @T["Tidak"]
                             </option>
 
                         </select>
@@ -104,17 +104,17 @@
 
                             <option value=""
                                     selected="@(Context.Request.Query["isActive"] == "")">
-                                -- Semua --
+                                @T["-- Semua --"]
                             </option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["isActive"] == "true")">
-                                Aktif
+                                @T["Aktif"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["isActive"] == "false")">
-                                Nonaktif
+                                @T["Nonaktif"]
                             </option>
 
                         </select>
@@ -125,7 +125,7 @@
                     <div class="col-md-2">
 
                         <label for="pageSize" class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select class="form-select"
@@ -159,7 +159,7 @@
                                 class="btn btn-primary d-flex align-items-center gap-2">
 
                             <i class="bi bi-search"></i>
-                            Terapkan
+                            @T["Terapkan"]
 
                         </button>
 
@@ -195,7 +195,7 @@
             <div class="d-flex align-items-center gap-2">
 
                 <span class="fw-bold fs-5">
-                    Gudang
+                    @T["Gudang"]
                 </span>
 
                 <span class="badge badge-count">
@@ -203,7 +203,7 @@
                 </span>
 
                 <span class="menu-description small ms-1">
-                    Kelola data gudang / lokasi penyimpanan
+                    @T["Kelola data gudang / lokasi penyimpanan"]
                 </span>
 
             </div>
@@ -235,7 +235,7 @@
                 <a asp-action="Print"
                    asp-controller="Warehouse"
                    class="btn btn-light btn-custom-square text-secondary"
-                   title="Cetak"
+                   title="@T["Cetak"]"
                    target="_blank">
 
                     <i class="bi bi-printer-fill"></i>
@@ -262,7 +262,7 @@
                 </button>
 
                 <!-- ADD -->
-                <button type="button"
+                <button data-perm="create" type="button"
                         class="btn btn-teal btn-custom-action"
                         id="btnAddWarehouse"
                         onclick="openCreateModal()">
@@ -270,7 +270,7 @@
                     <i class="bi bi-plus-circle"></i>
 
                     <span>
-                        Tambah Gudang
+                        @T["Tambah Gudang"]
                     </span>
 
                 </button>
@@ -299,31 +299,31 @@
                             </th>
 
                             <th style="width: 130px;">
-                                CODE
+                                @T["CODE"]
                             </th>
 
                             <th>
-                                NAME
+                                @T["NAME"]
                             </th>
 
                             <th style="width: 150px;">
-                                PHONE
+                                @T["PHONE"]
                             </th>
 
                             <th style="width: 180px;">
-                                PIC NAME
+                                @T["PIC NAME"]
                             </th>
 
                             <th class="text-center" style="width: 120px;">
-                                IS DEFAULT
+                                @T["IS DEFAULT"]
                             </th>
 
                             <th class="text-center" style="width: 120px;">
-                                IS ACTIVE
+                                @T["IS ACTIVE"]
                             </th>
 
                             <th class="text-center" style="width: 120px;">
-                                AKSI
+                                @T["AKSI"]
                             </th>
 
                         </tr>
@@ -371,13 +371,13 @@
                                         @if (item.IsDefault)
                                         {
                                             <span class="badge bg-success">
-                                                Ya
+                                                @T["Ya"]
                                             </span>
                                         }
                                         else
                                         {
                                             <span class="badge bg-danger">
-                                                Tidak
+                                                @T["Tidak"]
                                             </span>
                                         }
 
@@ -389,13 +389,13 @@
                                         @if (item.IsActive)
                                         {
                                             <span class="badge bg-success">
-                                                Aktif
+                                                @T["Aktif"]
                                             </span>
                                         }
                                         else
                                         {
                                             <span class="badge bg-danger">
-                                                Tidak Aktif
+                                                @T["Tidak Aktif"]
                                             </span>
                                         }
 
@@ -404,13 +404,13 @@
                                     <!-- ACTION -->
                                     <td class="text-center">
 
-                                        <div class="d-flex justify-content-center gap-1">
+                                        <div class="row-actions">
 
                                             <!-- EDIT -->
-                                            <button type="button"
-                                                    class="btn btn-sm menu-action-edit"
-                                                    title="Edit"
-                                                    data-id="@item.Id"
+                                            <button data-perm="update" type="button"
+                                                    class="act-btn act-edit"
+                                                    title="@T["Edit"]"
+                                                    data-uid="@item.Uid"
                                                     data-code="@item.Code"
                                                     data-name="@item.Name"
                                                     data-address="@item.Address"
@@ -425,7 +425,7 @@
                                             </button>
 
                                             <!-- DELETE -->
-                                            <form method="post"
+                                            <form data-perm="delete" method="post"
                                                   asp-action="Delete"
                                                   asp-controller="Warehouse"
                                                   class="d-inline"
@@ -434,12 +434,12 @@
                                                 @Html.AntiForgeryToken()
 
                                                 <input type="hidden"
-                                                       name="id"
-                                                       value="@item.Id" />
+                                                       name="uid"
+                                                       value="@item.Uid" />
 
                                                 <button type="submit"
-                                                        class="btn btn-sm menu-action-delete"
-                                                        title="Hapus">
+                                                        class="act-btn act-delete"
+                                                        title="@T["Hapus"]">
 
                                                     <i class="bi bi-trash"></i>
 
@@ -465,7 +465,7 @@
                                     class="text-center py-4 form-label">
 
                                     <p class="menu-description">
-                                        Belum ada data gudang.
+                                        @T["Belum ada data gudang."]
                                     </p>
 
                                 </td>
@@ -502,19 +502,19 @@
 
                 <span class="menu-description small">
 
-                    Menampilkan
+                    @T["Menampilkan"]
 
                     <strong>
                         @startItem – @endItem
                     </strong>
 
-                    dari
+                    @T["dari"]
 
                     <strong>
                         @Model.TotalCount
                     </strong>
 
-                    data
+                    @T["data"]
 
                 </span>
 
@@ -542,7 +542,7 @@
                                    pageSize = Model.PageSize
                                })">
 
-                                Sebelumnya
+                                @T["Sebelumnya"]
 
                             </a>
 
@@ -585,7 +585,7 @@
                                    pageSize = Model.PageSize
                                })">
 
-                                Berikutnya
+                                @T["Berikutnya"]
 
                             </a>
 
@@ -631,7 +631,7 @@
                     <h5 class="modal-title fw-semibold menu-modal-title"
                         id="modalTitle">
 
-                        Tambah Gudang
+                        @T["Tambah Gudang"]
 
                     </h5>
 
@@ -649,8 +649,8 @@
                 <div class="modal-body py-3">
 
                     <input type="hidden"
-                           id="Id"
-                           name="Id"
+                           id="Uid"
+                           name="Uid"
                            value="" />
 
                     <div class="row g-3">
@@ -661,7 +661,7 @@
                             <label for="Code"
                                    class="form-label fw-medium">
 
-                                Kode Gudang
+                                @T["Kode Gudang"]
                                 <span class="text-danger">*</span>
 
                             </label>
@@ -682,7 +682,7 @@
                             <label for="Name"
                                    class="form-label fw-medium">
 
-                                Nama Gudang
+                                @T["Nama Gudang"]
                                 <span class="text-danger">*</span>
 
                             </label>
@@ -703,7 +703,7 @@
                             <label for="Phone"
                                    class="form-label fw-medium">
 
-                                Nomor Telepon
+                                @T["Nomor Telepon"]
 
                             </label>
 
@@ -741,7 +741,7 @@
                             <label for="Address"
                                    class="form-label fw-medium">
 
-                                Alamat
+                                @T["Alamat"]
 
                             </label>
 
@@ -800,7 +800,7 @@
                                 <label class="form-check-label ms-2"
                                        for="IsActive">
 
-                                    Aktif
+                                    @T["Aktif"]
 
                                 </label>
 
@@ -821,7 +821,7 @@
 
                         <i class="bi bi-box-arrow-down me-2"></i>
 
-                        Simpan
+                        @T["Simpan"]
 
                     </button>
 
@@ -829,7 +829,7 @@
                             class="btn btn-secondary px-3"
                             data-bs-dismiss="modal">
 
-                        Batal
+                        @T["Batal"]
 
                     </button>
 
@@ -877,12 +877,12 @@
     function openCreateModal() {
 
         document.getElementById('modalTitle').innerText =
-            'Tambah Gudang';
+            @Json.Serialize(T["Tambah Gudang"]);
 
         document.getElementById('warehouseForm').action =
             '@Url.Action("Create", "Warehouse")';
 
-        document.getElementById('Id').value = '';
+        document.getElementById('Uid').value = '';
 
         document.getElementById('Code').value = '';
 
@@ -909,7 +909,7 @@
 
     function openEditModal(button) {
 
-        const id = button.getAttribute('data-id'); 
+        const uid = button.getAttribute('data-uid');
         const code = button.getAttribute('data-code'); 
         const name = button.getAttribute('data-name'); 
         const address = button.getAttribute('data-address'); 
@@ -919,16 +919,16 @@
         const isActive = button.getAttribute('data-is-active');
 
 
-        if (!id || id === '0') {
+        if (!uid) {
 
-            alert('ID gudang tidak ditemukan.');
+            alert(@Json.Serialize(T["Data gudang tidak ditemukan."]));
 
             return;
 
         }
 
 
-        document.getElementById('modalTitle').innerText = 'Edit Gudang';
+        document.getElementById('modalTitle').innerText = @Json.Serialize(T["Edit Gudang"]);
 
 
         // ==========================================
@@ -943,8 +943,8 @@
         // SET DATA
         // ==========================================
 
-        document.getElementById('Id').value =
-            id;
+        document.getElementById('Uid').value =
+            uid;
 
         document.getElementById('Code').value =
             code || '';
@@ -969,7 +969,7 @@
     function confirmDeleteWarehouse() {
 
         return confirm(
-            "Hapus data gudang ini?"
+            @Json.Serialize(T["Hapus data gudang ini?"])
         );
 
     }

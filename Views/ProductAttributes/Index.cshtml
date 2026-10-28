@@ -1,13 +1,13 @@
 ﻿@model PagedResult<ERP.Web.Models.ProductAttributeViewModel>
 
 @{
-    ViewData["Title"] = "Atribut & Varian";
+    ViewData["Title"] = T["Atribut & Varian"];
 }
 <div class="supplier-page">
 
     <!-- HEADER -->
     <div class="mb-3">
-        <h4 class="page-title">Atribut &amp; Varian</h4>
+        <h4 class="page-title">@T["Atribut & Varian"]</h4>
     </div>
 
     <!-- FILTER -->
@@ -16,7 +16,7 @@
         <div class="attribute-filter-header">
             <strong>
                 <i class="bi bi-funnel me-1"></i>
-                Filter
+                @T["Filter"]
             </strong>
 
             <i class="bi bi-chevron-down"></i>
@@ -31,20 +31,20 @@
                     <!-- SEARCH -->
                     <div class="col-md-4">
                         <label class="form-label">
-                            Cari (Kode/Name)
+                            @T["Cari (Kode/Name)"]
                         </label>
 
                         <input type="text"
                                name="search"
                                value="@ViewBag.Search"
                                class="form-control"
-                               placeholder="Cari atribut..." />
+                               placeholder="@T["Cari atribut..."]" />
                     </div>
 
                     <!-- PER HALAMAN -->
                     <div class="col-md-2">
                         <label class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select name="pageSize" class="form-select">
@@ -62,12 +62,12 @@
                             <button type="submit"
                                     class="btn attribute-apply-btn">
                                 <i class="bi bi-search me-1"></i>
-                                Terapkan
+                                @T["Terapkan"]
                             </button>
 
                             <a asp-action="Index"
                                class="btn attribute-reset-btn"
-                               title="Reset">
+                               title="@T["Reset"]">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </a>
 
@@ -90,7 +90,7 @@
             <div class="d-flex align-items-center gap-2">
 
                 <strong class="attribute-card-title">
-                    Atribut &amp; Varian
+                    @T["Atribut & Varian"]
                 </strong>
 
                 <span class="attribute-count">
@@ -98,7 +98,7 @@
                 </span>
 
                 <small class="attribute-card-description d-none d-md-inline">
-                    Atribut produk (Warna, Ukuran, ...) beserta nilai variannya
+                    @T["Atribut produk (Warna, Ukuran, ...) beserta nilai variannya"]
                 </small>
 
               </div>
@@ -128,7 +128,7 @@
                 <a asp-action="Print"
                    asp-controller="ProductAttributes"
                    class="btn btn-light btn-custom-square text-secondary"
-                   title="Cetak"
+                   title="@T["Cetak"]"
                    target="_blank">
                     <i class="bi bi-printer-fill"></i>
                 </a>
@@ -152,9 +152,10 @@
                 <!-- TAMBAH ATRIBUT -->
                 <button type="button"
                         class="btn btn-primary btn-sm attribute-add-btn"
+                        data-perm="create"
                         onclick="openCreateAttribute()">
                     <i class="bi bi-plus-circle me-1"></i>
-                    Tambah Atribut
+                    @T["Tambah Atribut"]
                 </button>
 
             </div>
@@ -171,11 +172,11 @@
                     <thead>
                         <tr>
                             <th class="attribute-number">#</th>
-                            <th style="width: 20%;">KODE</th>
-                            <th style="width: 38%;">NAMA ATRIBUT</th>
-                            <th class="text-center" style="width: 15%;">JML VARIAN</th>
-                            <th style="width: 16%;">STATUS</th>
-                            <th style="width: 140px;">AKSI</th>
+                            <th style="width: 20%;">@T["KODE"]</th>
+                            <th style="width: 38%;">@T["NAMA ATRIBUT"]</th>
+                            <th class="text-center" style="width: 15%;">@T["JML VARIAN"]</th>
+                            <th style="width: 16%;">@T["STATUS"]</th>
+                            <th class="text-center" style="width: 140px;">@T["AKSI"]</th>
                         </tr>
                     </thead>
 
@@ -218,37 +219,37 @@
                                         @if (item.IsActive)
                                         {
                                             <span class="badge bg-success">
-                                                Aktif
+                                                @T["Aktif"]
                                             </span>
                                         }
                                         else
                                         {
                                             <span class="badge bg-danger">
-                                                Tidak Aktif
+                                                @T["Tidak Aktif"]
                                             </span>
                                         }
                                     </td>
 
                                     <!-- AKSI -->
-                                    <td class="attribute-action-cell">
+                                    <td class="text-center">
 
-                                        <div class="attribute-actions">
+                                        <div class="row-actions">
 
                                             <!-- VARIAN -->
                                             <button type="button"
-                                                    class="attribute-btn attribute-btn-variant"
-                                                    title="Varian"
-                                                    onclick="openVariant(@item.Id)">
+                                                    class="act-btn act-other"
+                                                    title="@T["Varian"]"
+                                                    onclick="openVariant('@item.Uid')">
                                                 <i class="bi bi-list-ul"></i>
-                                                Varian
                                             </button>
 
                                             <!-- EDIT -->
                                             <button type="button"
-                                                    class="attribute-btn attribute-btn-edit"
-                                                    title="Edit"
-                                                    onclick="openEditAttribute(@item.Id)">
-                                                <i class="bi bi-pencil-square"></i>
+                                                    class="act-btn act-edit"
+                                                    title="@T["Edit"]"
+                                                    data-perm="update"
+                                                    onclick="openEditAttribute('@item.Uid')">
+                                                <i class="bi bi-pencil"></i>
                                             </button>
 
                                             <!-- DELETE -->
@@ -259,18 +260,19 @@
                                                 new
                                                 {
                                                     @class = "role-delete-form",
-                                                    onsubmit = "return confirm('Yakin ingin menghapus atribut ini?');"
+                                                    data_perm = "delete",
+                                                    onsubmit = "return confirm(" + System.Text.Json.JsonSerializer.Serialize(T["Yakin ingin menghapus atribut ini?"]) + ");"
                                                 }))
                                             {
                                                 @Html.AntiForgeryToken()
 
                                                 <input type="hidden"
-                                                       name="id"
-                                                       value="@item.Id" />
+                                                       name="uid"
+                                                       value="@item.Uid" />
 
                                                 <button type="submit"
-                                                        class="attribute-btn attribute-btn-delete"
-                                                        title="Delete">
+                                                        class="act-btn act-delete"
+                                                        title="@T["Hapus"]">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             }
@@ -289,7 +291,7 @@
                             <tr>
                                 <td colspan="6"
                                     class="text-center text-muted py-4">
-                                    Tidak ada data atribut.
+                                    @T["Tidak ada data atribut."]
                                 </td>
                             </tr>
                         }
@@ -315,11 +317,11 @@
                 }
 
                 <span class="menu-description small">
-                    Menampilkan
+                    @T["Menampilkan"]
                     <strong>@startItem – @endItem</strong>
-                    dari
+                    @T["dari"]
                     <strong>@Model.TotalData</strong>
-                    data
+                    @T["data"]
                 </span>
 
                 @{
@@ -345,7 +347,7 @@
                                    pageSize = Model.PageSize
                                })">
 
-                                Sebelumnya
+                                @T["Sebelumnya"]
 
                             </a>
 
@@ -380,7 +382,7 @@
                                    pageSize = Model.PageSize
                                })">
 
-                                Berikutnya
+                                @T["Berikutnya"]
 
                             </a>
 
@@ -413,7 +415,7 @@
 
             <div class="modal-header">
                 <h5 class="modal-title">
-                    Tambah Atribut
+                    @T["Tambah Atribut"]
                 </h5>
 
                 <button type="button"
@@ -434,29 +436,29 @@
                     <!-- CODE -->
                     <div class="mb-3">
                         <label class="form-label">
-                            Kode
+                            @T["Kode"]
                         </label>
 
                         <input type="text"
                                class="form-control"
-                               placeholder="Otomatis saat disimpan (ATRxxx)"
+                               placeholder="@T["Otomatis saat disimpan (ATRxxx)"]"
                                readonly />
 
                         <small class="text-muted">
-                            Kode atribut dibuat otomatis oleh sistem.
+                            @T["Kode atribut dibuat otomatis oleh sistem."]
                         </small>
                     </div>
 
                     <!-- NAME -->
                     <div class="mb-3">
                         <label class="form-label">
-                            Nama Atribut <span class="text-danger">*</span>
+                            @T["Nama Atribut"] <span class="text-danger">*</span>
                         </label>
 
                         <input type="text"
                                name="Name"
                                class="form-control"
-                               placeholder="mis. Warna, Ukuran"
+                               placeholder="@T["mis. Warna, Ukuran"]"
                                required />
                     </div>
 
@@ -482,13 +484,13 @@
                     <button type="button"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
-                        Batal
+                        @T["Batal"]
                     </button>
 
                     <button type="submit"
                             class="btn btn-primary">
                         <i class="bi bi-save me-1"></i>
-                        Simpan
+                        @T["Simpan"]
                     </button>
 
                 </div>
@@ -514,7 +516,7 @@
 
             <div class="modal-header">
                 <h5 class="modal-title">
-                    Edit Atribut
+                    @T["Edit Atribut"]
                 </h5>
 
                 <button type="button"
@@ -533,13 +535,13 @@
                 <div class="modal-body">
 
                     <input type="hidden"
-                           name="Id"
+                           name="Uid"
                            id="editAttributeId" />
 
                     <!-- CODE -->
                     <div class="mb-3">
                         <label class="form-label">
-                            Kode
+                            @T["Kode"]
                         </label>
 
                         <input type="text"
@@ -551,7 +553,7 @@
                     <!-- NAME -->
                     <div class="mb-3">
                         <label class="form-label">
-                            Nama Atribut
+                            @T["Nama Atribut"]
                         </label>
 
                         <input type="text"
@@ -582,12 +584,12 @@
                     <button type="button"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
-                        Batal
+                        @T["Batal"]
                     </button>
 
                     <button type="submit"
                             class="btn btn-primary">
-                        Simpan Perubahan
+                        @T["Simpan Perubahan"]
                     </button>
 
                 </div>
@@ -659,17 +661,17 @@
         // EDIT ATTRIBUTE
         // =========================
 
-        async function openEditAttribute(id) {
+        async function openEditAttribute(uid) {
 
             try {
 
                 const response = await fetch(
-                    `/ProductAttributes/GetById?id=${id}`
+                    `/ProductAttributes/GetById?uid=${encodeURIComponent(uid)}`
                 );
 
                 if (!response.ok) {
 
-                    alert("Data atribut tidak ditemukan.");
+                    alert(@Json.Serialize(T["Data atribut tidak ditemukan."]));
 
                     return;
                 }
@@ -678,7 +680,7 @@
 
                 document.getElementById(
                     "editAttributeId"
-                ).value = data.id;
+                ).value = data.uid;
 
                 document.getElementById(
                     "editAttributeCode"
@@ -704,7 +706,7 @@
                 console.error(error);
 
                 alert(
-                    "Terjadi kesalahan saat mengambil data atribut."
+                    @Json.Serialize(T["Terjadi kesalahan saat mengambil data atribut."])
                 );
             }
         }
@@ -713,10 +715,10 @@
         // OPEN CREATE VARIANT
         // =========================
 
-        function openVariant(attributeId) {
+        function openVariant(attributeUid) {
 
             window.location.href =
-                `/AttributeVariants/Index?attributeId=${attributeId}`;
+                `/AttributeVariants/Index?attributeUid=${encodeURIComponent(attributeUid)}`;
         }
 
     </script>

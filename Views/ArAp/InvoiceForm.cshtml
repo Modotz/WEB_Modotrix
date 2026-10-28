@@ -1,0 +1,545 @@
+@model ERP.Web.Models.InvoiceFormViewModel
+@{
+    var c = Model.Config;
+    var isEdit = Model.Uid != null;
+    var fromApo = Model.ReceiptUid == null && Model.ApoUid != null;
+    var fromReceipt = Model.ReceiptUid != null || fromApo; // sumber terkunci: supplier, akun GR/IR & DPP dari dokumen
+    var title = isEdit ? T["Ubah Draft {0}", Model.InvoiceNo] : T[$"{c.Title} Baru"];
+    ViewData["Title"] = title;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@title</h3>
+        <a asp-controller="@c.Controller" asp-action="@(isEdit ? "Details" : "Index")" asp-route-uid="@Model.Uid" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+    </div>
+
+    @if (c.HasReceiptSource && !isEdit)
+    {
+        <div class="card custom-card mb-3">
+            <div class="card-body px-4 py-3">
+                <form method="get" asp-controller="@c.Controller" asp-action="Create" class="row g-2 align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label text-white small mb-1" for="receiptUid">@T["Dari Penerimaan Barang (opsional)"]</label>
+                        <select class="form-select form-select-sm" id="receiptUid" name="receiptUid" onchange="this.form.submit()">
+                            <option value="">@T["— Faktur jasa/biaya (tanpa penerimaan) —"]</option>
+                            @foreach (var r in Model.Receipts)
+                            {
+                                <option value="@r.Uid" selected="@(r.Uid == Model.ReceiptUid)">@r.ReceiptNo · @Acc.Date(r.ReceiptDate) · @(r.SupplierName ?? "-") · @Acc.Money(r.Amount)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4 text-white-50 small">
+                        @T["Faktur barang dibuat dari penerimaan: akun otomatis"] <strong>GR/IR</strong> @T["dan nilai = nilai penerimaan."]
+                    </div>
+                </form>
+                <form method="get" asp-controller="@c.Controller" asp-action="Create" class="row g-2 align-items-end mt-1">
+                    <div class="col-md-8">
+                        <label class="form-label text-white small mb-1" for="apoUid">@T["Dari PO Aset (opsional)"]</label>
+                        <select class="form-select form-select-sm" id="apoUid" name="apoUid" onchange="this.form.submit()">
+                            <option value="">@T["— Tidak dari PO Aset —"]</option>
+                            @foreach (var o in Model.AssetOrders)
+                            {
+                                <option value="@o.Uid" selected="@(o.Uid == Model.ApoUid)">@o.ApoNo · @(o.SupplierName ?? "-") · @o.ReceiptNos · @Acc.Money(o.Amount)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4 text-white-50 small">
+                        @T["Faktur aset: semua penerimaan PO Aset yang belum difakturkan, akun"] <strong>GR/IR</strong>.
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+
+    <form method="post" asp-controller="@c.Controller" asp-action="@(isEdit ? "Update" : "Create")">
+        <input type="hidden" name="Uid" value="@Model.Uid" />
+        <input type="hidden" name="InvoiceNo" value="@Model.InvoiceNo" />
+        <input type="hidden" name="ReceiptUid" value="@Model.ReceiptUid" />
+        <input type="hidden" name="ApoUid" value="@Model.ApoUid" />
+
+        @if (fromApo)
+        {
+            var apo = Model.AssetOrders.FirstOrDefault(o => o.Uid == Model.ApoUid);
+            <div class="alert alert-info small">
+                <i class="bi bi-pc-display me-1"></i>
+                @(Model.SourceLabel != null ? T[Model.SourceLabel] : apo != null ? T["PO Aset {0}", apo.ApoNo] : T["PO Aset"]) —
+                @T[c.PartyLabel], @T["akun (GR/IR) dan DPP diambil dari penerimaan PO Aset yang belum difakturkan"]@(apo != null ? $" ({apo.SupplierName}, {apo.ReceiptNos}, {Acc.Money(apo.Amount)})" : "").
+            </div>
+        }
+        else if (fromReceipt)
+        {
+            var receipt = Model.Receipts.FirstOrDefault(r => r.Uid == Model.ReceiptUid);
+            <div class="alert alert-info small">
+                <i class="bi bi-box-seam me-1"></i>
+                @(Model.SourceLabel != null ? T[Model.SourceLabel] : receipt != null ? T["Penerimaan {0}", receipt.ReceiptNo] : T["Penerimaan Barang"]) —
+                @T[c.PartyLabel], @T["akun (GR/IR) dan DPP diambil dari penerimaan"]@(receipt != null ? $" ({receipt.SupplierName}, {Acc.Money(receipt.Amount)})" : "").
+            </div>
+        }
+
+        <div class="card custom-card mb-3">
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    @if (!fromReceipt)
+                    {
+                        <div class="col-md-4">
+                            <label class="form-label text-white small mb-1" for="PartyId">@T[c.PartyLabel]</label>
+                            <select class="form-select form-select-sm" name="PartyId" id="PartyId" required>
+                                <option value="">@T["— Pilih —"]</option>
+                                @foreach (var p in Model.Parties)
+                                {
+                                    <option value="@p.Id" data-npwp="@p.Npwp" selected="@(p.Id == Model.PartyId)">@p.Name</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="PartyRef">@T[c.NumberLabel]</label>
+                        <input type="text" class="form-control form-control-sm" name="PartyRef" id="PartyRef" value="@Model.PartyRef" maxlength="100" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="InvoiceDate">@T["Tanggal faktur"]</label>
+                        <input type="date" class="form-control form-control-sm" name="InvoiceDate" id="InvoiceDate" value="@Model.InvoiceDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="DueDate">@T["Jatuh tempo"]</label>
+                        <input type="date" class="form-control form-control-sm" name="DueDate" id="DueDate" value="@Model.DueDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    @if (fromReceipt)
+                    {
+                        <input type="hidden" name="CurrencyCode" value="IDR" />
+                    }
+                    else
+                    {
+                        <div class="col-md-1">
+                            <label class="form-label text-white small mb-1" for="CurrencyCode">@T["Mata uang"]</label>
+                            <select class="form-select form-select-sm" name="CurrencyCode" id="CurrencyCode">
+                                @foreach (var cur in Model.Currencies)
+                                {
+                                    <option value="@cur.Code" selected="@(cur.Code == Model.CurrencyCode)">@cur.Code</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2" id="fxRateGroup">
+                            <label class="form-label text-white small mb-1" for="FxRate">@T["Kurs (IDR)"]</label>
+                            <input type="number" step="0.000001" min="0" class="form-control form-control-sm text-end" name="FxRate" id="FxRate"
+                                   value="@Model.FxRate?.ToString(inv)" placeholder="@T["otomatis"]" />
+                            <div class="form-text small" id="fxRateInfo"></div>
+                        </div>
+                    }
+                    @if (!fromReceipt)
+                    {
+                        <div class="col-md-5">
+                            <label class="form-label text-white small mb-1" for="AccountId">@(c.IsPayable ? T["Akun beban/aset"] : T["Akun pendapatan"])</label>
+                            <select class="form-select form-select-sm" name="AccountId" id="AccountId" required>
+                                <option value="">@T["— Pilih akun —"]</option>
+                                @foreach (var a in Model.Accounts)
+                                {
+                                    <option value="@a.Id" data-type="@a.Type" selected="@(a.Id == Model.AccountId)">@a.Label</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-white small mb-1" for="Amount">@T["DPP (sebelum PPN)"]</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end" name="Amount" id="Amount"
+                                   value="@(Model.Amount == 0 ? "" : Model.Amount.ToString(inv))" required />
+                        </div>
+                        <div class="col-md-3 dim-group">
+                            <label class="form-label text-white small mb-1" for="CostCenterId">@T["Cost center"]</label>
+                            <select class="form-select form-select-sm dim-select" name="CostCenterId" id="CostCenterId">
+                                <option value="">@T["— Tanpa —"]</option>
+                                @foreach (var cc in Model.Dimensions.CostCenters)
+                                {
+                                    <option value="@cc.Id" selected="@(cc.Id == Model.CostCenterId)">@cc.Code — @cc.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 dim-group">
+                            <label class="form-label text-white small mb-1" for="ProjectId">@T["Project"]</label>
+                            <select class="form-select form-select-sm dim-select" name="ProjectId" id="ProjectId">
+                                <option value="">@T["— Tanpa —"]</option>
+                                @foreach (var p in Model.Dimensions.Projects)
+                                {
+                                    <option value="@p.Id" data-type="@p.ProjectType" selected="@(p.Id == Model.ProjectId)">@p.Code — @p.Name@(p.ProjectType == "internal" ? $" ({T["internal"]})" : "")</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end dim-note">
+                            <div class="form-text small text-white-50" id="dimNote"></div>
+                        </div>
+                        @* Level 13: prepaid (beban) / diterima di muka (pendapatan) — diakui bulanan lewat Proses Rekognisi. *@
+                        <div class="col-12" id="deferralGroup">
+                            <div class="deferral-box rounded border border-secondary px-3 py-2">
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="IsDeferred" id="IsDeferred" value="true" checked="@Model.IsDeferred" />
+                                    <label class="form-check-label text-white small" for="IsDeferred">
+                                        @(c.IsPayable ? T["Prepaid — biaya dibayar di muka, diakui sebagai beban bulanan"] : T["Diterima di muka — pendapatan diakui bulanan"])
+                                    </label>
+                                </div>
+                                <div class="row g-2 mt-1 align-items-end" id="deferralFields">
+                                    <div class="col-md-3">
+                                        <label class="form-label text-white small mb-1" for="DeferralStartMonth">@T["Bulan mulai"]</label>
+                                        <input type="month" class="form-control form-control-sm" name="DeferralStartMonth" id="DeferralStartMonth" value="@Model.DeferralStartMonth" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label text-white small mb-1" for="DeferralMonths">@T["Jumlah bulan"]</label>
+                                        <input type="number" min="2" max="120" class="form-control form-control-sm" name="DeferralMonths" id="DeferralMonths" value="@Model.DeferralMonths" />
+                                    </div>
+                                    <div class="col-md-7">
+                                        <div class="form-text small text-white-50" id="deferralInfo"></div>
+                                    </div>
+                                </div>
+                                <div class="form-text small text-warning d-none" id="deferralNote"></div>
+                            </div>
+                        </div>
+                    }
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="TaxRateId">@T["Tarif PPN"]</label>
+                        <select class="form-select form-select-sm" name="TaxRateId" id="TaxRateId">
+                            <option value="">@T["— Tanpa PPN —"]</option>
+                            @foreach (var r in Model.TaxRates)
+                            {
+                                <option value="@r.Id" selected="@(r.Id == Model.TaxRateId)" data-nominal="@r.NominalRate.ToString(inv)"
+                                        data-num="@r.DppNumerator" data-den="@r.DppDenominator" data-creditable="@(r.IsInputCreditable ? "1" : "0")">@r.Name (@r.Formula)</option>
+                            }
+                        </select>
+                        <div class="form-text small text-warning d-none" id="taxNonCreditable">@T["PPN Masukan tarif ini tidak kreditabel — dicatat sebagai bagian biaya/aset."]</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="TaxInvoiceNo">@T["No. Faktur Pajak (opsional)"]</label>
+                        <input type="text" class="form-control form-control-sm" name="TaxInvoiceNo" id="TaxInvoiceNo" value="@Model.TaxInvoiceNo" maxlength="25"
+                               placeholder="@T["dari Coretax, boleh diisi nanti"]" />
+                    </div>
+                    @if (c.IsPayable)
+                    {
+                        <div class="col-md-3">
+                            <label class="form-label text-white small mb-1" for="Pph23RateId">@T["PPh 23 dipotong"]</label>
+                            <select class="form-select form-select-sm" name="Pph23RateId" id="Pph23RateId">
+                                <option value="">@T["— Tanpa PPh 23 —"]</option>
+                                @foreach (var r in Model.Pph23Rates)
+                                {
+                                    <option value="@r.Id" selected="@(r.Id == Model.Pph23RateId)" data-rate="@r.Rate.ToString(inv)" data-nonpwp="@r.NoNpwpRate.ToString(inv)">@r.Name (@r.Rate.ToString("0.##", inv)% / @r.NoNpwpRate.ToString("0.##", inv)%)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" name="Pph23HasNpwp" value="true" id="Pph23HasNpwp" @(Model.Pph23HasNpwp ? "checked" : "") />
+                                <input type="hidden" name="Pph23HasNpwp" value="false" />
+                                <label class="form-check-label text-white small" for="Pph23HasNpwp">@T["Supplier ber-NPWP"]</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-white small mb-1" for="Pph23Base">@T["DPP PPh 23"]</label>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" name="Pph23Base" id="Pph23Base"
+                                   value="@Model.Pph23Base?.ToString(inv)" placeholder="@T["= DPP faktur"]" />
+                        </div>
+                    }
+                    <div class="col-md-5 text-white small">
+                        <div class="text-white-50">@(c.IsPayable ? T["DPP Nilai Lain / PPN / PPh 23 / Hutang ke vendor"] : T["DPP Nilai Lain / PPN / Total"])</div>
+                        <div id="calcTotal">-</div>
+                        <div class="text-info" id="calcIdr"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-white small mb-1" for="Description">@T["Keterangan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Description" id="Description" value="@Model.Description" maxlength="255" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (c.BudgetApprovalDocType != null && !fromReceipt)
+        {
+            <div class="card custom-card mb-3 d-none" id="budgetCard">
+                <div class="card-header custom-card-header py-2 px-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-wallet2 text-white"></i><span class="fw-semibold text-white">@T["Cek Anggaran"]</span>
+                    <span class="badge ms-auto" id="budgetBadge"></span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4 text-white-50 small">@T["ANGGARAN"]</th>
+                                <th class="text-end text-white-50 small">@T["NILAI"]</th>
+                                <th class="text-end text-white-50 small">@T["REALISASI"]</th>
+                                <th class="text-end text-white-50 small">@T["PENDING"]</th>
+                                <th class="text-end text-white-50 small">@T["FAKTUR INI"]</th>
+                                <th class="text-end text-white-50 small">@T["PROYEKSI"]</th>
+                                <th class="text-end text-white-50 small pe-4">@T["KELEBIHAN"]</th>
+                            </tr>
+                        </thead>
+                        <tbody id="budgetRows"></tbody>
+                    </table>
+                </div>
+                <div class="card-body small py-2 px-4" id="budgetNote"></div>
+            </div>
+        }
+
+        @if (c.ApprovalDocType != null)
+        {
+            <partial name="~/Views/ArAp/_ApprovalPreviewBox.cshtml" model="c.ApprovalDocType" />
+        }
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <button type="submit" name="submitAction" value="draft" class="btn btn-outline-light"><i class="bi bi-save me-1"></i>@T["Simpan Draft"]</button>
+            <button type="submit" name="submitAction" value="post" class="btn btn-primary"
+                    onclick='return confirm(@Json.Serialize(T["Simpan dan posting faktur? Faktur posted hanya bisa dibatalkan (jurnal pembalik) selama belum dibayar."]));'>
+                <i class="bi bi-check2-circle me-1"></i>@T["Simpan & Posting"]
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const amount = document.getElementById('Amount');
+            const tax = document.getElementById('TaxRateId');
+            const out = document.getElementById('calcTotal');
+            const outIdr = document.getElementById('calcIdr');
+            const date = document.getElementById('InvoiceDate');
+            const isPayable = @Json.Serialize(c.IsPayable);
+            const taxRatesUrl = '@Url.Action("TaxRates", "Lookup")';
+            const txtNoTax = @Json.Serialize(T["— Tanpa PPN —"]);
+
+            // Tarif PPN mengikuti tanggal faktur: hanya tarif yang berlaku pada tanggal itu yang ditawarkan.
+            async function reloadTaxRates() {
+                const selected = tax.value;
+                const res = await fetch(`${taxRatesUrl}?date=${date.value}`);
+                if (!res.ok) return;
+                const rates = await res.json();
+                tax.innerHTML = `<option value="">${txtNoTax}</option>` + rates.map(r =>
+                    `<option value="${r.id}" data-nominal="${r.nominalRate}" data-num="${r.dppNumerator}" data-den="${r.dppDenominator}" data-creditable="${r.isInputCreditable ? 1 : 0}">${r.name} (${r.nominalRate}%${r.dppNumerator !== r.dppDenominator ? ` × ${r.dppNumerator}/${r.dppDenominator}` : ''})</option>`).join('');
+                tax.value = rates.some(r => String(r.id) === selected) ? selected : '';
+                window.dispatchEvent(new Event('tax-changed'));
+            }
+
+            function taxOf(base) {
+                const o = tax.selectedOptions[0];
+                if (!o || !o.value) return { taxBase: 0, tax: 0, creditable: true };
+                const taxBase = Math.round(base * parseInt(o.dataset.num) / parseInt(o.dataset.den) * 100) / 100;
+                return { taxBase, tax: Math.round(taxBase * parseFloat(o.dataset.nominal)) / 100, creditable: o.dataset.creditable === '1' };
+            }
+
+            function showCreditable() {
+                document.getElementById('taxNonCreditable').classList.toggle('d-none', !isPayable || taxOf(1).creditable);
+            }
+
+            tax.addEventListener('change', () => { showCreditable(); window.dispatchEvent(new Event('tax-changed')); });
+            date.addEventListener('change', reloadTaxRates);
+            showCreditable();
+
+            if (!amount) { out.textContent = @Json.Serialize(T["dihitung dari penerimaan"]); return; }
+            const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const fmtRate = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 6 });
+            const cur = document.getElementById('CurrencyCode');
+            const rate = document.getElementById('FxRate');
+            const rateGroup = document.getElementById('fxRateGroup');
+            const rateInfo = document.getElementById('fxRateInfo');
+            const lookupUrl = '@Url.Action("Rate", "Lookup")';
+            const txtRateOf = @Json.Serialize(T["kurs tabel per"]), txtNoRate = @Json.Serialize(T["belum ada kurs — isi manual"]);
+            let manual = rate && rate.value !== ''; // kurs yang diisi user (draft) tidak ditimpa otomatis
+            let tableRate = null;
+
+            function effectiveRate() {
+                const r = parseFloat(rate?.value);
+                return r > 0 ? r : tableRate;
+            }
+
+            // PPh 23: DPP dari nilai SEBELUM PPN; tarif 2× bila supplier tanpa NPWP; mengurangi hutang ke vendor.
+            const pph = document.getElementById('Pph23RateId');
+            const pphNpwp = document.getElementById('Pph23HasNpwp');
+            const pphBase = document.getElementById('Pph23Base');
+            const party = document.getElementById('PartyId');
+
+            function pphOf(a) {
+                const o = pph?.selectedOptions[0];
+                if (!o || !o.value) return 0;
+                const b = parseFloat(pphBase.value) > 0 ? parseFloat(pphBase.value) : a;
+                const pct = parseFloat(pphNpwp.checked ? o.dataset.rate : o.dataset.nonpwp);
+                return Math.round(b * pct) / 100;
+            }
+
+            async function reloadPph23Rates() {
+                if (!pph) return;
+                const selected = pph.value;
+                const res = await fetch(`@Url.Action("Pph23Rates", "Lookup")?date=${date.value}`);
+                if (!res.ok) return;
+                const rates = await res.json();
+                pph.innerHTML = `<option value="">@T["— Tanpa PPh 23 —"]</option>` + rates.map(r =>
+                    `<option value="${r.id}" data-rate="${r.rate}" data-nonpwp="${r.noNpwpRate}">${r.name} (${r.rate}% / ${r.noNpwpRate}%)</option>`).join('');
+                pph.value = rates.some(r => String(r.id) === selected) ? selected : '';
+                calc();
+            }
+
+            [pph, pphNpwp, pphBase].forEach(el => el?.addEventListener(el === pphBase ? 'input' : 'change', calc));
+            date.addEventListener('change', reloadPph23Rates);
+            // Status NPWP default dari data supplier.
+            party?.addEventListener('change', () => { if (pphNpwp) pphNpwp.checked = !!party.selectedOptions[0]?.dataset.npwp; calc(); });
+
+            function calc() {
+                const a = parseFloat(amount.value) || 0;
+                const t = taxOf(a);
+                const code = cur?.value ?? 'IDR';
+                const prefix = code === 'IDR' ? '' : code + ' ';
+                const w = pphOf(a);
+                out.textContent = pph
+                    ? `${prefix}${fmt.format(t.taxBase)} / ${prefix}${fmt.format(t.tax)} / − ${prefix}${fmt.format(w)} / ${prefix}${fmt.format(a + t.tax - w)}`
+                    : `${prefix}${fmt.format(t.taxBase)} / ${prefix}${fmt.format(t.tax)} / ${prefix}${fmt.format(a + t.tax)}`;
+                const r = effectiveRate();
+                // Alur persetujuan dicocokkan dengan tagihan bruto IDR (DPP + PPN).
+                if (window.apprPreview) window.apprPreview(code === 'IDR' ? a + t.tax : (r ? Math.round((a + t.tax) * r * 100) / 100 : 0));
+                // Anggaran dicek atas nilai BEBAN IDR (PPN tidak kreditabel ikut dikapitalisasi).
+                if (window.budgetCheck) {
+                    const expense = t.creditable ? a : a + t.tax;
+                    window.budgetCheck(code === 'IDR' ? expense : (r ? Math.round(expense * r * 100) / 100 : 0));
+                }
+                outIdr.textContent = code !== 'IDR' && r ? `≈ IDR ${fmt.format(Math.round((a + t.tax - w) * r * 100) / 100)}` : '';
+            }
+
+            async function lookup() {
+                const code = cur?.value ?? 'IDR';
+                rateGroup?.classList.toggle('d-none', code === 'IDR');
+                tableRate = null;
+                if (code === 'IDR') { if (rate) rate.value = ''; rateInfo.textContent = ''; manual = false; calc(); return; }
+                const res = await fetch(`${lookupUrl}?currency=${encodeURIComponent(code)}&date=${date.value}`);
+                if (res.ok) {
+                    const j = await res.json();
+                    tableRate = j.rate;
+                    rateInfo.textContent = `${txtRateOf} ${new Date(j.rateDate).toLocaleDateString('id-ID')}: ${fmtRate.format(j.rate)}`;
+                    if (!manual) rate.value = j.rate;
+                } else {
+                    rateInfo.textContent = txtNoRate;
+                    if (!manual) rate.value = '';
+                }
+                calc();
+            }
+
+            amount.addEventListener('input', calc);
+            window.addEventListener('tax-changed', calc);
+            rate?.addEventListener('input', () => { manual = rate.value !== ''; calc(); });
+            cur?.addEventListener('change', () => { manual = false; lookup(); });
+            date.addEventListener('change', () => { if (cur && cur.value !== 'IDR') { manual = false; lookup(); } });
+            lookup();
+        })();
+
+        // Level 11: cost center / project hanya untuk akun laba rugi; project internal tidak untuk pendapatan.
+        (function () {
+            const account = document.getElementById('AccountId');
+            const cc = document.getElementById('CostCenterId'), prj = document.getElementById('ProjectId');
+            if (!account || !cc) return;
+            const isPayable = @Json.Serialize(c.IsPayable);
+            const note = document.getElementById('dimNote');
+            const t = {
+                balance: @Json.Serialize(T["Cost center / project hanya untuk akun beban atau pendapatan."]),
+                internal: @Json.Serialize(T["Project internal tidak boleh menerima pendapatan."])
+            };
+
+            function syncDims() {
+                const type = account.selectedOptions[0]?.dataset.type;
+                const pl = type === 'expense' || type === 'revenue';
+                [cc, prj].forEach(s => { s.disabled = !pl; if (!pl) s.value = ''; });
+                // Penjualan: sembunyikan project internal dari pilihan.
+                prj.querySelectorAll('option[data-type="internal"]').forEach(o => { o.hidden = !isPayable; if (!isPayable && o.selected) prj.value = ''; });
+                note.textContent = !account.value || pl ? (isPayable ? '' : t.internal) : t.balance;
+                window.dispatchEvent(new Event('tax-changed'));
+            }
+
+            account.addEventListener('change', syncDims);
+            syncDims();
+
+            // Level 13: prepaid / diterima di muka — hanya untuk akun beban (pembelian) / pendapatan (penjualan).
+            const deferred = document.getElementById('IsDeferred');
+            (function () {
+                if (!deferred) return;
+                const fields = document.getElementById('deferralFields'), info = document.getElementById('deferralInfo');
+                const note = document.getElementById('deferralNote');
+                const start = document.getElementById('DeferralStartMonth'), months = document.getElementById('DeferralMonths');
+                const dpp = document.getElementById('Amount'), dateInput = document.getElementById('InvoiceDate');
+                const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const want = isPayable ? 'expense' : 'revenue';
+                const t = {
+                    info: @Json.Serialize(c.IsPayable
+                        ? T["Saat posting: D 1-1700 Biaya Dibayar di Muka (bukan beban). Proses Rekognisi tiap bulan: D beban / K 1-1700 ≈ {0} per bulan ({1} – {2})."]
+                        : T["Saat posting: K 2-1700 Pendapatan Diterima di Muka (bukan pendapatan). Proses Rekognisi tiap bulan: D 2-1700 / K pendapatan ≈ {0} per bulan ({1} – {2})."]),
+                    wrongAccount: @Json.Serialize(c.IsPayable ? T["Prepaid hanya untuk akun beban."] : T["Diterima di muka hanya untuk akun pendapatan."])
+                };
+
+                function addMonths(ym, n) {
+                    const [y, m] = ym.split('-').map(Number);
+                    const d = new Date(y, m - 1 + n, 1);
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                }
+
+                function sync() {
+                    const ok = account.selectedOptions[0]?.dataset.type === want;
+                    if (!ok && deferred.checked) deferred.checked = false;
+                    deferred.disabled = !ok;
+                    note.textContent = account.value && !ok ? t.wrongAccount : '';
+                    note.classList.toggle('d-none', !(account.value && !ok));
+                    fields.classList.toggle('d-none', !deferred.checked);
+                    if (deferred.checked && !start.value && dateInput.value) start.value = dateInput.value.substring(0, 7);
+                    const n = parseInt(months.value, 10), amount = parseFloat(dpp.value);
+                    info.textContent = deferred.checked && n >= 2 && amount > 0 && start.value
+                        ? t.info.replace('{0}', fmt.format(Math.round(amount / n * 100) / 100)).replace('{1}', start.value).replace('{2}', addMonths(start.value, n - 1))
+                        : '';
+                    window.dispatchEvent(new Event('tax-changed'));
+                }
+
+                [deferred, start, months, dpp, account].forEach(el => el.addEventListener('input', sync));
+                account.addEventListener('change', sync);
+                sync();
+            })();
+
+            const card = document.getElementById('budgetCard');
+            if (!card) return;
+            const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const url = '@Url.Action("BudgetCheck", "Lookup")';
+            const invoiceUid = @Json.Serialize(Model.Uid);
+            const tb = {
+                ok: @Json.Serialize(T["Dalam anggaran"]), over: @Json.Serialize(T["Melebihi anggaran"]),
+                route: @Json.Serialize(T["\"Simpan & Posting\" akan menyimpan faktur sebagai draft dan mengajukannya ke alur {0} (kelebihan {1}); jurnal dibuat setelah disetujui."]),
+                noRoute: @Json.Serialize(T["Belum ada alur persetujuan anggaran yang cocok — faktur tetap bisa diposting (penegakan lunak), dengan peringatan."]),
+                cc: @Json.Serialize(T["CC"]), project: @Json.Serialize(T["Project"])
+            };
+            let timer = null, last = '';
+
+            window.budgetCheck = function (amount) {
+                clearTimeout(timer);
+                timer = setTimeout(async () => {
+                    const date = document.getElementById('InvoiceDate').value;
+                    const key = [account.value, cc.value, prj.value, date, amount, deferred?.checked].join('|');
+                    if (key === last) return;
+                    last = key;
+                    // Prepaid: anggaran terpakai bulanan lewat jurnal rekognisi, bukan saat faktur.
+                    if (!account.value || (!cc.value && !prj.value) || !(amount > 0) || deferred?.checked) { card.classList.add('d-none'); return; }
+                    const qs = new URLSearchParams({ accountId: account.value, costCenterId: cc.value, projectId: prj.value, date, amount });
+                    if (invoiceUid) qs.set('invoiceUid', invoiceUid);
+                    const res = await fetch(`${url}?${qs}`);
+                    if (res.status !== 200) { card.classList.add('d-none'); return; }
+                    const j = await res.json();
+                    if (!j.impacts.length) { card.classList.add('d-none'); return; }
+                    document.getElementById('budgetRows').innerHTML = j.impacts.map(i => `<tr class="${i.overrun > 0 ? 'table-danger-soft' : ''}">
+                        <td class="ps-4 text-white small"><span class="badge ${i.budgetAgainst === 'project' ? 'bg-primary' : 'bg-secondary'} me-1">${i.budgetAgainst === 'project' ? tb.project : tb.cc}</span>${i.dimensionCode}</td>
+                        <td class="text-end text-white small">${fmt.format(i.budget)}</td>
+                        <td class="text-end text-white small">${fmt.format(i.actual)}</td>
+                        <td class="text-end small ${i.pending > 0 ? 'text-warning' : 'text-white-50'}">${fmt.format(i.pending)}</td>
+                        <td class="text-end text-white small">${fmt.format(i.current)}</td>
+                        <td class="text-end text-white small">${fmt.format(i.projected)}</td>
+                        <td class="text-end small pe-4 ${i.overrun > 0 ? 'text-danger fw-semibold' : 'text-success'}">${i.overrun > 0 ? fmt.format(i.overrun) : '-'}</td></tr>`).join('');
+                    const over = j.overrun > 0;
+                    const badge = document.getElementById('budgetBadge');
+                    badge.className = `badge ms-auto ${over ? 'bg-danger' : 'bg-success'}`;
+                    badge.textContent = over ? tb.over : tb.ok;
+                    document.getElementById('budgetNote').innerHTML = !over ? ''
+                        : j.approval ? `<span class="text-warning"><i class="bi bi-diagram-2 me-1"></i>${tb.route.replace('{0}', j.approval.workflowName).replace('{1}', fmt.format(j.overrun))}</span>`
+                        : `<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>${tb.noRoute}</span>`;
+                    card.classList.remove('d-none');
+                }, 400);
+            };
+
+            [cc, prj, document.getElementById('InvoiceDate')].forEach(el => el.addEventListener('change', () => window.dispatchEvent(new Event('tax-changed'))));
+            window.dispatchEvent(new Event('tax-changed'));
+        })();
+    </script>
+}

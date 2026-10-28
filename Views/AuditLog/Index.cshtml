@@ -1,0 +1,275 @@
+@model ERP.Web.Models.AuditLogIndexViewModel
+
+@{
+    ViewData["Title"] = T["Log Audit"];
+    var f = Model.Filter;
+    var logs = Model.Logs;
+    var no = (logs.Page - 1) * logs.PageSize;
+    var query = f.ToQueryString();
+    var exportQuery = query.Length > 0 ? "?" + query : "";
+}
+
+<div class="px-2">
+
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@T["Log Audit"]</h3>
+
+        <a class="btn btn-outline-light btn-sm" href="@Url.Action("ExportExcel")@exportQuery">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        </a>
+        <a class="btn btn-outline-light btn-sm" href="@Url.Action("ExportPdf")@exportQuery">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+        </a>
+        <a class="btn btn-outline-light btn-sm" href="@Url.Action("Print")@exportQuery" target="_blank">
+            <i class="bi bi-printer me-1"></i>@T["Cetak"]
+        </a>
+        <button type="button" class="btn btn-danger btn-sm" data-perm="delete"
+                data-bs-toggle="modal" data-bs-target="#clearModal">
+            <i class="bi bi-trash3 me-1"></i>@T["Bersihkan Log"]
+        </button>
+    </div>
+
+    <!-- FILTER -->
+    <div class="card custom-card mb-3">
+        <div class="card-body px-4 py-3">
+            <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label text-white small mb-1" for="q">@T["Cari"]</label>
+                    <input type="text" class="form-control form-control-sm" id="q" name="q" value="@f.Q"
+                           placeholder="@T["Deskripsi, record id, IP"]" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-white small mb-1" for="username">User</label>
+                    <input type="text" class="form-control form-control-sm" id="username" name="username" value="@f.Username" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-white small mb-1" for="action">@T["Aksi"]</label>
+                    <select class="form-select form-select-sm" id="action" name="action">
+                        <option value="">@T["Semua"]</option>
+                        @foreach (var action in Model.Options.Actions)
+                        {
+                            <option value="@action" selected="@(action == f.Action)">@T[AuditLogViewModel.ActionLabel(action).Label]</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-white small mb-1" for="module">@T["Modul"]</label>
+                    <select class="form-select form-select-sm" id="module" name="module">
+                        <option value="">@T["Semua"]</option>
+                        @foreach (var module in Model.Options.Modules)
+                        {
+                            <option value="@module" selected="@(module == f.Module)">@module</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <div class="flex-fill">
+                        <label class="form-label text-white small mb-1" for="dateFrom">@T["Dari"]</label>
+                        <input type="date" class="form-control form-control-sm" id="dateFrom" name="dateFrom" value="@f.DateFrom?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="flex-fill">
+                        <label class="form-label text-white small mb-1" for="dateTo">@T["Sampai"]</label>
+                        <input type="date" class="form-control form-control-sm" id="dateTo" name="dateTo" value="@f.DateTo?.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="col-12 d-flex gap-2 justify-content-end">
+                    <select class="form-select form-select-sm w-auto" name="pageSize" title="@T["Baris per halaman"]">
+                        @foreach (var size in new[] { 15, 25, 50, 100 })
+                        {
+                            <option value="@size" selected="@(size == f.PageSize)">@T["{0} / halaman", size]</option>
+                        }
+                    </select>
+                    <a asp-action="Index" class="btn btn-outline-light btn-sm">Reset</a>
+                    <button type="submit" class="btn btn-primary btn-sm px-3"><i class="bi bi-funnel me-1"></i>Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TABEL -->
+    <div class="card custom-card">
+        <div class="card-header custom-card-header d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="fw-semibold text-white fs-6">@T["Aktivitas User"]</span>
+            <span class="text-white-50 small">Total: @logs.TotalCount.ToString("N0") log</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-center fw-bold" style="width: 50px;">#</th>
+                        <th class="fw-bold" style="width: 150px;">@T["WAKTU"]</th>
+                        <th class="fw-bold" style="width: 140px;">USER</th>
+                        <th class="fw-bold" style="width: 110px;">@T["AKSI"]</th>
+                        <th class="fw-bold" style="width: 160px;">@T["MODUL"]</th>
+                        <th class="fw-bold">@T["DESKRIPSI"]</th>
+                        <th class="fw-bold" style="width: 120px;">IP</th>
+                        <th class="text-center fw-bold" style="width: 70px;">DETAIL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (logs.Data.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-white-50 py-4">@T["Belum ada log."]</td></tr>
+                    }
+
+                    @foreach (var log in logs.Data)
+                    {
+                        no++;
+                        var (label, badge) = AuditLogViewModel.ActionLabel(log.Action);
+                        <tr>
+                            <td class="text-center text-white">@no</td>
+                            <td class="text-white small">@log.CreatedAt?.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            <td class="text-white">@(log.Username ?? "-")</td>
+                            <td><span class="badge @badge">@T[label]</span></td>
+                            <td class="text-white small">@(log.Module ?? "-")</td>
+                            <td class="text-white">
+                                @(log.Description ?? "-")
+                                @if (!string.IsNullOrEmpty(log.RecordId))
+                                {
+                                    <small class="text-white-50 ms-1">#@log.RecordId</small>
+                                }
+                            </td>
+                            <td class="text-white-50 small">@(log.IpAddress ?? "-")</td>
+                            <td class="text-center">
+                                <div class="row-actions">
+                                <button type="button" class="act-btn act-view btn-audit-detail" title="@T["Detail"]"
+                                        data-action="@T[label]" data-description="@log.Description" data-user="@log.Username"
+                                        data-time="@log.CreatedAt?.ToString("dd/MM/yyyy HH:mm:ss")" data-agent="@log.UserAgent"
+                                        data-old="@log.OldData" data-new="@log.NewData">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (logs.TotalPage > 1)
+        {
+            var start = Math.Max(1, logs.Page - 2);
+            var end = Math.Min(logs.TotalPage, logs.Page + 2);
+            string PageUrl(int p) => Url.Action("Index") + "?" + f.ToQueryString(p);
+
+            <div class="card-footer d-flex justify-content-end py-3 px-4">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(logs.Page == 1 ? "disabled" : "")"><a class="page-link" href="@PageUrl(logs.Page - 1)">&laquo;</a></li>
+                        @for (var p = start; p <= end; p++)
+                        {
+                            <li class="page-item @(p == logs.Page ? "active" : "")"><a class="page-link" href="@PageUrl(p)">@p</a></li>
+                        }
+                        <li class="page-item @(logs.Page == logs.TotalPage ? "disabled" : "")"><a class="page-link" href="@PageUrl(logs.Page + 1)">&raquo;</a></li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+
+</div>
+
+<!-- DETAIL -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Detail Aktivitas"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row small mb-3" id="detailMeta"></dl>
+                <div id="detailChanges"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BERSIHKAN -->
+<div class="modal fade" id="clearModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Clear" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Bersihkan Log Audit"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" for="before">@T["Hapus log sebelum tanggal"]</label>
+                <input type="date" class="form-control" id="before" name="before" />
+                <div class="form-text">@T["Kosongkan untuk menghapus"] <strong>@T["semua"]</strong> @T["log. Tindakan ini tidak dapat dibatalkan."]</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-danger"><i class="bi bi-trash3 me-1"></i>@T["Hapus"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+            const i18n = {
+                noChanges: @Json.Serialize(T["Tidak ada data perubahan."]),
+                column: @Json.Serialize(T["Kolom"]),
+                before: @Json.Serialize(T["Sebelum"]),
+                after: @Json.Serialize(T["Sesudah"]),
+                deletedData: @Json.Serialize(T["Data dihapus"]),
+                items: @Json.Serialize(T["Item (tambah {0}, ubah {1}, hapus {2})"]),
+                time: @Json.Serialize(T["Waktu"]),
+                action: @Json.Serialize(T["Aksi"]),
+                description: @Json.Serialize(T["Deskripsi"])
+            };
+
+            const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const fmt = (v) => v === null || v === undefined ? '<span class="text-muted">-</span>'
+                : typeof v === 'object' ? `<pre class="mb-0 small">${esc(JSON.stringify(v, null, 2))}</pre>`
+                : esc(v);
+            const parse = (s) => { if (!s) return null; try { return JSON.parse(s); } catch { return s; } };
+
+            function changesTable(oldData, newData) {
+                if (oldData === null && newData === null)
+                    return `<p class="text-muted mb-0">${esc(i18n.noChanges)}</p>`;
+
+                if (typeof oldData === 'string' || typeof newData === 'string')
+                    return `<pre class="small">${esc(oldData ?? '')}\n${esc(newData ?? '')}</pre>`;
+
+                const old = oldData || {}, now = newData || {};
+                const items = now._items; delete now._items;
+                const keys = [...new Set([...Object.keys(old), ...Object.keys(now)])];
+                const both = oldData && newData;
+
+                let html = `<table class="table table-sm table-bordered align-middle small mb-3">
+                    <thead class="table-light"><tr><th style="width:30%">${esc(i18n.column)}</th>
+                    ${both ? `<th>${esc(i18n.before)}</th><th>${esc(i18n.after)}</th>` : `<th>${oldData ? esc(i18n.deletedData) : 'Data'}</th>`}</tr></thead><tbody>`;
+
+                for (const k of keys) {
+                    html += both
+                        ? `<tr><td class="fw-semibold">${esc(k)}</td><td class="text-danger">${fmt(old[k])}</td><td class="text-success">${fmt(now[k])}</td></tr>`
+                        : `<tr><td class="fw-semibold">${esc(k)}</td><td>${fmt(oldData ? old[k] : now[k])}</td></tr>`;
+                }
+                html += '</tbody></table>';
+
+                if (items) {
+                    html += `<h6 class="mt-2">${esc(i18n.items.replace('{0}', items.created).replace('{1}', items.updated).replace('{2}', items.deleted))}</h6>
+                        <pre class="small bg-light p-2 rounded">${esc(JSON.stringify(items.details, null, 2))}</pre>`;
+                }
+                return html;
+            }
+
+            document.querySelectorAll('.btn-audit-detail').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const d = btn.dataset;
+                    document.getElementById('detailMeta').innerHTML = [
+                        [i18n.time, d.time], ['User', d.user || '-'], [i18n.action, d.action],
+                        [i18n.description, d.description || '-'], ['Browser', d.agent || '-']
+                    ].map(([k, v]) => `<dt class="col-sm-3">${k}</dt><dd class="col-sm-9">${esc(v)}</dd>`).join('');
+                    document.getElementById('detailChanges').innerHTML = changesTable(parse(d.old), parse(d.new));
+                    modal.show();
+                });
+            });
+        })();
+    </script>
+}

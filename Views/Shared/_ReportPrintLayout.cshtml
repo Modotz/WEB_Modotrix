@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="@T.Lang">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 24px; font-family: Arial, Helvetica, sans-serif; color: #111; background: #fff; font-size: 12px; }
+        h1 { margin: 0 0 4px 0; font-size: 18px; }
+        .meta { color: #6c757d; margin-bottom: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { padding: 4px 6px; text-align: left; }
+        th { border-bottom: 2px solid #333; }
+        .num { text-align: right; white-space: nowrap; }
+        .muted { color: #6c757d; }
+        tr.group td { padding-top: 12px; border-bottom: 1px solid #ccc; }
+        tr.total td { font-weight: 700; }
+        tr.grand td { font-weight: 700; border-top: 2px solid #333; border-bottom: 3px double #333; }
+        .warn { color: #b02a37; font-weight: 700; margin-bottom: 8px; }
+        @@media print { body { padding: 0; } }
+    </style>
+</head>
+<body onload="window.print()">
+    @RenderBody()
+</body>
+</html>

@@ -1,0 +1,131 @@
+@model ERP.Web.Models.PartyCardViewModel
+@{
+    ViewData["Title"] = T[Model.Title];
+    var qs = $"?partyUid={Model.Party?.Uid}&from={Model.From:yyyy-MM-dd}&to={Model.To:yyyy-MM-dd}";
+    var hasParty = Model.Party != null;
+    var header = new ListHeaderModel
+    {
+        Title = hasParty ? Model.Party!.Name : T[Model.Title],
+        Count = hasParty ? Model.Lines.Count : null,
+        Description = Acc.Date(Model.From) + " " + T["s/d"] + " " + Acc.Date(Model.To),
+        PdfUrl = hasParty ? Url.Action("ExportPdf") + qs : null,
+        ExcelUrl = hasParty ? Url.Action("ExportExcel") + qs : null,
+        PrintUrl = hasParty ? Url.Action("PrintList") + qs : null
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T[Model.Title]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="partyUid">@T[Model.PartyLabel]</label>
+                        <select class="form-select" id="partyUid" name="partyUid" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var p in Model.Parties)
+                            {
+                                <option value="@p.Uid" selected="@(p.Uid != null && p.Uid == Model.Party?.Uid)">@p.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="from">@T["Dari"]</label>
+                        <input type="date" class="form-control" id="from" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="to">@T["Sampai"]</label>
+                        <input type="date" class="form-control" id="to" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4 text-start" style="width: 100px;">@T["TANGGAL"]</th>
+                        <th style="width: 190px;">@T["DOKUMEN"]</th>
+                        <th style="width: 140px;">@T["NO."]</th>
+                        <th>@T["KETERANGAN"]</th>
+                        <th class="text-end">@(Model.IsPayable ? T["HUTANG (+)"] : T["PIUTANG (+)"])</th>
+                        <th class="text-end">@(Model.IsPayable ? T["BAYAR (−)"] : T["TERIMA (−)"])</th>
+                        <th class="text-end">@T["SALDO"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!hasParty)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@(T["Pilih {0} untuk menampilkan kartunya.", T[Model.PartyLabel].ToLowerInvariant()])</td></tr>
+                    }
+                    else
+                    {
+                        <tr><td colspan="6" class="ps-4 text-start text-white fst-italic">@T["Saldo awal"]</td><td class="text-end text-white fw-semibold">@Acc.Money(Model.Opening)</td></tr>
+                        @foreach (var l in Model.Lines)
+                        {
+                            var isInvoice = l.DocType.Contains("aktur", StringComparison.OrdinalIgnoreCase);
+                            var isRevaluation = l.DocType.Contains("evaluasi", StringComparison.OrdinalIgnoreCase);
+                            var docController = isRevaluation ? "FxRevaluations" : isInvoice ? Model.InvoiceController : Model.PaymentController;
+                            <tr>
+                                <td class="ps-4 text-start text-white small">@Acc.Date(l.Date)</td>
+                                <td class="text-white small">@T[l.DocType]</td>
+                                <td><a asp-controller="@docController" asp-action="Details" asp-route-uid="@l.DocUid" class="text-info text-decoration-none">@l.DocNo</a></td>
+                                <td class="text-white-50 small">
+                                    @l.Description
+                                    @if (l.ForeignAmount != null)
+                                    {
+                                        <span class="badge bg-secondary fw-normal ms-1">@Acc.Fx(l.ForeignAmount.Value, l.CurrencyCode)</span>
+                                    }
+                                </td>
+                                <td class="text-end text-white">@Acc.MoneyOrBlank(l.Increase)</td>
+                                <td class="text-end text-white">@Acc.MoneyOrBlank(l.Decrease)</td>
+                                <td class="text-end text-white">@Acc.Money(l.Balance)</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+                @if (hasParty)
+                {
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="4" class="text-end text-white">@T["Total / Saldo akhir"]</td>
+                            <td class="text-end text-white">@Acc.Money(Model.TotalIncrease)</td>
+                            <td class="text-end text-white">@Acc.Money(Model.TotalDecrease)</td>
+                            <td class="text-end text-white">@Acc.Money(Model.Closing)</td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+        </div>
+    </div>
+</div>

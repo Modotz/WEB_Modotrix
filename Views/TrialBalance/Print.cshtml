@@ -1,0 +1,66 @@
+@model ERP.Web.Models.TrialBalanceViewModel
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="@T.Lang">
+<head>
+    <meta charset="utf-8" />
+    <title>@T["Neraca Saldo"]</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 20px; font-family: Arial, Helvetica, sans-serif; color: #111; background: #fff; font-size: 11px; }
+        h1 { margin: 0 0 4px 0; font-size: 18px; }
+        .meta { color: #6c757d; margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
+        th { background: #f1f3f5; text-align: center; }
+        .num { text-align: right; white-space: nowrap; }
+        tfoot td { font-weight: 700; }
+        .warn { color: #b02a37; font-weight: 700; margin-bottom: 8px; }
+        @@media print { body { padding: 0; } }
+    </style>
+</head>
+<body onload="window.print()">
+    <h1>@T["Neraca Saldo"]</h1>
+    <div class="meta">@T["Periode {0} s/d {1}", Acc.Date(Model.From), Acc.Date(Model.To)] · @T["Dicetak"] @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+    @if (!Model.IsBalanced)
+    {
+        <div class="warn">@T["PERINGATAN: neraca saldo tidak seimbang."]</div>
+    }
+    <table>
+        <thead>
+            <tr><th rowspan="2">@T["Kode"]</th><th rowspan="2">@T["Nama Akun"]</th><th colspan="2">@T["Saldo Awal"]</th><th colspan="2">@T["Mutasi"]</th><th colspan="2">@T["Saldo Akhir"]</th></tr>
+            <tr><th>@T["Debit"]</th><th>@T["Kredit"]</th><th>@T["Debit"]</th><th>@T["Kredit"]</th><th>@T["Debit"]</th><th>@T["Kredit"]</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model.Rows)
+            {
+                <tr>
+                    <td>@r.Code</td>
+                    <td>@r.Name</td>
+                    <td class="num">@Acc.MoneyOrBlank(r.OpeningDebit)</td>
+                    <td class="num">@Acc.MoneyOrBlank(r.OpeningCredit)</td>
+                    <td class="num">@Acc.MoneyOrBlank(r.MovementDebit)</td>
+                    <td class="num">@Acc.MoneyOrBlank(r.MovementCredit)</td>
+                    <td class="num">@Acc.MoneyOrBlank(r.ClosingDebit)</td>
+                    <td class="num">@Acc.MoneyOrBlank(r.ClosingCredit)</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2" class="num">@T["Total"]</td>
+                <td class="num">@Acc.Money(Model.TotalOpeningDebit)</td>
+                <td class="num">@Acc.Money(Model.TotalOpeningCredit)</td>
+                <td class="num">@Acc.Money(Model.TotalMovementDebit)</td>
+                <td class="num">@Acc.Money(Model.TotalMovementCredit)</td>
+                <td class="num">@Acc.Money(Model.TotalClosingDebit)</td>
+                <td class="num">@Acc.Money(Model.TotalClosingCredit)</td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>

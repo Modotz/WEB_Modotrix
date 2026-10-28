@@ -1,0 +1,40 @@
+@model ERP.Web.Models.EquityChangesViewModel
+@{
+    var print = ViewData["Print"] is true;
+    var cell = print ? "" : "text-white";
+    var ps = print ? "" : "ps-4 text-start";
+}
+<table class="@(print ? "" : "table table-hover align-middle mb-0 supplier-table first-left")">
+    <thead>
+        <tr>
+            <th class="fw-bold @ps" style="width: 110px;">@T["KODE"]</th>
+            <th class="fw-bold">@T["KOMPONEN EKUITAS"]</th>
+            <th class="fw-bold text-end num" style="width: 170px;">@T["SALDO AWAL"]</th>
+            <th class="fw-bold text-end num" style="width: 170px;">@T["PERUBAHAN"]</th>
+            <th class="fw-bold text-end num" style="width: 170px;">@T["SALDO AKHIR"]</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Rows.Count == 0)
+        {
+            <tr><td colspan="5" class="@(print ? "" : "text-center text-muted py-4")">@T["Belum ada saldo ekuitas."]</td></tr>
+        }
+        @foreach (var r in Model.Rows)
+        {
+            <tr>
+                <td class="@cell @ps">@r.Code</td>
+                <td class="@cell">@(r.Uid == null || r.Name.StartsWith("Dikurangi: ") ? T[r.Name] : r.Name)</td>
+                <td class="text-end num @cell">@Acc.Money(r.Opening)</td>
+                <td class="text-end num @cell">@Acc.Money(r.Movement)</td>
+                <td class="text-end num @cell">@Acc.Money(r.Closing)</td>
+            </tr>
+        }
+        <tr class="@(print ? "grand" : "fw-bold")">
+            <td></td>
+            <td class="@cell">@T["TOTAL EKUITAS"]</td>
+            <td class="text-end num @cell">@Acc.Money(Model.TotalOpening)</td>
+            <td class="text-end num @cell">@Acc.Money(Model.TotalMovement)</td>
+            <td class="text-end num @cell">@Acc.Money(Model.TotalClosing)</td>
+        </tr>
+    </tbody>
+</table>

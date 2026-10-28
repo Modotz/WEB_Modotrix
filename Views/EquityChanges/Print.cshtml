@@ -1,0 +1,9 @@
+@model ERP.Web.Models.EquityChangesViewModel
+@{
+    Layout = "_ReportPrintLayout";
+    ViewData["Title"] = T["Perubahan Ekuitas"];
+    ViewData["Print"] = true;
+}
+<h1>@T["Laporan Perubahan Ekuitas"]</h1>
+<div class="meta">@T["Periode {0} s/d {1}", Acc.Date(Model.From), Acc.Date(Model.To)] · @T["Dicetak"] @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+<partial name="_Body" model="Model" view-data="ViewData" />

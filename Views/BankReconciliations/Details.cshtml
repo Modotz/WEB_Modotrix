@@ -1,0 +1,371 @@
+@model ERP.Web.Models.BankStatementViewModel
+@{
+    ViewData["Title"] = $"{T["Rekonsiliasi Bank"]} {Model.StatementNo}";
+    var (label, css) = ERP.Web.Models.BankStatementListViewModel.StatusBadge(Model.Status);
+    var draft = Model.Status == "draft";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var totalIn = Model.Lines.Where(l => l.Amount > 0).Sum(l => l.Amount);
+    var totalOut = Model.Lines.Where(l => l.Amount < 0).Sum(l => l.Amount);
+    var unmatched = Model.LineCount - Model.MatchedCount;
+    string Signed(decimal v) => (v > 0 ? "+" : v < 0 ? "−" : "") + Acc.Money(Math.Abs(v));
+    string SignCss(decimal v) => v > 0 ? "text-success" : v < 0 ? "text-danger" : "text-white";
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T["Rekening Koran"] @Model.StatementNo</h3>
+        <span class="badge @css">@T[label]</span>
+        <span class="text-white-50 small me-auto">@Model.CashAccountName · @Acc.Date(Model.PeriodFrom) – @Acc.Date(Model.StatementDate)@(Model.Reference != null ? $" · {Model.Reference}" : "")</span>
+
+        @if (draft)
+        {
+            <button type="button" class="btn btn-warning btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#headerModal"><i class="bi bi-pencil me-1"></i>@T["Ubah Saldo"]</button>
+            <form method="post" asp-action="Complete" asp-route-uid="@Model.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(unmatched > 0 || Model.Difference != 0 || Model.BookDifference != 0
+                      ? T["Masih ada selisih / baris belum cocok. Tetap tandai selesai? Rekening koran menjadi read-only."]
+                      : T["Tandai rekening koran selesai? Setelah itu read-only."]));'>
+                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check2-all me-1"></i>@T["Tandai Selesai"]</button>
+            </form>
+            @if (Model.MatchedCount == 0)
+            {
+                <form method="post" asp-action="Delete" asp-route-uid="@Model.Uid" class="d-inline" data-perm="delete"
+                      onsubmit='return confirm(@Json.Serialize(T["Hapus rekening koran {0}?", Model.StatementNo]));'>
+                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus"]</button>
+                </form>
+            }
+        }
+        <a asp-action="Index" asp-route-cashAccountId="@Model.CashAccountId" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    @if (Model.Difference != 0)
+    {
+        <div class="alert alert-warning small mb-2"><i class="bi bi-exclamation-triangle me-1"></i>@T["Saldo akhir rekening koran {0} ≠ saldo awal + mutasi {1} (selisih {2}). Periksa baris yang belum diketik.", Acc.Money(Model.ClosingBalance), Acc.Money(Model.ComputedClosing), Acc.Money(Model.Difference)]</div>
+    }
+    @if (unmatched > 0)
+    {
+        <div class="alert alert-warning small mb-2"><i class="bi bi-exclamation-triangle me-1"></i>@T["{0} baris rekening koran belum dicocokkan.", unmatched]</div>
+    }
+    @if (Model.Status == "completed")
+    {
+        <div class="alert alert-success small mb-2"><i class="bi bi-lock me-1"></i>@T["Selesai {0} oleh {1} — read-only.", Model.CompletedAt?.ToString("dd/MM/yyyy HH:mm") ?? "-", Model.CompletedByName ?? "-"]</div>
+    }
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            <div class="card custom-card h-100"><div class="card-body small">
+                <div class="fw-semibold text-white mb-2">@T["Rekening koran"]</div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Saldo awal"]</span><span class="text-white">@Acc.Money(Model.OpeningBalance)</span></div>
+                @if (Model.PreviousClosing != null && Model.PreviousClosing != Model.OpeningBalance)
+                {
+                    <div class="text-warning">@T["Saldo akhir rekening koran sebelumnya {0} (rantai saldo putus)", Acc.Money(Model.PreviousClosing.Value)]</div>
+                }
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Masuk"]</span><span class="text-success">+@Acc.Money(totalIn)</span></div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Keluar"]</span><span class="text-danger">−@Acc.Money(-totalOut)</span></div>
+                <div class="d-flex justify-content-between border-top mt-1 pt-1"><span class="text-white-50">@T["Saldo akhir terhitung"]</span><span class="text-white">@Acc.Money(Model.ComputedClosing)</span></div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Saldo akhir rekening koran"]</span><span class="text-white fw-semibold">@Acc.Money(Model.ClosingBalance)</span></div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Selisih"]</span><span class="@(Model.Difference == 0 ? "text-success" : "text-warning fw-semibold")">@Acc.Money(Model.Difference)</span></div>
+            </div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card custom-card h-100"><div class="card-body small">
+                <div class="fw-semibold text-white mb-2">@T["Buku vs bank per {0}", Acc.Date(Model.StatementDate)]</div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Saldo akun bank di buku"]</span><span class="text-white">@Acc.Money(Model.BookBankBalance)</span></div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["− Mutasi bank belum dikonfirmasi"]</span><span class="text-white">@Acc.Money(Model.UnconfirmedBank)</span></div>
+                <div class="d-flex justify-content-between border-top mt-1 pt-1"><span class="text-white-50">@T["Saldo terkonfirmasi"]</span><span class="text-white fw-semibold">@Acc.Money(Model.ConfirmedBank)</span></div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Saldo akhir rekening koran"]</span><span class="text-white">@Acc.Money(Model.ClosingBalance)</span></div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Selisih"]</span><span class="@(Model.BookDifference == 0 ? "text-success" : "text-warning fw-semibold")">@Acc.Money(Model.BookDifference)</span></div>
+            </div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card custom-card h-100"><div class="card-body small">
+                <div class="fw-semibold text-white mb-2">@T["Dalam proses (item timing)"]</div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Pembayaran belum terpotong"]</span><span class="text-danger">@Acc.Money(Model.InTransitPayments)</span></div>
+                <div class="d-flex justify-content-between"><span class="text-white-50">@T["Penerimaan belum masuk"]</span><span class="text-success">@Acc.Money(Model.InTransitReceipts)</span></div>
+                <div class="text-white-50 mt-2">@T["Item timing tidak memblokir apa pun; tetap menunggu sampai muncul di rekening koran berikutnya."]</div>
+                <a asp-controller="BankOutstanding" asp-action="Index" asp-route-cashAccountId="@Model.CashAccountId" asp-route-asOf="@Model.StatementDate.ToString("yyyy-MM-dd")" class="small text-info">@T["Lihat item belum terkonfirmasi"]</a>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <!-- KIRI: baris rekening koran -->
+        <div class="col-xl-6">
+            <div class="card custom-card h-100">
+                <div class="card-header custom-card-header py-3 px-4 d-flex align-items-center">
+                    <span class="fw-semibold text-white fs-6 me-auto">@T["Baris rekening koran"]</span>
+                    <span class="text-white-50 small">@Model.MatchedCount / @Model.LineCount @T["cocok"]</span>
+                </div>
+                @if (draft)
+                {
+                    <form method="post" asp-action="SaveLine" asp-route-uid="@Model.Uid" class="row g-2 px-3 pt-3 align-items-end" data-perm="update">
+                        <div class="col-sm-3">
+                            <label class="form-label small mb-1" for="lDate">@T["Tanggal"]</label>
+                            <input type="date" class="form-control form-control-sm" name="line.LineDate" id="lDate" value="@Model.StatementDate.ToString("yyyy-MM-dd")"
+                                   min="@Model.PeriodFrom.ToString("yyyy-MM-dd")" max="@Model.StatementDate.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-sm-2">
+                            <label class="form-label small mb-1" for="lDir">@T["Arah"]</label>
+                            <select class="form-select form-select-sm" name="line.Direction" id="lDir">
+                                <option value="in">@T["Masuk"]</option>
+                                <option value="out">@T["Keluar"]</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label small mb-1" for="lAmount">@T["Nominal"]</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end" name="line.Amount" id="lAmount" required />
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small mb-1" for="lDesc">@T["Keterangan"]</label>
+                            <input type="text" class="form-control form-control-sm" name="line.Description" id="lDesc" maxlength="255" required />
+                        </div>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control form-control-sm" name="line.Reference" maxlength="100" placeholder="@T["Referensi (opsional)"]" />
+                        </div>
+                        <div class="col-sm-4 d-grid">
+                            <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-plus-lg me-1"></i>@T["Tambah baris"]</button>
+                        </div>
+                        <div class="col-12 form-text small">@T["Pakai sudut pandang rekening kita: Masuk = kredit di rekening koran, Keluar = debet."]</div>
+                    </form>
+                }
+                <div class="table-responsive mt-2">
+                    <table class="table table-hover align-middle mb-0" id="stmtTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 32px;"></th>
+                                <th class="text-white-50 small">@T["TANGGAL"]</th>
+                                <th class="text-white-50 small">@T["KETERANGAN"]</th>
+                                <th class="text-end text-white-50 small">@T["NOMINAL"]</th>
+                                <th class="text-white-50 small">@T["STATUS"]</th>
+                                <th style="width: 40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Lines.Count == 0)
+                            {
+                                <tr><td colspan="6" class="text-center text-muted py-4">@T["Belum ada baris. Ketik mutasi dari rekening koran."]</td></tr>
+                            }
+                            @foreach (var l in Model.Lines)
+                            {
+                                var free = draft && l.Status == "unmatched";
+                                <tr class="stmt-row @(free ? "selectable" : "")" data-uid="@l.Uid" data-amount="@l.Amount.ToString(inv)" data-date="@l.LineDate.ToString("yyyy-MM-dd")" data-desc="@l.Description">
+                                    <td class="text-center">
+                                        @if (free)
+                                        {
+                                            <input class="form-check-input stmt-pick" type="radio" name="stmtPick" value="@l.Uid" />
+                                        }
+                                    </td>
+                                    <td class="text-white small text-nowrap">@Acc.Date(l.LineDate)</td>
+                                    <td class="text-white small">
+                                        @l.Description
+                                        @if (!string.IsNullOrEmpty(l.Reference))
+                                        {
+                                            <div class="text-white-50">@l.Reference</div>
+                                        }
+                                        @if (l.JournalNo != null)
+                                        {
+                                            <div class="text-white-50">
+                                                ↔ <a asp-controller="Journals" asp-action="Details" asp-route-uid="@l.JournalUid" class="text-info text-nowrap">@l.JournalNo</a> @l.JournalDescription
+                                                @if (l.ClearingJournalNo != null)
+                                                {
+                                                    <span> · @T["clearing"] <a asp-controller="Journals" asp-action="Details" asp-route-uid="@l.ClearingJournalUid" class="text-info text-nowrap">@l.ClearingJournalNo</a></span>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                    <td class="text-end text-nowrap @SignCss(l.Amount)">@Signed(l.Amount)</td>
+                                    <td>
+                                        @switch (l.Status)
+                                        {
+                                            case "matched":
+                                                <span class="badge bg-success">@T["Cocok"]</span>
+                                                break;
+                                            case "direct":
+                                                <span class="badge bg-success">@T["Cocok (bank)"]</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-warning text-dark">@T["Belum"]</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        @if (draft && l.Status != "unmatched")
+                                        {
+                                            <form method="post" asp-action="Unmatch" asp-route-uid="@Model.Uid" asp-route-lineUid="@l.Uid" class="d-inline" data-perm="update"
+                                                  onsubmit='return confirm(@Json.Serialize(l.ClearingJournalNo != null ? T["Batal cocok? Jurnal clearing {0} akan dibalik.", l.ClearingJournalNo] : T["Batal cocok?"]));'>
+                                                <button type="submit" class="btn btn-link btn-sm p-0 text-warning" title="@T["Batal cocok"]"><i class="bi bi-x-circle"></i></button>
+                                            </form>
+                                        }
+                                        else if (free)
+                                        {
+                                            <form method="post" asp-action="DeleteLine" asp-route-uid="@Model.Uid" asp-route-lineUid="@l.Uid" class="d-inline" data-perm="update"
+                                                  onsubmit='return confirm(@Json.Serialize(T["Hapus baris ini?"]));'>
+                                                <button type="submit" class="btn btn-link btn-sm p-0 text-danger" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- KANAN: baris jurnal menunggu konfirmasi -->
+        <div class="col-xl-6">
+            <div class="card custom-card h-100">
+                <div class="card-header custom-card-header py-3 px-4 d-flex align-items-center">
+                    <span class="fw-semibold text-white fs-6 me-auto">@T["Jurnal menunggu konfirmasi bank"]</span>
+                    <span class="text-white-50 small">@Model.Candidates.Count @T["baris"]</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="candTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 32px;"></th>
+                                <th class="text-white-50 small">@T["TANGGAL"]</th>
+                                <th class="text-white-50 small">@T["JURNAL"]</th>
+                                <th class="text-white-50 small">@T["AKUN"]</th>
+                                <th class="text-end text-white-50 small">@T["EFEK KE REKENING"]</th>
+                            </tr>
+                        </thead>
+                        <tbody id="candBody">
+                            @if (draft && Model.Candidates.Count == 0)
+                            {
+                                <tr><td colspan="5" class="text-center text-muted py-4">@T["Tidak ada jurnal yang menunggu konfirmasi."]</td></tr>
+                            }
+                            @foreach (var c in Model.Candidates)
+                            {
+                                <tr class="cand-row selectable" data-id="@c.JournalLineId" data-amount="@c.Amount.ToString(inv)">
+                                    <td class="text-center"><input class="form-check-input cand-pick" type="radio" name="candPick" value="@c.JournalLineId" /></td>
+                                    <td class="text-white small text-nowrap">@Acc.Date(c.Date)</td>
+                                    <td class="small">
+                                        <a asp-controller="Journals" asp-action="Details" asp-route-uid="@c.JournalUid" class="text-info text-nowrap">@c.JournalNo</a>
+                                        <div class="text-white-50">@(c.Reference ?? "")@(c.Description != null ? $" · {c.Description}" : "")</div>
+                                    </td>
+                                    <td class="small">
+                                        <span class="badge @(c.Kind == "transit" ? "bg-info text-dark" : "bg-secondary")" title="@(c.Kind == "transit" ? T["Dalam proses: dicocokkan → jurnal clearing baru"] : T["Langsung di akun bank: dicocokkan tanpa jurnal baru"])">@c.AccountCode</span>
+                                    </td>
+                                    <td class="text-end text-nowrap @SignCss(c.Amount)">@Signed(c.Amount)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (draft)
+    {
+        <div class="card custom-card mb-4 recon-bar">
+            <div class="card-body d-flex flex-wrap align-items-center gap-2 py-2 px-4">
+                <span class="text-white small me-auto" id="pickInfo">@T["Pilih satu baris rekening koran (kiri) dan satu baris jurnal (kanan) dengan nominal yang sama persis."]</span>
+                <a href="#" class="btn btn-outline-light btn-sm d-none" id="btnNewTrx" data-perm="cash-transactions:create">
+                    <i class="bi bi-plus-circle me-1"></i>@T["Catat sebagai transaksi baru"]
+                </a>
+                <form method="post" asp-action="Match" asp-route-uid="@Model.Uid" class="d-inline" data-perm="update">
+                    <input type="hidden" name="lineUid" id="mLine" />
+                    <input type="hidden" name="journalLineId" id="mJournal" />
+                    <button type="submit" class="btn btn-primary btn-sm" id="btnMatch" disabled><i class="bi bi-link-45deg me-1"></i>@T["Cocokkan"]</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal fade" id="headerModal" tabindex="-1">
+            <div class="modal-dialog">
+                <form method="post" asp-action="Update" class="modal-content">
+                    <input type="hidden" name="Uid" value="@Model.Uid" />
+                    <input type="hidden" name="CashAccountId" value="@Model.CashAccountId" />
+                    <div class="modal-header">
+                        <h5 class="modal-title">@T["Ubah Rekening Koran"]</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="hRef">@T["Referensi rekening koran"]</label>
+                                <input type="text" class="form-control" name="Reference" id="hRef" value="@Model.Reference" maxlength="100" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="hFrom">@T["Periode dari"]</label>
+                                <input type="date" class="form-control" name="PeriodFrom" id="hFrom" value="@Model.PeriodFrom.ToString("yyyy-MM-dd")" required />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="hTo">@T["Tanggal saldo akhir"]</label>
+                                <input type="date" class="form-control" name="StatementDate" id="hTo" value="@Model.StatementDate.ToString("yyyy-MM-dd")" required />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="hOpen">@T["Saldo awal"]</label>
+                                <input type="number" step="0.01" class="form-control text-end" name="OpeningBalance" id="hOpen" value="@Model.OpeningBalance.ToString(inv)" required />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="hClose">@T["Saldo akhir"]</label>
+                                <input type="number" step="0.01" class="form-control text-end" name="ClosingBalance" id="hClose" value="@Model.ClosingBalance.ToString(inv)" required />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="hNote">@T["Catatan"]</label>
+                                <input type="text" class="form-control" name="Note" id="hNote" value="@Model.Note" maxlength="255" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const body = document.getElementById('candBody');
+            const btn = document.getElementById('btnMatch');
+            if (!btn) return;
+            const info = document.getElementById('pickInfo');
+            const newTrx = document.getElementById('btnNewTrx');
+            const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const trxUrl = '@Url.Action("Create", "CashTransactions")';
+            const cashAccountId = @Model.CashAccountId;
+            const t = {
+                same: @Json.Serialize(T["Nominal sama — siap dicocokkan."]),
+                diff: @Json.Serialize(T["Nominal berbeda: harus sama persis."]),
+                none: @Json.Serialize(T["Tidak ada jurnal dengan nominal sama. Item baru (biaya adm, bunga)? Catat sebagai transaksi baru lalu cocokkan."]),
+                pickRight: @Json.Serialize(T["Pilih baris jurnal (kanan). Baris hijau = nominal sama."])
+            };
+            let line = null, cand = null;
+
+            function refresh() {
+                const la = line ? parseFloat(line.dataset.amount) : null;
+                // Saran exact amount: baris kanan bernominal sama disorot hijau dan dinaikkan ke atas (tidak dicocokkan otomatis).
+                const rows = [...body.querySelectorAll('.cand-row')];
+                rows.forEach(r => r.classList.toggle('table-success-soft', la !== null && parseFloat(r.dataset.amount) === la));
+                if (la !== null) rows.sort((a, b) => (parseFloat(b.dataset.amount) === la) - (parseFloat(a.dataset.amount) === la)).forEach(r => body.appendChild(r));
+
+                document.getElementById('mLine').value = line?.dataset.uid ?? '';
+                document.getElementById('mJournal').value = cand?.dataset.id ?? '';
+                const same = line && cand && parseFloat(cand.dataset.amount) === la;
+                btn.disabled = !same;
+                const anySame = la !== null && rows.some(r => parseFloat(r.dataset.amount) === la);
+                info.textContent = !line ? info.dataset.default : !cand ? (anySame ? t.pickRight : t.none) : same ? t.same : t.diff;
+
+                newTrx.classList.toggle('d-none', !line || anySame);
+                if (line) {
+                    const qs = new URLSearchParams({ type: la < 0 ? 'out' : 'in', cashAccountId, trxDate: line.dataset.date, amount: Math.abs(la), description: line.dataset.desc });
+                    newTrx.href = `${trxUrl}?${qs}`;
+                }
+            }
+
+            info.dataset.default = info.textContent;
+            document.querySelectorAll('.stmt-pick').forEach(r => r.addEventListener('change', () => { line = r.closest('tr'); cand = null; document.querySelectorAll('.cand-pick').forEach(c => c.checked = false); refresh(); }));
+            document.querySelectorAll('.cand-pick').forEach(r => r.addEventListener('change', () => { cand = r.closest('tr'); refresh(); }));
+            document.querySelectorAll('tr.selectable').forEach(tr => tr.addEventListener('click', (e) => {
+                if (e.target.closest('a, button, form, input')) return;
+                const radio = tr.querySelector('input[type=radio]');
+                if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
+            }));
+        })();
+    </script>
+}

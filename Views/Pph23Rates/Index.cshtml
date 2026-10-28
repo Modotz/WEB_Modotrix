@@ -1,0 +1,180 @@
+@model List<ERP.Web.Models.Pph23RateViewModel>
+@{
+    ViewData["Title"] = T["Tarif PPh 23"];
+    var header = new ListHeaderModel
+    {
+        Title = T["Tarif PPh 23"],
+        Count = Model.Count,
+        Description = T["Tarif historis per tanggal berlaku"],
+        AddOnClick = "openPphModal()",
+        AddText = T["Tambah Tarif"]
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Tarif PPh 23"]</h3>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["PPh 23 dipotong dari pembayaran ke vendor (bukan ditambahkan seperti PPN): beban tetap penuh, hutang ke vendor berkurang, potongannya disetor ke negara paling lambat tanggal 15 bulan berikutnya. UU PPh Pasal 23: 15% dividen, bunga, royalti, hadiah; 2% sewa harta (selain tanah/bangunan) dan jasa. Vendor tanpa NPWP: tarif 100% lebih tinggi."]
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["NAMA"]</th>
+                        <th style="width: 200px;">@T["JENIS OBJEK"]</th>
+                        <th class="text-end" style="width: 110px;">@T["TARIF"]</th>
+                        <th class="text-end" style="width: 130px;">@T["TANPA NPWP"]</th>
+                        <th style="width: 190px;">@T["BERLAKU"]</th>
+                        <th class="text-end" style="width: 90px;">@T["DIPAKAI"]</th>
+                        <th class="text-center" style="width: 100px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada tarif."]</td></tr>
+                    }
+                    @foreach (var r in Model)
+                    {
+                        <tr class="@(r.IsActive ? "" : "opacity-50")">
+                            <td class="ps-4 text-white">
+                                @r.Name
+                                @if (!r.IsActive)
+                                {
+                                    <span class="badge bg-dark ms-1">@T["Nonaktif"]</span>
+                                }
+                                @if (!string.IsNullOrEmpty(r.Note))
+                                {
+                                    <div class="text-white-50 small">@r.Note</div>
+                                }
+                            </td>
+                            <td class="text-white small">@T[r.ObjectTypeLabel]</td>
+                            <td class="text-end text-white fw-semibold">@r.Rate.ToString("0.##", Acc.Culture)%</td>
+                            <td class="text-end text-warning">@r.NoNpwpRate.ToString("0.##", Acc.Culture)%</td>
+                            <td class="text-white small">@r.ValidityLabel</td>
+                            <td class="text-end text-white-50 small">@(r.UsageCount == 0 ? "-" : r.UsageCount.ToString())</td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                    <button type="button" class="act-btn act-edit btn-edit-pph" data-perm="update" title="@T["Ubah"]"
+                                            data-pph="@System.Text.Json.JsonSerializer.Serialize(r)"><i class="bi bi-pencil"></i></button>
+                                    @if (!r.IsUsed)
+                                    {
+                                        <form method="post" asp-action="Delete" asp-route-uid="@r.Uid" data-perm="delete"
+                                              onsubmit='return confirm(@Json.Serialize(T["Hapus tarif {0}?", r.Name]));'>
+                                            <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="pphModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Create" class="modal-content" id="pphForm">
+            <input type="hidden" name="Uid" id="pUid" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="pphTitle">@T["Tambah Tarif"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small d-none" id="pLockedNote">@T["Tarif sudah dipakai faktur: jenis objek, tarif dan tanggal mulai terkunci."]</div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" for="pName">@T["Nama"]</label>
+                        <input type="text" class="form-control" name="Name" id="pName" maxlength="80" required />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="pType">@T["Jenis objek"]</label>
+                        <select class="form-select lockable" name="ObjectType" id="pType">
+                            @foreach (var (value, label) in ERP.Web.Models.Pph23RateViewModel.ObjectTypes)
+                            {
+                                <option value="@value">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" for="pRate">@T["Tarif (%)"]</label>
+                        <input type="number" step="0.01" min="0.01" max="100" class="form-control text-end lockable" name="Rate" id="pRate" required />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" for="pNoNpwp">@T["Tarif tanpa NPWP (%)"]</label>
+                        <input type="number" step="0.01" min="0" max="100" class="form-control text-end lockable" name="NoNpwpRate" id="pNoNpwp" placeholder="@T["kosong = 2 × tarif"]" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" for="pFrom">@T["Berlaku dari"]</label>
+                        <input type="date" class="form-control lockable" name="ValidFrom" id="pFrom" required />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" for="pTo">@T["Berlaku sampai"]</label>
+                        <input type="date" class="form-control" name="ValidTo" id="pTo" />
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="pActive" checked />
+                            <input type="hidden" name="IsActive" value="false" />
+                            <label class="form-check-label" for="pActive">@T["Aktif (tampil di pilihan faktur)"]</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="pNote">@T["Catatan"]</label>
+                        <input type="text" class="form-control" name="Note" id="pNote" maxlength="255" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const modal = new bootstrap.Modal($('pphModal'));
+            const createUrl = '@Url.Action("Create")', updateUrl = '@Url.Action("Update")';
+            const txtAdd = @Json.Serialize(T["Tambah Tarif"]), txtEdit = @Json.Serialize(T["Ubah Tarif"]);
+            const today = '@DateTime.Today.ToString("yyyy-MM-dd")';
+
+            function open(r) {
+                $('pphForm').action = r ? updateUrl : createUrl;
+                $('pphTitle').textContent = r ? `${txtEdit} ${r.Name}` : txtAdd;
+                $('pUid').value = r?.Uid ?? '';
+                $('pName').value = r?.Name ?? '';
+                $('pType').value = r?.ObjectType ?? 'jasa';
+                $('pRate').value = r?.Rate ?? 2;
+                $('pNoNpwp').value = r?.NoNpwpRate ?? '';
+                $('pFrom').value = r?.ValidFrom ?? today;
+                $('pTo').value = r?.ValidTo ?? '';
+                $('pActive').checked = r ? r.IsActive : true;
+                $('pNote').value = r?.Note ?? '';
+                const locked = !!(r && r.IsUsed);
+                document.querySelectorAll('#pphForm .lockable').forEach(el => {
+                    if (el.tagName === 'SELECT') el.onmousedown = locked ? (e) => e.preventDefault() : null; else el.readOnly = locked;
+                });
+                $('pLockedNote').classList.toggle('d-none', !locked);
+                modal.show();
+            }
+
+            window.openPphModal = () => open(null);
+            document.querySelectorAll('.btn-edit-pph').forEach(b => b.addEventListener('click', () => open(JSON.parse(b.dataset.pph))));
+        })();
+    </script>
+}

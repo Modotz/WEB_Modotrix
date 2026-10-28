@@ -1,0 +1,189 @@
+@model ERP.Web.Models.PaymentViewModel
+@{
+    var c = (ArApPageConfig)ViewData["Config"]!;
+    ViewData["Title"] = $"{T[c.Title]} {Model.PaymentNo}";
+    var (label, css) = ArApPages.StatusBadge(Model.Status);
+    var cur = Model.CurrencyCode;
+    var posted = Model.Status != "draft";
+    var approval = ViewData["Approval"] as ApprovalDocumentViewModel;
+    var pending = Model.Status == "draft" && Model.ApprovalStatus == "pending";
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T[c.Title] @Model.PaymentNo</h3>
+        <span class="badge @css">@T[label]</span>
+        @if (Model.BankStatus != null)
+        {
+            <span class="badge @(Model.BankStatus == "confirmed" ? "bg-success" : "bg-warning text-dark")" title="@T["Konfirmasi rekening koran"]"><i class="bi bi-bank me-1"></i>@(Model.BankStatus == "confirmed" ? T["Bank: {0}", Acc.Date(Model.BankConfirmedDate)] : T["Menunggu bank"])</span>
+        }
+        @if (Model.ApprovalStatus != null)
+        {
+            var (al, ac, ai) = Appr.RequestBadge(Model.ApprovalStatus);
+            <span class="badge @ac" title="@T["Status persetujuan"]"><i class="bi @ai me-1"></i>@T[al]</span>
+        }
+        <span class="me-auto"></span>
+
+        @if (Model.Status == "draft" && !pending)
+        {
+            <a asp-controller="@c.Controller" asp-action="Edit" asp-route-uid="@Model.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil me-1"></i>@T["Ubah"]</a>
+            <form method="post" asp-controller="@c.Controller" asp-action="Post" asp-route-uid="@Model.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T["Posting {0}?", Model.PaymentNo]));'>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i>@T["Posting"]</button>
+            </form>
+            <form method="post" asp-controller="@c.Controller" asp-action="Delete" asp-route-uid="@Model.Uid" class="d-inline" data-perm="delete"
+                  onsubmit='return confirm(@Json.Serialize(T["Hapus draft {0}?", Model.PaymentNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus Draft"]</button>
+            </form>
+        }
+        @if (Model.Status == "posted")
+        {
+            <button type="button" class="btn btn-outline-danger btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#voidModal">
+                <i class="bi bi-x-circle me-1"></i>@T["Batalkan"]
+            </button>
+        }
+        <a asp-controller="@c.Controller" asp-action="Print" asp-route-uid="@Model.Uid" target="_blank" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i>@T["Cetak"]</a>
+        <a asp-controller="@c.Controller" asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    @if (Model.Status == "void")
+    {
+        <div class="alert alert-danger small"><i class="bi bi-x-octagon me-1"></i>@T["Dibatalkan. Alasan: {0}", Model.VoidReason ?? "-"]</div>
+    }
+
+    @if (pending)
+    {
+        <div class="alert alert-warning small"><i class="bi bi-hourglass-split me-1"></i>@T["Pembayaran ini menunggu persetujuan: tetap draft (kas belum keluar) dan tidak dapat diubah atau dihapus sampai diputuskan atau pengajuannya ditarik."]</div>
+    }
+    @if (approval != null)
+    {
+        approval.ReturnUrl = Url.Action("Details", c.Controller, new { uid = Model.Uid });
+        <partial name="_ApprovalPanel" model="approval" />
+    }
+
+    <div class="card custom-card mb-3">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 text-white small">
+                <div class="col-md-3"><div class="text-white-50">@T[c.PartyLabel]</div>@(Model.PartyName ?? "-")</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Tanggal"]</div>@Acc.Date(Model.PaymentDate)</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Rekening"]</div>@Model.CashAccountName</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Jumlah"]</div><span class="fs-5 fw-semibold">@Acc.Fx(Model.Amount, cur)</span></div>
+                @if (Model.IsForeign)
+                {
+                    <div class="col-md-3"><div class="text-white-50">@T["Kurs bayar"]</div>@Acc.Rate(Model.FxRate) IDR</div>
+                    <div class="col-md-3">
+                        <div class="text-white-50">@(c.IsPayable ? T["Kas keluar (IDR)"] : T["Kas masuk (IDR)"])</div>
+                        @(posted ? Acc.Money(Model.FunctionalAmount) : "≈ " + Acc.Money(Model.FunctionalAmount))
+                        @if (Acc.IsForeign(Model.CashCurrencyCode) && c.IsPayable)
+                        {
+                            <div class="text-white-50 small">@T["nilai tercatat rekening {0}", Model.CashCurrencyCode]</div>
+                        }
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-white-50">@T["Selisih kurs terealisasi"]</div>
+                        @if (posted)
+                        {
+                            <span class="fw-semibold @(Model.FxGainLoss >= 0 ? "text-success" : "text-danger")">@Acc.Money(Model.FxGainLoss)</span>
+                            <span class="text-white-50 small">@(Model.FxGainLoss >= 0 ? T["laba"] : T["rugi"])</span>
+                        }
+                        else
+                        {
+                            <span class="text-white-50">@T["dihitung saat posting"]</span>
+                        }
+                    </div>
+                }
+                <div class="col-md-3"><div class="text-white-50">@T["Referensi"]</div>@(Model.Reference ?? "-")</div>
+                <div class="col-md-6"><div class="text-white-50">@T["Keterangan"]</div>@(Model.Description ?? "-")</div>
+                <div class="col-md-3">
+                    <div class="text-white-50">@T["Jurnal"]</div>
+                    @if (Model.JournalUid != null)
+                    {
+                        <a asp-controller="Journals" asp-action="Details" asp-route-uid="@Model.JournalUid" class="text-info">@Model.JournalNo</a>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card custom-card">
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>@T["FAKTUR"]</th><th>@T["TANGGAL"]</th><th class="text-end">@T["TOTAL FAKTUR"]</th><th class="text-end">@T["ALOKASI"]</th>
+                        @if (Model.IsForeign)
+                        {
+                            <th class="text-end">@T["KURS FAKTUR"]</th><th class="text-end">@T["PENGURANG (IDR)"]</th><th class="text-end">@T["SELISIH KURS"]</th>
+                        }
+                        <th class="text-center" style="width: 70px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in Model.Allocations)
+                    {
+                        <tr>
+                            <td><a asp-controller="@c.InvoiceController" asp-action="Details" asp-route-uid="@a.InvoiceUid" class="text-info text-decoration-none">@a.InvoiceNo</a></td>
+                            <td class="text-white small">@Acc.Date(a.InvoiceDate)</td>
+                            <td class="text-end text-white">@Acc.Fx(a.InvoiceTotal, cur)</td>
+                            <td class="text-end text-white">@Acc.Fx(a.Amount, cur)</td>
+                            @if (Model.IsForeign)
+                            {
+                                <td class="text-end text-white-50 small">@Acc.Rate(a.InvoiceFxRate)</td>
+                                <td class="text-end text-white">@(posted ? Acc.Money(a.FunctionalAmount) : "-")</td>
+                                <td class="text-end @(a.FxGainLoss >= 0 ? "text-success" : "text-danger")">@(posted ? Acc.Money(a.FxGainLoss) : "-")</td>
+                            }
+                            <td class="text-center">
+                                <div class="row-actions">
+                                    <a asp-controller="@c.InvoiceController" asp-action="Details" asp-route-uid="@a.InvoiceUid" class="act-btn act-view" title="@T["Lihat"]"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td colspan="3" class="text-end text-white">@T["TOTAL"]</td>
+                        <td class="text-end text-white">@Acc.Fx(Model.Allocations.Sum(a => a.Amount), cur)</td>
+                        @if (Model.IsForeign)
+                        {
+                            <td></td>
+                            <td class="text-end text-white">@(posted ? Acc.Money(Model.Allocations.Sum(a => a.FunctionalAmount)) : "-")</td>
+                            <td class="text-end @(Model.FxGainLoss >= 0 ? "text-success" : "text-danger")">@(posted ? Acc.Money(Model.FxGainLoss) : "-")</td>
+                        }
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (Model.Status == "posted")
+{
+    <div class="modal fade" id="voidModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-controller="@c.Controller" asp-action="Void" asp-route-uid="@Model.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batalkan"] @Model.PaymentNo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Jurnal dibalik dan sisa tagihan faktur dikembalikan. Dokumen tetap tercatat berstatus Dibatalkan."]</p>
+                    <div class="mb-3">
+                        <label class="form-label" for="voidDate">@T["Tanggal pembatalan"]</label>
+                        <input type="date" class="form-control" name="date" id="voidDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@Model.PaymentDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <label class="form-label" for="voidReason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="voidReason" rows="3" maxlength="200" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Batalkan"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

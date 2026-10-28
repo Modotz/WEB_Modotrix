@@ -13,10 +13,12 @@ namespace ERP.Web.Controllers;
 public class BrandsController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public BrandsController(ApiClient api)
+    public BrandsController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
 
@@ -52,10 +54,10 @@ public class BrandsController : Controller
     // =========================================================
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
         var brand =
-            await _api.GetBrandAsync(id);
+            await _api.GetBrandAsync(uid);
 
         if (brand is null)
             return NotFound();
@@ -174,10 +176,10 @@ public class BrandsController : Controller
     // =========================================================
 
     [HttpGet]
-    public async Task<IActionResult> Edit(long id)
+    public async Task<IActionResult> Edit(Guid uid)
     {
         var brand =
-            await _api.GetBrandAsync(id);
+            await _api.GetBrandAsync(uid);
 
 
         if (brand is null)
@@ -265,7 +267,7 @@ public class BrandsController : Controller
                     nameof(Edit),
                     new
                     {
-                        id = model.Id
+                        uid = model.Uid
                     }
                 );
             }
@@ -273,13 +275,13 @@ public class BrandsController : Controller
 
 
         // =====================================================
-        // ID TETAP DIPERLUKAN UNTUK UPDATE
+        // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
         // =====================================================
 
-        if (!model.Id.HasValue)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
             TempData["Error"] =
-                "ID brand tidak ditemukan.";
+                "Brand tidak ditemukan.";
 
             return RedirectToAction(
                 nameof(Index)
@@ -324,7 +326,7 @@ public class BrandsController : Controller
             return BadRequest(new
             {
                 message =
-                    "Gambar belum dipilih di ERP.Web."
+                    _t["Gambar belum dipilih di ERP.Web."]
             });
         }
 
@@ -340,8 +342,8 @@ public class BrandsController : Controller
                 message =
                     string.IsNullOrWhiteSpace(
                         result.Error)
-                        ? "API gagal mengupload gambar."
-                        : result.Error
+                        ? _t["API gagal mengupload gambar."]
+                        : _t[result.Error]
             });
         }
 
@@ -358,10 +360,10 @@ public class BrandsController : Controller
     // =========================================================
 
     [HttpPost]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
         var result =
-            await _api.DeleteBrandAsync(id);
+            await _api.DeleteBrandAsync(uid);
 
 
         TempData[result.Success
@@ -402,9 +404,9 @@ public class BrandsController : Controller
             workbook.Worksheets.Add("Brand");
 
         worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Nama Brand";
+        worksheet.Cell(1, 2).Value = _t["Nama Brand"];
         worksheet.Cell(1, 3).Value = "Image";
-        worksheet.Cell(1, 4).Value = "Status";
+        worksheet.Cell(1, 4).Value = _t["Status"];
 
         var header =
             worksheet.Range("A1:D1");
@@ -430,8 +432,8 @@ public class BrandsController : Controller
 
             worksheet.Cell(row, 4).Value =
                 item.IsActive
-                    ? "Aktif"
-                    : "Nonaktif";
+                    ? _t["Aktif"]
+                    : _t["Nonaktif"];
 
             row++;
             no++;
@@ -512,7 +514,7 @@ public class BrandsController : Controller
                                             .FontColor("#6c757d");
 
                                         text.Span(
-                                                $"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}"
+                                                _t["Dicetak: {0}", DateTime.Now.ToString("dd/MM/yyyy HH:mm")]
                                             )
                                             .FontColor("#6c757d");
 
@@ -520,7 +522,7 @@ public class BrandsController : Controller
                                             .FontColor("#6c757d");
 
                                         text.Span(
-                                                $"Total: {listBrands.Count} data"
+                                                _t["Total: {0} data", listBrands.Count]
                                             )
                                             .FontColor("#6c757d");
                                     });
@@ -549,7 +551,7 @@ public class BrandsController : Controller
 
                                     header.Cell()
                                         .Element(HeaderStyle)
-                                        .Text("Nama Brand");
+                                        .Text(_t["Nama Brand"]);
 
                                     header.Cell()
                                         .Element(HeaderStyle)
@@ -557,7 +559,7 @@ public class BrandsController : Controller
 
                                     header.Cell()
                                         .Element(HeaderStyle)
-                                        .Text("Status");
+                                        .Text(_t["Status"]);
 
 
                                     static IContainer HeaderStyle(
@@ -618,8 +620,8 @@ public class BrandsController : Controller
                                                 backgroundColor))
                                         .Text(
                                             item.IsActive
-                                                ? "Aktif"
-                                                : "Nonaktif");
+                                                ? _t["Aktif"]
+                                                : _t["Nonaktif"]);
 
                                     no++;
                                 }
@@ -644,7 +646,7 @@ public class BrandsController : Controller
                             .AlignLeft()
                             .PaddingTop(10)
                             .Text(
-                                "Dokumen dihasilkan otomatis oleh sistem."
+                                _t["Dokumen dihasilkan otomatis oleh sistem."]
                             )
                             .FontSize(8.5f)
                             .FontColor("#888888");

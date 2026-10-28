@@ -3,7 +3,7 @@
 @model PagedResult<ProductViewModel>
 
 @{
-    ViewData["Title"] = "Varian";
+    ViewData["Title"] = T["Varian"];
 
     var no = ((Model.Page - 1) * Model.PageSize);
     var variants = Model?.Data ?? Enumerable.Empty<ProductViewModel>();
@@ -15,7 +15,7 @@
     <div class="mb-2">
 
         <h4 class="page-title">
-            Varian — @(parentProduct?.Name ?? "Produk")
+            @T["Varian"] — @(parentProduct?.Name ?? T["Produk"])
         </h4>
 
         <div class="d-flex gap-1">
@@ -25,17 +25,18 @@
                class="btn btn-sm btn-outline-secondary">
 
                 <i class="bi bi-arrow-left"></i>
-                Kembali ke Produk
+                @T["Kembali ke Produk"]
 
             </a>
 
             <a asp-action="Edit"
                asp-controller="Products"
-               asp-route-id="@parentProduct?.Id"
-               class="btn btn-sm btn-outline-warning">
+               asp-route-uid="@parentProduct?.Uid"
+               class="btn btn-sm btn-outline-warning"
+               data-perm="update">
 
                 <i class="bi bi-pencil"></i>
-                Edit Induk
+                @T["Edit Induk"]
 
             </a>
 
@@ -46,7 +47,7 @@
     <div class="card variant-card mb-2"> 
         <div class="card-body"> 
             <div class="variant-parent-label">
-                Produk Induk
+                @T["Produk Induk"]
             </div>
 
             <div class="d-flex align-items-center flex-wrap gap-2"> 
@@ -61,15 +62,15 @@
                 @if (parentProduct?.HasVariants == true)
                 {
                     <span class="badge bg-info text-dark">
-                        Punya Varian
+                        @T["Punya Varian"]
                     </span>
                 }
 
             </div>
 
             <div class="variant-parent-description">
-                Induk dijadikan template (tidak distok).
-                Stok & harga ada di tiap varian.
+                @T["Induk dijadikan template (tidak distok)."]
+                @T["Stok & harga ada di tiap varian."]
             </div>
 
         </div>
@@ -80,7 +81,7 @@
         <div class="card-header bg-transparent d-flex justify-content-between align-items-center"> 
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-funnel"></i>
-                <span class="fw-semibold">Filter</span>
+                <span class="fw-semibold">@T["Filter"]</span>
             </div>
 
             <button class="btn btn-sm text-muted p-0"
@@ -97,11 +98,12 @@
             <div class="card-body"> 
                 <form method="get"
                       asp-action="Index"
+                      asp-route-uid="@parentProduct?.Uid"
                       class="row g-2 align-items-end">
 
                     <div class="col-md-3">
                         <label for="search" class="form-label">
-                            Cari
+                            @T["Cari"]
                         </label>
 
                         <input type="text"
@@ -122,17 +124,17 @@
 
                             <option value=""
                                     selected="@(Context.Request.Query["isActive"] == "")">
-                                -- Semua --
+                                @T["-- Semua --"]
                             </option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["isActive"] == "true")">
-                                Aktif
+                                @T["Aktif"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["isActive"] == "false")">
-                                Non-Aktif
+                                @T["Non-Aktif"]
                             </option>
 
                         </select>
@@ -149,17 +151,17 @@
 
                             <option value=""
                                     selected="@(Context.Request.Query["trackStock"] == "")">
-                                -- Semua --
+                                @T["-- Semua --"]
                             </option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["trackStock"] == "true")">
-                                Ya
+                                @T["Ya"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["trackStock"] == "false")">
-                                Tidak
+                                @T["Tidak"]
                             </option>
 
                         </select>
@@ -167,7 +169,7 @@
 
                     <div class="col-md-2">
                         <label for="pageSize" class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select class="form-select"
@@ -185,15 +187,15 @@
                     <div class="col-md-3 d-flex gap-2"> 
                         <button type="submit" class="btn btn-primary d-flex align-items-center gap-2"> 
                             <i class="bi bi-search"></i>
-                            Terapkan 
+                            @T["Terapkan"]
                         </button>
 
                         <a asp-action="Index"
                            asp-controller="ProductVariants"
-                           asp-route-id="@parentProduct?.Id"
+                           asp-route-uid="@parentProduct?.Uid"
                            class="btn filter-reset-btn">
                             <i class="bi bi-arrow-counterclockwise"></i>
-                            Reset
+                            @T["Reset"]
                         </a>
                     </div> 
                 </form> 
@@ -206,16 +208,17 @@
     <div class="product-table-header">
         <div class="product-table-heading">
 
-            <span class="product-table-title">Varian Terdaftar (@Model.TotalCount)</span> 
+            <span class="product-table-title">@T["Varian Terdaftar ({0})", Model.TotalCount]</span> 
         </div>
 
             <a asp-action="Create"
                asp-controller="ProductVariants"
-               asp-route-id="@parentProduct?.Id"
-               class="btn btn-teal btn-custom-action">
+               asp-route-uid="@parentProduct?.Uid"
+               class="btn btn-teal btn-custom-action"
+               data-perm="create">
 
                 <i class="bi bi-plus-lg"></i>
-                Tambah Varian
+                @T["Tambah Varian"]
 
             </a>
     </div>
@@ -228,19 +231,19 @@
                     <tr>
                         <th class="text-center" >#</th>
                         <th class="text-center" >IMAGE</th>
-                        <th class="text-center" >NO. PRODUK</th>
+                        <th class="text-center" >@T["NO. PRODUK"]</th>
                         <th class="text-center" >SKU</th>
                         <th class="text-center" >NAME</th> 
                         <th class="text-center" >BRAND</th>
                         <th class="text-center" >CATEGORY</th> 
-                        <th class="text-center">JENIS</th>
+                        <th class="text-center">@T["JENIS"]</th>
                         <th class="text-center" >UNIT</th>
                         <th class="text-center">COST PRICE</th>
                         <th class="text-center"> SELL PRICE </th>
                         <th class="text-center"> MIN STOCK </th>
                         <th class="text-center"> TRACK STOCK </th>
                         <th class="text-center"> IS ACTIVE </th>
-                        <th class="text-center"> AKSI </th>
+                        <th class="text-center">@T["AKSI"]</th>
                     </tr>
                 </thead>
 
@@ -325,13 +328,13 @@
                                     @if (item.TrackStock)
                                     {
                                     <span class="badge bg-success">
-                                        Ya
+                                        @T["Ya"]
                                     </span>
                                     }
                                     else
                                     {
                                     <span class="badge bg-secondary">
-                                        Tidak
+                                        @T["Tidak"]
                                     </span>
                                     }
 
@@ -341,24 +344,24 @@
                                     @if (item.IsActive)
                                     {
                                         <span class="product-badge product-badge-stock">
-                                            Aktif
+                                            @T["Aktif"]
                                         </span>
                                     }
                                     else
                                     {
                                         <span class="product-badge product-badge-no-stock">
-                                            Nonaktif
+                                            @T["Nonaktif"]
                                         </span>
                                     } 
                                 </td>
                                  
-                                <td> 
-                                    <div class="product-actions"> 
+                                <td class="text-center">
+                                    <div class="row-actions"> 
                                         <a asp-action="Variant"
                                            asp-controller="ProductUnits"
-                                           asp-route-id="@item.Id"
-                                           class="product-action-btn product-action-variant"
-                                           title="Satuan & Konversi">
+                                           asp-route-uid="@item.Uid"
+                                           class="act-btn act-other"
+                                           title="@T["Satuan & Konversi"]">
 
                                             <i class="bi bi-rulers"></i>
 
@@ -366,9 +369,10 @@
 
                                         <a asp-action="Copy"
                                            asp-controller="ProductVariants"
-                                           asp-route-id="@item.Id"
-                                           class="product-action-btn product-action-copy"
-                                           title="Salin Produk Varian">
+                                           asp-route-uid="@item.Uid"
+                                           class="act-btn act-other"
+                                           data-perm="create"
+                                           title="@T["Salin Produk Varian"]">
 
                                             <i class="bi bi-files"></i>
 
@@ -376,11 +380,12 @@
                                          
                                         <a asp-action="Edit"
                                            asp-controller="ProductVariants"
-                                           asp-route-id="@item.Id"
-                                           class="product-action-btn product-action-edit"
-                                           title="Edit">
+                                           asp-route-uid="@item.Uid"
+                                           class="act-btn act-edit"
+                                           data-perm="update"
+                                           title="@T["Edit"]">
 
-                                            <i class="bi bi-pencil-square"></i>
+                                            <i class="bi bi-pencil"></i>
 
                                         </a>
                                          
@@ -388,21 +393,22 @@
                                               asp-action="Delete"
                                               asp-controller="ProductVariants"
                                               class="d-inline"
-                                              onsubmit="return confirm('Yakin ingin menghapus varian ini?');">
+                                              data-perm="delete"
+                                              onsubmit='return confirm(@Json.Serialize(T["Yakin ingin menghapus varian ini?"]));'>
 
                                             @Html.AntiForgeryToken()
 
                                             <input type="hidden"
-                                                   name="id"
-                                                   value="@item.Id" />
+                                                   name="uid"
+                                                   value="@item.Uid" />
 
                                             <input type="hidden"
-                                                   name="parentId"
-                                                   value="@parentProduct?.Id" />
+                                                   name="parentUid"
+                                                   value="@parentProduct?.Uid" />
 
                                             <button type="submit"
-                                                    class="product-action-btn product-action-delete"
-                                                    title="Hapus">
+                                                    class="act-btn act-delete"
+                                                    title="@T["Hapus"]">
 
                                                 <i class="bi bi-trash"></i>
 
@@ -420,7 +426,7 @@
                             <td colspan="17"
                                 class="product-empty"> 
                                 <i class="bi bi-box-seam"></i> 
-                                Tidak ada data varian produk. 
+                                @T["Tidak ada data varian produk."]
                             </td> 
                         </tr>
                     }
@@ -436,7 +442,7 @@
              var startItem = Model.TotalCount == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1;
              var endItem = Math.Min(Model.Page * Model.PageSize, Model.TotalCount);
           }
-          <span class="menu-description small"> Menampilkan <strong>@startItem – @endItem</strong> dari <strong>@Model.TotalCount</strong> data </span>
+          <span class="menu-description small"> @T["Menampilkan"] <strong>@startItem – @endItem</strong> @T["dari"] <strong>@Model.TotalCount</strong> @T["data"] </span>
           @{
              var currentPage = Model.Page;
              var totalPages = Model.TotalPage;
@@ -446,6 +452,7 @@
                     <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
                        <a class="page-link" href="@Url.Action("Index", new
                             {
+                                uid = parentProduct?.Uid,
                                 page = currentPage - 1,
                                 pageSize = Model.PageSize,
                                 search = Context.Request.Query["search"].ToString(),
@@ -458,7 +465,7 @@
                                 isActive = Context.Request.Query["isActive"].ToString(),
                                 showVariant = Context.Request.Query["showVariant"].ToString()
                             })">
-                             Sebelumnya
+                             @T["Sebelumnya"]
                        </a>
                     </li>
 
@@ -469,6 +476,7 @@
                             <a class="page-link"
                                href="@Url.Action("Index", new
                                {
+                                   uid = parentProduct?.Uid,
                                    page = i,
                                    pageSize = Model.PageSize,
                                    search = Context.Request.Query["search"].ToString(),
@@ -493,6 +501,7 @@
                             <a class="page-link"
                                href="@Url.Action("Index", new
                                {
+                                   uid = parentProduct?.Uid,
                                    page = currentPage + 1,
                                    pageSize = Model.PageSize,
                                    search = Context.Request.Query["search"].ToString(),
@@ -506,7 +515,7 @@
                                    showVariant = Context.Request.Query["showVariant"].ToString()
                                })">
 
-                                Berikutnya
+                                @T["Berikutnya"]
 
                             </a>
 

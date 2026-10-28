@@ -1,0 +1,106 @@
+@model ERP.Web.Models.DeferralScheduleViewModel
+@{
+    ViewData["Title"] = $"{T[Model.SideLabel]} {Model.SourceNo}";
+    var badge = ERP.Web.Models.DeferralScheduleViewModel.Badge(Model.Status);
+}
+
+<div class="page-heading supplier-page">
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <h3 class="fw-bold mb-0">@T[Model.SideLabel] @Model.SourceNo</h3>
+        <span class="badge @badge.Css">@T[badge.Label]</span>
+        <div class="ms-auto d-flex gap-2">
+            @if (Model.SourceUid != null)
+            {
+                <a asp-controller="@Model.SourceController" asp-action="Details" asp-route-uid="@Model.SourceUid" class="btn btn-outline-info btn-sm"><i class="bi bi-receipt me-1"></i>@T["Buka faktur"]</a>
+            }
+            <a asp-action="Index" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-7">
+            <div class="card supplier-card h-100">
+                <div class="card-body py-3 px-4 small">
+                    <div class="row g-2">
+                        <div class="col-sm-6"><div class="text-white-50">@T["Keterangan"]</div><div class="text-white">@Model.Description</div></div>
+                        <div class="col-sm-6"><div class="text-white-50">@(Model.IsPrepaid ? T["Supplier"] : T["Customer"])</div><div class="text-white">@Model.PartyName</div></div>
+                        <div class="col-sm-6"><div class="text-white-50">@T["Akun deferral"]</div><div class="text-white">@Model.DeferralAccountCode @T[Model.DeferralAccountName ?? ""]</div></div>
+                        <div class="col-sm-6"><div class="text-white-50">@(Model.IsPrepaid ? T["Akun beban (diakui bulanan)"] : T["Akun pendapatan (diakui bulanan)"])</div><div class="text-white">@Model.TargetAccountCode @Model.TargetAccountName</div></div>
+                        @if (Model.CostCenterCode != null || Model.ProjectCode != null)
+                        {
+                            <div class="col-sm-6"><div class="text-white-50">@T["Cost center / project"]</div><div class="text-white">@string.Join(" · ", new[] { Model.CostCenterCode, Model.ProjectCode }.Where(x => x != null))</div></div>
+                        }
+                        <div class="col-sm-6"><div class="text-white-50">@T["Periode"]</div><div class="text-white">@Model.StartPeriod – @Model.EndPeriod (@T["{0} bulan", Model.Months])</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card supplier-card h-100">
+                <div class="card-body py-3 px-4">
+                    <div class="d-flex justify-content-between small"><span class="text-white-50">@T["Nilai jadwal"]</span><span class="text-white">@Acc.Money(Model.TotalAmount)</span></div>
+                    <div class="d-flex justify-content-between small"><span class="text-white-50">@T["Sudah diakui"]</span><span class="text-white">@Acc.Money(Model.RecognizedAmount)</span></div>
+                    <div class="d-flex justify-content-between border-top border-secondary mt-2 pt-2"><span class="text-white">@T["Sisa di akun deferral"]</span><span class="text-white fw-bold">@Acc.Money(Model.RemainingAmount)</span></div>
+                    @if (Model.Status == "active")
+                    {
+                        <form method="post" asp-action="Reschedule" asp-route-uid="@Model.Uid" class="d-flex gap-2 align-items-end mt-3" data-perm="update"
+                              onsubmit='return confirm(@Json.Serialize(T["Ubah jumlah bulan? Bulan yang sudah diakui tetap; sisa dibagi ulang mulai bulan pertama yang belum diakui."]));'>
+                            <div>
+                                <label class="form-label text-white small mb-1" for="months">@T["Jumlah bulan baru"]</label>
+                                <input type="number" min="@Math.Max(2, Model.RecognizedMonths + 1)" max="120" class="form-control form-control-sm" name="months" id="months" value="@Model.Months" required style="width:7rem" />
+                            </div>
+                            <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-calendar2-range me-1"></i>@T["Ubah Jadwal"]</button>
+                        </form>
+                        <div class="form-text small text-white-50">@T["Catch-up: baris yang sudah diakui tidak diubah. Nilai total mengikuti faktur dan tidak bisa diubah di sini."]</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["BULAN"]</th>
+                        <th class="text-end">@T["NOMINAL"]</th>
+                        <th>@T["STATUS"]</th>
+                        <th class="pe-4">@T["JURNAL"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Lines.Count == 0)
+                    {
+                        <tr><td colspan="4" class="text-center text-muted py-4">@T["Jadwal dibatalkan — tidak ada baris rencana."]</td></tr>
+                    }
+                    @foreach (var l in Model.Lines)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white">@l.Period</td>
+                            <td class="text-end text-white">@Acc.Money(l.Amount)</td>
+                            <td>
+                                @if (l.IsRecognized)
+                                {
+                                    <span class="badge bg-success">@T["Diakui"]</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@T["Rencana"]</span>
+                                }
+                            </td>
+                            <td class="pe-4 small">
+                                @if (l.JournalUid != null)
+                                {
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@l.JournalUid" class="text-info text-nowrap">@l.JournalNo</a>
+                                    <span class="text-white-50 ms-1">@l.RecognitionNo</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

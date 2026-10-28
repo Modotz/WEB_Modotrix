@@ -10,7 +10,7 @@
 <head>
     <meta charset="utf-8" />
 
-    <title>Gudang</title>
+    <title>@T["Gudang"]</title>
 
     <style>
         * {
@@ -158,13 +158,13 @@
 
         <div class="print-button">
             <button type="button" onclick="window.print()">
-                Cetak
+                @T["Cetak"]
             </button>
 
             <button type="button"
                     class="close-button"
                     onclick="window.close()">
-                Tutup
+                @T["Tutup"]
             </button>
         </div>
 
@@ -173,16 +173,15 @@
             <h1>ERP-LITE</h1>
 
             <div class="header-info">
-                <span>Gudang</span>
+                <span>@T["Gudang"]</span>
                 <span>•</span>
                 <span>
-                    Dicetak:
+                    @T["Dicetak"]:
                     @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
                 </span>
                 <span>•</span>
                 <span>
-                    Total:
-                    @Model.TotalData data
+                    @T["Total: {0}", T["{0} data", Model.TotalData]]
                 </span>
             </div>
 
@@ -192,7 +191,7 @@
 
             <thead>
                 <tr>
-                    <th style="width: 4%;">No</th>
+                    <th style="width: 4%;">@T["No"]</th>
                     <th style="width: 9%;">Code</th>
                     <th style="width: 16%;">Name</th>
                     <th style="width: 25%;">Address</th>
@@ -237,11 +236,11 @@
                             </td>
 
                             <td class="status">
-                                @(item.IsDefault == true ? "Ya" : "Tidak")
+                                @(item.IsDefault == true ? T["Ya"] : T["Tidak"])
                             </td>
 
                             <td class="status">
-                                @(item.IsActive == true ? "Aktif" : "Nonaktif")
+                                @(item.IsActive == true ? T["Aktif"] : T["Nonaktif"])
                             </td>
                         </tr>
 
@@ -252,7 +251,7 @@
                 {
                     <tr>
                         <td colspan="8" class="status">
-                            Belum ada data gudang.
+                            @T["Belum ada data gudang."]
                         </td>
                     </tr>
                 }
@@ -262,7 +261,7 @@
         </table>
 
         <div class="footer">
-            Dokumen dihasilkan otomatis oleh sistem.
+            @T["Dokumen dihasilkan otomatis oleh sistem."]
         </div>
 
     </div>

@@ -2,7 +2,7 @@
 @using ERP.Web.Models
 
 @{
-   ViewData["Title"] = ViewBag.IsEdit == true ? "Edit RFQ Barang" : "Tambah RFQ Barang";
+   ViewData["Title"] = ViewBag.IsEdit == true ? T["Edit RFQ Barang"] : T["Tambah RFQ Barang"];
 
     var products = ViewBag.Products as List<GoodsRfqItemViewModel> ?? new List<GoodsRfqItemViewModel>(); 
     
@@ -23,7 +23,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
 <div class="po-create-page">
 
   <div class="product-page-title">
-    @(ViewBag.IsEdit == true ? "Edit RFQ Barang" : "Tambah RFQ Barang")
+    @(ViewBag.IsEdit == true ? T["Edit RFQ Barang"] : T["Tambah RFQ Barang"])
   </div>
 
     <!-- PANDUAN -->
@@ -33,7 +33,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
              data-bs-target="#productInfo">
             <div>
                 <i class="bi bi-info-circle-fill me-2"></i>
-                <strong>Panduan Pengisian - RFQ Barang</strong>
+                <strong>@T["Panduan Pengisian - RFQ Barang"]</strong>
             </div>
             <i class="bi bi-chevron-down"></i>
         </div>
@@ -42,40 +42,32 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
             <div class="product-info-body">
                 <ol class="ps-3 mb-0">
                     <li>
-                        <strong>RFQ (Request for Quotation)</strong> adalah permintaan
-                        penawaran harga ke <strong>satu supplier</strong> — belum jadi pesanan.
-                        Pilih <strong>Supplier</strong> dan <strong>Tanggal</strong> (wajib).
-                        <i>Berlaku s/d</i> dan <i>Catatan</i> opsional.
+                        @Html.Raw(T["<strong>RFQ (Request for Quotation)</strong> adalah permintaan penawaran harga ke <strong>satu supplier</strong> — belum jadi pesanan. Pilih <strong>Supplier</strong> dan <strong>Tanggal</strong> (wajib). <i>Berlaku s/d</i> dan <i>Catatan</i> opsional."])
                     </li>
 
                     <li>
-                        Tambah item: cari <strong>Produk</strong>, isi <strong>Qty</strong>,
-                        pilih <strong>Satuan</strong>, dan isi <strong>Est.Harga</strong> 
-                        (perkiraan/target) sebagai acuan - <i>bukan</i> harga final.
+                        @Html.Raw(T["Tambah item: cari <strong>Produk</strong>, isi <strong>Qty</strong>, pilih <strong>Satuan</strong>, dan isi <strong>Est.Harga</strong> (perkiraan/target) sebagai acuan - <i>bukan</i> harga final."])
                     </li>
 
                     <li>
-                        Klik <strong>Simpan Draft</strong>. Selanjutnya:
-                        <strong>Kirim ke Supplier</strong> →
-                        <strong>Input Penawaran</strong> (harga dari supplier) →
-                        <strong>Jadikan PO</strong>.
+                        @Html.Raw(T["Klik <strong>Simpan Draft</strong>. Selanjutnya: <strong>Kirim ke Supplier</strong> → <strong>Input Penawaran</strong> (harga dari supplier) → <strong>Jadikan PO</strong>."])
                     </li>
 
                     <li>
-                        <strong>Stok tidak berubah</strong> pada tahap RFQ.
+                        @Html.Raw(T["<strong>Stok tidak berubah</strong> pada tahap RFQ."])
                     </li>
                 </ol>
 
                 <div class="product-info-tip">
                     <i class="bi bi-lightbulb"></i>
-                    Tips: RFQ juga bisa dibuat dari PR yang disetujui (tombol "Buat RFQ" di halaman PR).
+                    @(T["Tips: RFQ juga bisa dibuat dari PR yang disetujui (tombol \"Buat RFQ\" di halaman PR)."])
                 </div>
             </div>
         </div>
     </div>
 
     <form asp-action="@(ViewBag.IsEdit == true ? "Edit" : "Create")"
-          asp-route-id="@(ViewBag.IsEdit == true ? Model.Id : (long?)null)"
+          asp-route-uid="@(ViewBag.IsEdit == true ? Model.Uid : null)"
           method="post" id="goodsRfqForm">
 
           @Html.AntiForgeryToken()
@@ -84,7 +76,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
         <div class="card po-detail-card">
 
         <div class="card-header">
-          <strong>@(ViewBag.IsEdit == true ? "Edit RFQ Barang" : "Tambah RFQ Barang")</strong>
+          <strong>@(ViewBag.IsEdit == true ? T["Edit RFQ Barang"] : T["Tambah RFQ Barang"])</strong>
         </div>
     
             <div class="card-body">
@@ -92,7 +84,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
                 @if (!ViewData.ModelState.IsValid)
                 {
                     <div class="alert alert-danger mb-3">
-                        <strong>Data belum dapat disimpan.</strong>
+                        <strong>@T["Data belum dapat disimpan."]</strong>
                         <ul class="mb-0 mt-2">
                             @foreach (var item in ViewData.ModelState)
                             {
@@ -101,8 +93,8 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
                                     <li>
                                         @(string.IsNullOrWhiteSpace(error.ErrorMessage)
                                             ? error.Exception?.GetBaseException().Message
-                                                ?? "Nilai yang dimasukkan tidak valid."
-                                            : error.ErrorMessage)
+                                                ?? T["Nilai yang dimasukkan tidak valid."]
+                                            : T[error.ErrorMessage])
                                     </li>
                                 }
                             }
@@ -113,15 +105,15 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
                 @if (TempData["Error"] != null)
                 {
                     <div class="alert alert-danger">
-                        <strong>Gagal menyimpan:</strong>
-                        @TempData["Error"]
+                        <strong>@T["Gagal menyimpan:"]</strong>
+                        @T[TempData["Error"]?.ToString()]
                     </div>
                 }
 
                 <div class="row g-2 mb-2">
 
                     <div class="col-md-4">
-                        <label class="form-label">No. RFQ</label>
+                        <label class="form-label">@T["No. RFQ"]</label>
                         <input type="text"
                                class="form-control"
                                value="@(ViewBag.IsEdit == true ? Model.RfqNo: (ViewBag.NextRfqNo ?? "-"))"
@@ -130,12 +122,12 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
 
                     <div class="col-md-4">
                         <label asp-for="SupplierId" class="form-label">
-                            Supplier <span class="text-danger">*</span>
+                            @T["Supplier"] <span class="text-danger">*</span>
                         </label>
                         <select asp-for="SupplierId"
                                 class="form-select"
                                 required>
-                            <option value="">-- Pilih Supplier --</option>
+                            <option value="">@T["-- Pilih Supplier --"]</option>
 
                             @foreach (var supplier in suppliers)
                             {
@@ -146,7 +138,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
 
                     <div class="col-md-4">
                         <label asp-for="RfqDate" class="form-label">
-                            Tanggal RFQ <span class="text-danger">*</span>
+                            @T["Tanggal RFQ"] <span class="text-danger">*</span>
                         </label>
                         <input asp-for="RfqDate"
                                type="date"
@@ -156,18 +148,18 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
                     </div>
 
                     <div class="col-md-4">
-                        <label asp-for="ValidUntil" class="form-label">Berlaku s/d</label>
+                        <label asp-for="ValidUntil" class="form-label">@T["Berlaku s/d"]</label>
                         <input asp-for="ValidUntil"
                                type="date"
                                class="form-control" />
                     </div>
 
                     <div class="col-md-8">
-                        <label asp-for="Note" class="form-label">Catatan</label>
+                        <label asp-for="Note" class="form-label">@T["Catatan"]</label>
                         <input asp-for="Note"
                                type="text"
                                class="form-control"
-                               placeholder="Catatan RFQ (opsional)" />
+                               placeholder="@T["Catatan RFQ (opsional)"]" />
                     </div>
 
                 </div>
@@ -177,12 +169,12 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
         <!-- DETAIL ITEM -->
         <div class="card mt-2">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>Detail Item</strong>
+                <strong>@T["Detail Item"]</strong>
 
                 <button type="button"
                         class="btn btn-sm btn-add-row"
                         id="addItemBtn">
-                    <i class="bi bi-plus-lg"></i> Tambah Baris
+                    <i class="bi bi-plus-lg"></i> @T["Tambah Baris"]
                 </button>
             </div>
 
@@ -191,11 +183,11 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
                     <thead>
                         <tr>
                             <th style="width:32px">#</th>
-                            <th>PRODUK<span class="text-danger">*</span></th>
-                            <th style="width:90px">QTY</th>
-                            <th style="width:100px">SATUAN</th>
-                            <th style="width:130px">EST. HARGA</th>
-                            <th style="width:130px">SUBTOTAL</th>
+                            <th>@T["PRODUK"]<span class="text-danger">*</span></th>
+                            <th style="width:90px">@T["QTY"]</th>
+                            <th style="width:100px">@T["SATUAN"]</th>
+                            <th style="width:130px">@T["EST. HARGA"]</th>
+                            <th style="width:130px">@T["SUBTOTAL"]</th>
                             <th style="width:35px"></th>
                         </tr>
                     </thead>
@@ -210,7 +202,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
                                     <select name="Items[@i].ProductId"
                                             class="form-select form-select-sm product-select"
                                             required>
-                                        <option value="">-- Cari produk --</option>
+                                        <option value="">@T["-- Cari produk --"]</option>
                                         @foreach (var product in products)
                                         {
                                             <option value="@product.ProductId"
@@ -267,7 +259,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
                                 <td>
                                     <button type="button"
                                             class="btn btn-sm btn-danger btn-hapus remove-item"
-                                            title="Hapus baris">
+                                            title="@T["Hapus baris"]">
                                         ×
                                     </button>
                                 </td>
@@ -278,7 +270,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
             <tr>
          
              <td colspan="5" class="text-end border-0">
-                 <strong>Estimasi Total</strong>
+                 <strong>@T["Estimasi Total"]</strong>
                  </td>
             
               <td class="border-0">   
@@ -297,11 +289,11 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
                  <div class="po-summary-wrap">
                 <div class="po-form-actions">
                     <button type="submit" class="btn po-btn-save">
-                        <i class="bi bi-save"></i> Simpan Draft
+                        <i class="bi bi-save"></i> @T["Simpan Draft"]
                     </button>
 
                     <a asp-action="Index" class="btn po-btn-cancel">
-                        Batal
+                        @T["Batal"]
                     </a>
                 </div>
             </div>
@@ -319,7 +311,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
 
     // Pilihan produk beserta harga dan satuan default
     const productOptions = `
-        <option value="">-- Cari produk --</option>
+        <option value="">@T["-- Cari produk --"]</option>
         @foreach (var product in products)
         {
             <option value="@product.ProductId"
@@ -454,7 +446,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
             <td>
                 <button type="button"
                         class="btn btn-sm btn-danger btn-hapus remove-item"
-                        title="Hapus baris">×</button>
+                        title="@T["Hapus baris"]">×</button>
             </td>
         `;
 
@@ -489,7 +481,7 @@ var suppliers = ViewBag.Suppliers as IEnumerable<DropdownItemViewModel>
         const rows = itemsBody.querySelectorAll('.item-row');
 
         if (rows.length <= 1) {
-            alert('Minimal harus ada satu baris item.');
+            alert(@Json.Serialize(T["Minimal harus ada satu baris item."]));
             return;
         }
 

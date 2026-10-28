@@ -1,0 +1,211 @@
+@model ERP.Web.Models.CashTransactionFormViewModel
+@{
+    var isEdit = Model.Uid != null;
+    var typeLabel = Model.Type switch { "out" => T["Kas Keluar"], "transfer" => T["Transfer Antar Rekening"], _ => T["Kas Masuk"] };
+    var title = isEdit ? T["Ubah Draft {0}", Model.TrxNo] : typeLabel;
+    ViewData["Title"] = title;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@title</h3>
+        <a asp-action="@(isEdit ? "Details" : "Index")" asp-route-uid="@Model.Uid" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+    </div>
+
+    <form method="post" asp-action="@(isEdit ? "Update" : "Create")">
+        <input type="hidden" name="Uid" value="@Model.Uid" />
+        <input type="hidden" name="TrxNo" value="@Model.TrxNo" />
+        <input type="hidden" name="Type" value="@Model.Type" />
+
+        <div class="card custom-card mb-3">
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="TrxDate">@T["Tanggal"]</label>
+                        <input type="date" class="form-control form-control-sm" name="TrxDate" id="TrxDate" value="@Model.TrxDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-white small mb-1" for="CashAccountId">@(Model.Type == "transfer" ? T["Dari rekening"] : T["Rekening kas/bank"])</label>
+                        <select class="form-select form-select-sm" name="CashAccountId" id="CashAccountId" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var c in Model.CashAccounts)
+                            {
+                                <option value="@c.Id" data-currency="@c.CurrencyCode" selected="@(c.Id == Model.CashAccountId)">@c.OptionLabel(T["saldo"])</option>
+                            }
+                        </select>
+                    </div>
+                    @if (Model.Type == "transfer")
+                    {
+                        <div class="col-md-5">
+                            <label class="form-label text-white small mb-1" for="DestCashAccountId">@T["Ke rekening"]</label>
+                            <select class="form-select form-select-sm" name="DestCashAccountId" id="DestCashAccountId" required>
+                                <option value="">@T["— Pilih —"]</option>
+                                @foreach (var c in Model.CashAccounts)
+                                {
+                                    <option value="@c.Id" data-currency="@c.CurrencyCode" selected="@(c.Id == Model.DestCashAccountId)">@c.Name@(c.IsForeign ? $" [{c.CurrencyCode}]" : "")</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="col-md-5">
+                            <label class="form-label text-white small mb-1" for="CounterAccountId">@(Model.Type == "in" ? T["Diterima dari (akun lawan)"] : T["Dibayar untuk (akun lawan)"])</label>
+                            <select class="form-select form-select-sm" name="CounterAccountId" id="CounterAccountId" required>
+                                <option value="">@T["— Pilih akun —"]</option>
+                                @foreach (var a in Model.CounterAccounts)
+                                {
+                                    <option value="@a.Id" data-type="@a.Type" selected="@(a.Id == Model.CounterAccountId)">@a.Label</option>
+                                }
+                            </select>
+                            <div class="form-text text-white-50">@T["Transaksi dengan supplier/customer lewat Pembayaran Hutang / Penerimaan Piutang."]</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-white small mb-1" for="CostCenterId">@T["Cost center"]</label>
+                            <select class="form-select form-select-sm dim-select" name="CostCenterId" id="CostCenterId">
+                                <option value="">@T["— Tanpa —"]</option>
+                                @foreach (var cc in Model.Dimensions.CostCenters)
+                                {
+                                    <option value="@cc.Id" selected="@(cc.Id == Model.CostCenterId)">@cc.Code — @cc.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-white small mb-1" for="ProjectId">@T["Project"]</label>
+                            <select class="form-select form-select-sm dim-select" name="ProjectId" id="ProjectId">
+                                <option value="">@T["— Tanpa —"]</option>
+                                @foreach (var p in Model.Dimensions.Projects)
+                                {
+                                    <option value="@p.Id" data-type="@p.ProjectType" selected="@(p.Id == Model.ProjectId)">@p.Code — @p.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-5 d-flex align-items-end"><div class="form-text small text-white-50">@T["Cost center / project hanya untuk akun beban atau pendapatan."]</div></div>
+                    }
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="Amount">@T["Nominal"] <span id="amountCur"></span></label>
+                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end" name="Amount" id="Amount"
+                               value="@(Model.Amount == 0 ? "" : Model.Amount.ToString(inv))" required />
+                        <div class="form-text small text-info" id="fxPreview"></div>
+                    </div>
+                    <div class="col-md-3 d-none" id="fxRateGroup">
+                        <label class="form-label text-white small mb-1" for="FxRate">@T["Kurs"] <span id="fxCurLabel"></span> (IDR)</label>
+                        <input type="number" step="0.000001" min="0" class="form-control form-control-sm text-end" name="FxRate" id="FxRate"
+                               value="@Model.FxRate?.ToString(inv)" placeholder="@T["otomatis"]" />
+                        <div class="form-text small" id="fxRateInfo"></div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="Reference">@T["Referensi"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Reference" id="Reference" value="@Model.Reference" maxlength="100" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-white small mb-1" for="Description">@T["Keterangan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Description" id="Description" value="@Model.Description" maxlength="255" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <button type="submit" name="submitAction" value="draft" class="btn btn-outline-light"><i class="bi bi-save me-1"></i>@T["Simpan Draft"]</button>
+            <button type="submit" name="submitAction" value="post" class="btn btn-primary"
+                    onclick='return confirm(@Json.Serialize(T["Simpan dan posting? Transaksi posted hanya bisa dibatalkan (jurnal pembalik)."]));'>
+                <i class="bi bi-check2-circle me-1"></i>@T["Simpan & Posting"]
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // Level 11: dimensi hanya untuk akun lawan laba rugi; project internal tidak untuk pendapatan.
+        (function () {
+            const account = document.getElementById('CounterAccountId');
+            const cc = document.getElementById('CostCenterId'), prj = document.getElementById('ProjectId');
+            if (!account || !cc) return;
+            function sync() {
+                const type = account.selectedOptions[0]?.dataset.type;
+                const pl = type === 'expense' || type === 'revenue';
+                [cc, prj].forEach(s => { s.disabled = !pl; if (!pl) s.value = ''; });
+                prj.querySelectorAll('option[data-type="internal"]').forEach(o => { o.hidden = type === 'revenue'; if (o.hidden && o.selected) prj.value = ''; });
+            }
+            account.addEventListener('change', sync);
+            sync();
+        })();
+
+        // Rekening valas: nominal dalam mata uang rekening sumber; kurs otomatis dari tabel (bisa diganti kurs bank aktual).
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const fmtRate = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 6 });
+            const src = $('CashAccountId'), dest = $('DestCashAccountId'), amount = $('Amount'), rate = $('FxRate'), date = $('TrxDate');
+            const lookupUrl = '@Url.Action("Rate", "Lookup")';
+            const type = @Json.Serialize(Model.Type);
+            const t = {
+                rateOf: @Json.Serialize(T["kurs tabel per"]), noRate: @Json.Serialize(T["belum ada kurs — isi manual"]),
+                received: @Json.Serialize(T["diterima"]), outNote: @Json.Serialize(T["rekening valas berkurang sebesar nilai tercatatnya; selisih ke laba/rugi kurs"]),
+                cross: @Json.Serialize(T["Transfer antar dua mata uang asing belum didukung — lewat rekening IDR."])
+            };
+            let manual = rate.value !== '', tableRate = null, lastCur = null;
+
+            const curOf = (sel) => sel?.selectedOptions[0]?.dataset.currency || 'IDR';
+
+            function foreignCurrency() {
+                const s = curOf(src), d = type === 'transfer' ? curOf(dest) : 'IDR';
+                if (s !== 'IDR' && d !== 'IDR' && s !== d) return { error: true };
+                return { code: s !== 'IDR' ? s : d !== 'IDR' ? d : null, s, d };
+            }
+
+            async function lookup(code) {
+                tableRate = null;
+                if (!code) { $('fxRateInfo').textContent = ''; return; }
+                const res = await fetch(`${lookupUrl}?currency=${encodeURIComponent(code)}&date=${date.value}`);
+                if (res.ok) {
+                    const j = await res.json();
+                    tableRate = j.rate;
+                    $('fxRateInfo').textContent = `${t.rateOf} ${new Date(j.rateDate).toLocaleDateString('id-ID')}: ${fmtRate.format(j.rate)}`;
+                    if (!manual) rate.value = j.rate;
+                } else {
+                    $('fxRateInfo').textContent = t.noRate;
+                    if (!manual) rate.value = '';
+                }
+            }
+
+            function preview(info) {
+                const out = $('fxPreview');
+                if (info.error) { out.innerHTML = `<span class="text-danger">${t.cross}</span>`; return; }
+                const a = parseFloat(amount.value) || 0, r = parseFloat(rate.value) > 0 ? parseFloat(rate.value) : tableRate;
+                if (!info.code || !r || !a) { out.textContent = ''; return; }
+                if (type === 'transfer' && info.s !== info.d) {
+                    const got = info.d === 'IDR' ? Math.round(a * r * 100) / 100 : Math.round(a / r * 100) / 100;
+                    out.textContent = `${t.received}: ${info.d === 'IDR' ? 'IDR' : info.d} ${fmt.format(got)}`;
+                } else if (info.s !== 'IDR') {
+                    out.textContent = `≈ IDR ${fmt.format(Math.round(a * r * 100) / 100)}` + (type !== 'in' ? ` — ${t.outNote}` : '');
+                } else {
+                    out.textContent = '';
+                }
+            }
+
+            async function sync() {
+                const info = foreignCurrency();
+                const code = info.error ? null : info.code;
+                $('fxRateGroup').classList.toggle('d-none', !code);
+                $('fxCurLabel').textContent = code ?? '';
+                $('amountCur').textContent = curOf(src) !== 'IDR' ? `(${curOf(src)})` : '';
+                if (code !== lastCur) {
+                    lastCur = code;
+                    if (!code) { rate.value = ''; manual = false; }
+                    await lookup(code);
+                }
+                preview(info);
+            }
+
+            src.addEventListener('change', () => { manual = false; sync(); });
+            dest?.addEventListener('change', () => { manual = false; sync(); });
+            date.addEventListener('change', () => { manual = false; lastCur = undefined; sync(); });
+            rate.addEventListener('input', () => { manual = rate.value !== ''; preview(foreignCurrency()); });
+            amount.addEventListener('input', () => preview(foreignCurrency()));
+            sync();
+        })();
+    </script>
+}

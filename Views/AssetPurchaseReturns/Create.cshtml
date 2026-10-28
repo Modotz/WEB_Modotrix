@@ -1,0 +1,80 @@
+@model ERP.Web.Models.AssetReturnFormViewModel
+@{
+    ViewData["Title"] = T["Tambah Retur Aset"];
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@T["Tambah Retur Aset"]</h3>
+        <a asp-action="Index" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+    </div>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>@T["Retur hanya untuk aset dari penerimaan PO Aset yang belum difakturkan: jurnal pelepasan Dr GR/IR (2-1300) sebesar harga perolehan. Aset yang penerimaannya sudah difakturkan tidak bisa diretur di sini (butuh nota debit/retur faktur)."]
+    </div>
+
+    <form method="post" asp-action="Create">
+        <div class="card custom-card mb-3">
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="ReturnDate">@T["Tanggal retur"]</label>
+                        <input type="date" class="form-control form-control-sm" name="ReturnDate" id="ReturnDate" value="@Model.ReturnDate.ToString("yyyy-MM-dd")" max="@today" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-white small mb-1" for="Reason">@T["Alasan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Reason" id="Reason" value="@Model.Reason" maxlength="150" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-white small mb-1" for="Note">@T["Catatan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Note" id="Note" value="@Model.Note" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Pilih aset yang diretur"]</span></div>
+            <div class="table-responsive">
+                <table class="table custom-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th class="fw-bold">@T["NO. ASET"]</th>
+                            <th class="fw-bold">@T["NAMA"]</th>
+                            <th class="fw-bold">@T["SUPPLIER"]</th>
+                            <th class="fw-bold">@T["PO / PENERIMAAN"]</th>
+                            <th class="fw-bold text-end">@T["HARGA PEROLEHAN"]</th>
+                            <th class="fw-bold">@T["FAKTUR"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Assets.Count == 0)
+                        {
+                            <tr><td colspan="7" class="text-center text-white-50 py-4">@T["Tidak ada aset aktif dari penerimaan PO Aset."]</td></tr>
+                        }
+                        @foreach (var a in Model.Assets)
+                        {
+                            var invoiced = a.InvoiceNo != null;
+                            <tr class="@(invoiced ? "opacity-50" : "")">
+                                <td><input type="checkbox" class="form-check-input" name="AssetUids" value="@a.Uid" id="a_@a.Uid" disabled="@invoiced" checked="@Model.AssetUids.Contains(a.Uid)" /></td>
+                                <td><label for="a_@a.Uid" class="text-info">@a.AssetNo</label></td>
+                                <td class="text-white">@a.Name</td>
+                                <td class="text-white">@(a.SupplierName ?? "-")</td>
+                                <td class="text-white small">@a.ApoNo / @a.ReceiptNo (@Acc.Date(a.ReceiptDate))</td>
+                                <td class="text-end text-white">@Acc.Money(a.AcquisitionCost)</td>
+                                <td class="small">@(invoiced ? T["Sudah difakturkan ({0})", a.InvoiceNo!] : T["Belum"])</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <button type="submit" class="btn btn-danger btn-sm" onclick='return confirm(@Json.Serialize(T["Posting retur? Aset terpilih dilepas (retur) dengan jurnal pelepasan."]));'>
+                <i class="bi bi-box-arrow-left me-1"></i>@T["Posting Retur"]
+            </button>
+        </div>
+    </form>
+</div>

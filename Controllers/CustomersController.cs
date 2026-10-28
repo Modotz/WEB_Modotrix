@@ -11,10 +11,12 @@ namespace ERP.Web.Controllers;
 public class CustomersController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public CustomersController(ApiClient api)
+    public CustomersController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     // =========================================================
@@ -96,11 +98,19 @@ public class CustomersController : Controller
 
         if (file != null && file.Length > 0)
         {
+            if (!Guid.TryParse(customer.Uid, out var customerUid))
+            {
+                TempData["Error"] =
+                    "Customer berhasil ditambahkan, tetapi foto gagal disimpan.";
+
+                return RedirectToAction(nameof(Index));
+            }
+
             try
             {
                 var imagePath =
                     await _api.UploadCustomerImageAsync(
-                        customer.Id,
+                        customerUid,
                         file);
 
                 if (string.IsNullOrWhiteSpace(imagePath))
@@ -133,16 +143,11 @@ public class CustomersController : Controller
     // =========================================================
 
     [HttpGet]
-    public async Task<IActionResult> Edit(long id)
+    public async Task<IActionResult> Edit(Guid uid)
     {
-        var result =
-            await _api.GetCustomersAsync(
-                page: 1,
-                pageSize: 100);
-
-        var customer =
-            result.Data.FirstOrDefault(
-                x => x.Id == id);
+        var customer = uid == Guid.Empty
+            ? null
+            : await _api.GetCustomerAsync(uid);
 
         if (customer == null)
         {
@@ -159,7 +164,7 @@ public class CustomersController : Controller
         // SHIPPING ADDRESSES
         // =====================================================
 
-        await LoadShippingAddresses(id);
+        await LoadShippingAddresses(uid);
 
         return View(customer);
     }
@@ -174,11 +179,21 @@ public class CustomersController : Controller
         CustomerViewModel model,
         IFormFile? imageFile)
     {
+        // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
+        if (!Guid.TryParse(model.Uid, out var customerUid) ||
+            customerUid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Customer tidak ditemukan.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
         if (!ModelState.IsValid)
         {
             await LoadDropdowns();
 
-            await LoadShippingAddresses(model.Id);
+            await LoadShippingAddresses(customerUid);
 
             return View(model);
         }
@@ -198,7 +213,7 @@ public class CustomersController : Controller
 
             await LoadDropdowns();
 
-            await LoadShippingAddresses(model.Id);
+            await LoadShippingAddresses(customerUid);
 
             return View(model);
         }
@@ -213,7 +228,7 @@ public class CustomersController : Controller
             {
                 var imagePath =
                     await _api.UploadCustomerImageAsync(
-                        model.Id,
+                        customerUid,
                         imageFile);
 
                 if (string.IsNullOrWhiteSpace(imagePath))
@@ -223,7 +238,7 @@ public class CustomersController : Controller
 
                     return RedirectToAction(
                         nameof(Edit),
-                        new { id = model.Id });
+                        new { uid = customerUid });
                 }
             }
             catch (Exception ex)
@@ -233,7 +248,7 @@ public class CustomersController : Controller
 
                 return RedirectToAction(
                     nameof(Edit),
-                    new { id = model.Id });
+                    new { uid = customerUid });
             }
         }
 
@@ -251,10 +266,18 @@ public class CustomersController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Customer tidak ditemukan.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var success =
-            await _api.DeleteCustomerAsync(id);
+            await _api.DeleteCustomerAsync(uid);
 
         if (success)
         {
@@ -273,10 +296,18 @@ public class CustomersController : Controller
     // ACTIVATE CUSTOMER
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Activate(long id)
+    public async Task<IActionResult> Activate(Guid uid)
     {
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Customer tidak ditemukan.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var success =
-            await _api.ActivateCustomerAsync(id);
+            await _api.ActivateCustomerAsync(uid);
 
         if (success)
         {
@@ -299,9 +330,17 @@ public class CustomersController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UploadImage(
-        long customerId,
+        Guid customerUid,
         IFormFile file)
     {
+        if (customerUid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Customer tidak ditemukan.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
         if (file == null || file.Length == 0)
         {
             TempData["Error"] =
@@ -309,14 +348,14 @@ public class CustomersController : Controller
 
             return RedirectToAction(
                 nameof(Edit),
-                new { id = customerId });
+                new { uid = customerUid });
         }
 
         try
         {
             var imagePath =
                 await _api.UploadCustomerImageAsync(
-                    customerId,
+                    customerUid,
                     file);
 
             if (string.IsNullOrWhiteSpace(imagePath))
@@ -326,7 +365,7 @@ public class CustomersController : Controller
 
                 return RedirectToAction(
                     nameof(Edit),
-                    new { id = customerId });
+                    new { uid = customerUid });
             }
 
             TempData["Success"] =
@@ -340,7 +379,7 @@ public class CustomersController : Controller
 
         return RedirectToAction(
             nameof(Edit),
-            new { id = customerId });
+            new { uid = customerUid });
     }
 
     // ==========================================
@@ -406,8 +445,8 @@ public class CustomersController : Controller
 
             worksheet.Cell(row, 6).Value =
                 item.IsActive
-                    ? "Aktif"
-                    : "Nonaktif";
+                    ? _t["Aktif"]
+                    : _t["Nonaktif"];
 
             row++;
             no++;
@@ -486,14 +525,14 @@ public class CustomersController : Controller
                                         .FontColor("#6c757d");
 
                                     text.Span(
-                                        $"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                                        $"{_t["Dicetak"]}: {DateTime.Now:dd/MM/yyyy HH:mm}")
                                         .FontColor("#6c757d");
 
                                     text.Span(" · ")
                                         .FontColor("#6c757d");
 
                                     text.Span(
-                                        $"Total: {listCustomers.Count} data")
+                                        _t["Total: {0} data", listCustomers.Count])
                                         .FontColor("#6c757d");
                                 });
                         });
@@ -633,8 +672,8 @@ public class CustomersController : Controller
                                         Cell(c, bgColor))
                                     .Text(
                                         item.IsActive
-                                            ? "Aktif"
-                                            : "Nonaktif");
+                                            ? _t["Aktif"]
+                                            : _t["Nonaktif"]);
 
 
                                 no++;
@@ -665,7 +704,7 @@ public class CustomersController : Controller
                         .AlignLeft()
                         .PaddingTop(10)
                         .Text(
-                            "Dokumen dihasilkan otomatis oleh sistem.")
+                            _t["Dokumen dihasilkan otomatis oleh sistem."])
                         .FontSize(8.5f)
                         .FontColor("#888888");
                 });
@@ -728,11 +767,11 @@ public class CustomersController : Controller
     // =========================================================
 
     private async Task LoadShippingAddresses(
-        long customerId)
+        Guid customerUid)
     {
         var shippingAddresses =
             await _api.GetShippingAddressesByCustomerAsync(
-                customerId);
+                customerUid);
 
         ViewBag.ShippingAddresses =
             shippingAddresses;
@@ -801,11 +840,19 @@ public class CustomersController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult>
         CreateShippingAddress(
-        long customerId,
+        Guid customerUid,
         string name,
         string address,
         long? shippingAreaId)
     {
+        if (customerUid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Customer tidak ditemukan.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
         if (string.IsNullOrWhiteSpace(name))
         {
             TempData["Error"] =
@@ -813,7 +860,7 @@ public class CustomersController : Controller
 
             return RedirectToAction(
                 nameof(Edit),
-                new { id = customerId });
+                new { uid = customerUid });
         }
 
         if (string.IsNullOrWhiteSpace(address))
@@ -823,12 +870,12 @@ public class CustomersController : Controller
 
             return RedirectToAction(
                 nameof(Edit),
-                new { id = customerId });
+                new { uid = customerUid });
         }
 
         var success =
             await _api.CreateShippingAddressAsync(
-                customerId,
+                customerUid,
                 name,
                 address,
                 shippingAreaId);
@@ -846,7 +893,7 @@ public class CustomersController : Controller
 
         return RedirectToAction(
             nameof(Edit),
-            new { id = customerId });
+            new { uid = customerUid });
     }
 
     // =========================================================
@@ -857,12 +904,30 @@ public class CustomersController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult>
         EditShippingAddress(
-        long id,
-        long customerId,
+        Guid uid,
+        Guid customerUid,
         string name,
         string address,
         long? shippingAreaId)
     {
+        if (customerUid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Customer tidak ditemukan.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Alamat pengiriman tidak ditemukan.";
+
+            return RedirectToAction(
+                nameof(Edit),
+                new { uid = customerUid });
+        }
+
         if (string.IsNullOrWhiteSpace(name))
         {
             TempData["Error"] =
@@ -870,7 +935,7 @@ public class CustomersController : Controller
 
             return RedirectToAction(
                 nameof(Edit),
-                new { id = customerId });
+                new { uid = customerUid });
         }
 
         if (string.IsNullOrWhiteSpace(address))
@@ -880,13 +945,13 @@ public class CustomersController : Controller
 
             return RedirectToAction(
                 nameof(Edit),
-                new { id = customerId });
+                new { uid = customerUid });
         }
 
         var success =
             await _api.UpdateShippingAddressAsync(
-                id,
-                customerId,
+                uid,
+                customerUid,
                 name,
                 address,
                 shippingAreaId);
@@ -904,7 +969,7 @@ public class CustomersController : Controller
 
         return RedirectToAction(
             nameof(Edit),
-            new { id = customerId });
+            new { uid = customerUid });
     }
 
     // =========================================================
@@ -914,11 +979,29 @@ public class CustomersController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteShippingAddress(
-        long id,
-        long customerId)
+        Guid uid,
+        Guid customerUid)
     {
+        if (customerUid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Customer tidak ditemukan.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Alamat pengiriman tidak ditemukan.";
+
+            return RedirectToAction(
+                nameof(Edit),
+                new { uid = customerUid });
+        }
+
         var success =
-            await _api.DeleteShippingAddressAsync(id);
+            await _api.DeleteShippingAddressAsync(uid);
 
         if (success)
         {
@@ -933,7 +1016,7 @@ public class CustomersController : Controller
 
         return RedirectToAction(
             nameof(Edit),
-            new { id = customerId });
+            new { uid = customerUid });
     }
 
 }

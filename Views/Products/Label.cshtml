@@ -3,7 +3,7 @@
 @model ProductLabelViewModel
 
 @{
-    ViewData["Title"] = "Preview Label Produk";
+    ViewData["Title"] = T["Preview Label Produk"];
     Layout = null;
 
     var totalPcs = Model.PerLabel * Model.LabelCount;
@@ -30,7 +30,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>@productName - Label Produk</title>
+    <title>@productName - @T["Label Produk"]</title>
 
     <style>
         * {
@@ -423,7 +423,7 @@
             <button type="button"
                     class="preview-button print"
                     onclick="printLabels()">
-                🖨️ Cetak
+                🖨️ @T["Cetak"]
             </button>
 
             <button type="button"
@@ -431,7 +431,7 @@
                     onclick="window.close(); setTimeout(() => {
                         if (!window.closed) history.back();
                     }, 100)">
-                Tutup
+                @T["Tutup"]
             </button>
         </div>
     </header>
@@ -451,7 +451,7 @@
 
                 <section class="product-main">
                     <div class="product-information">
-                        <div class="product-type">BUSA</div>
+                        <div class="product-type">@T["BUSA"]</div>
 
                         <div class="product-meta">
                             <div>@sku</div>
@@ -461,7 +461,7 @@
                         </div>
 
                         <div class="quantity-row">
-                            <span class="quantity-label">Isi:</span>
+                            <span class="quantity-label">@T["Isi:"]</span>
                             <span class="quantity-value">
                                 @Model.PerLabel pcs
                             </span>
@@ -477,7 +477,7 @@
                         }
                         else
                         {
-                            <div class="qr-error">QR gagal dibuat</div>
+                            <div class="qr-error">@T["QR gagal dibuat"]</div>
                         }
                     </div>
                 </section>
@@ -509,7 +509,7 @@
                     if (svg) {
                         svg.outerHTML =
                             '<div class="barcode-error">' +
-                            'Barcode gagal dimuat. Periksa koneksi internet.' +
+                            @Json.Serialize(T["Barcode gagal dimuat. Periksa koneksi internet."]) +
                             '</div>';
                     }
                 });
@@ -522,7 +522,7 @@
 
                 if (!value || !value.trim()) {
                     svg.outerHTML =
-                        '<div class="barcode-error">Data barcode kosong</div>';
+                        '<div class="barcode-error">' + @Json.Serialize(T["Data barcode kosong"]) + '</div>';
                     return;
                 }
 
@@ -538,7 +538,7 @@
                     });
                 } catch (error) {
                     svg.outerHTML =
-                        '<div class="barcode-error">Barcode tidak valid</div>';
+                        '<div class="barcode-error">' + @Json.Serialize(T["Barcode tidak valid"]) + '</div>';
                 }
             });
         }

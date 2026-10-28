@@ -9,10 +9,12 @@ namespace ERP.Web.Controllers;
 public class SalesForcesController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public SalesForcesController(ApiClient api)
+    public SalesForcesController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     // =========================
@@ -46,10 +48,10 @@ public class SalesForcesController : Controller
     // =========================
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
         var salesForce =
-            await _api.GetSalesForceAsync(id);
+            await _api.GetSalesForceAsync(uid);
 
         if (salesForce is null)
             return NotFound();
@@ -116,10 +118,11 @@ public class SalesForcesController : Controller
     public async Task<IActionResult> Edit(
         SalesForceViewModel model)
     {
-        if (!model.Id.HasValue)
+        // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
             TempData["Error"] =
-                "ID sales force tidak valid.";
+                "Sales force tidak ditemukan.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -170,10 +173,18 @@ public class SalesForcesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] =
+                "Sales force tidak ditemukan.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var result =
-            await _api.DeleteSalesForceAsync(id);
+            await _api.DeleteSalesForceAsync(uid);
 
         TempData[result.Success
             ? "Success"
@@ -196,9 +207,9 @@ public class SalesForcesController : Controller
         var worksheet = workbook.Worksheets.Add("SalesForces");
 
         worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Kode";
-        worksheet.Cell(1, 3).Value = "Nama";
-        worksheet.Cell(1, 4).Value = "Telepon";
+        worksheet.Cell(1, 2).Value = _t["Kode"];
+        worksheet.Cell(1, 3).Value = _t["Nama"];
+        worksheet.Cell(1, 4).Value = _t["Telepon"];
         worksheet.Cell(1, 5).Value = "Email";
         worksheet.Cell(1, 6).Value = "Area";
         worksheet.Cell(1, 7).Value = "Status";
@@ -219,7 +230,7 @@ public class SalesForcesController : Controller
             worksheet.Cell(row, 4).Value = item.Phone;
             worksheet.Cell(row, 5).Value = item.Email;
             worksheet.Cell(row, 6).Value = item.Area;
-            worksheet.Cell(row, 7).Value = item.IsActive ? "Aktif" : "Nonaktif";
+            worksheet.Cell(row, 7).Value = item.IsActive ? _t["Aktif"] : _t["Nonaktif"];
 
             row++;
             no++;
@@ -259,9 +270,9 @@ public class SalesForcesController : Controller
                     {
                         text.Span("Sales Force").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span(_t["Dicetak"] + $": {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {list.Count} data").FontColor("#6c757d");
+                        text.Span(_t["Total: {0} data", list.Count]).FontColor("#6c757d");
                     });
                 });
 
@@ -281,9 +292,9 @@ public class SalesForcesController : Controller
                     table.Header(header =>
                     {
                         header.Cell().Element(HeaderStyle).Text("No");
-                        header.Cell().Element(HeaderStyle).Text("Kode");
-                        header.Cell().Element(HeaderStyle).Text("Nama");
-                        header.Cell().Element(HeaderStyle).Text("Telepon");
+                        header.Cell().Element(HeaderStyle).Text(_t["Kode"]);
+                        header.Cell().Element(HeaderStyle).Text(_t["Nama"]);
+                        header.Cell().Element(HeaderStyle).Text(_t["Telepon"]);
                         header.Cell().Element(HeaderStyle).Text("Email");
                         header.Cell().Element(HeaderStyle).Text("Area");
                         header.Cell().Element(HeaderStyle).Text("Status");
@@ -308,7 +319,7 @@ public class SalesForcesController : Controller
                         table.Cell().Element(c => Cell(c, bg)).Text(item.Phone ?? "");
                         table.Cell().Element(c => Cell(c, bg)).Text(item.Email ?? "");
                         table.Cell().Element(c => Cell(c, bg)).Text(item.Area ?? "");
-                        table.Cell().Element(c => Cell(c, bg)).Text(item.IsActive ? "Aktif" : "Nonaktif");
+                        table.Cell().Element(c => Cell(c, bg)).Text(item.IsActive ? _t["Aktif"] : _t["Nonaktif"]);
 
                         no++;
                     }
@@ -322,7 +333,7 @@ public class SalesForcesController : Controller
                 });
 
                 page.Footer().AlignLeft().PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f).FontColor("#888888");
             });
         });

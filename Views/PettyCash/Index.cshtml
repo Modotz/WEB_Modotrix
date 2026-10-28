@@ -1,0 +1,381 @@
+@model ERP.Web.Models.PettyCashPageViewModel
+@{
+    ViewData["Title"] = T["Kas Kecil"];
+    var s = Model.Summary;
+    var list = Model.Transactions;
+    var assetBase = (ViewData["AssetBase"] as string ?? "/").TrimEnd('/');
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var pageSize = ViewData["PageSize"] as int? ?? 25;
+    var query = string.Join("&", new[]
+    {
+        Model.DateFrom == null ? null : "dateFrom=" + Model.DateFrom.Value.ToString("yyyy-MM-dd"),
+        Model.DateTo == null ? null : "dateTo=" + Model.DateTo.Value.ToString("yyyy-MM-dd")
+    }.Where(x => x != null));
+    var qs = query.Length > 0 ? "?" + query : "";
+    string PageUrl(int p) => Url.Action("Index") + "?" + (query.Length > 0 ? query + "&" : "") + $"page={p}&pageSize={pageSize}";
+
+    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> actionButtons =
+        @<text>
+            <button type="button" class="btn btn-teal btn-custom-action d-inline-flex align-items-center gap-1" data-perm="create" data-bs-toggle="modal" data-bs-target="#topupModal">
+                <i class="bi bi-plus-circle"></i><span>@T["Isi Dana"]</span>
+            </button>
+            <button type="button" class="btn btn-danger btn-custom-action btn-petty-expense d-inline-flex align-items-center gap-1" data-perm="create" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                <i class="bi bi-receipt"></i><span>@T["Catat Pengeluaran"]</span>
+            </button>
+        </text>;
+
+    var header = new ListHeaderModel
+    {
+        Title = T["Daftar Transaksi"],
+        Count = list.TotalCount,
+        Description = s.Account == null ? null : s.Account.Name,
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        Extra = actionButtons(null)
+    };
+}
+
+<style>
+    .btn-custom-action.btn-petty-expense { background: #dc3545; border-color: #dc3545; }
+    .btn-custom-action.btn-petty-expense:hover { background: #bb2d3b; border-color: #bb2d3b; }
+</style>
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Kas Kecil"]</h3>
+
+    @if (s.Account == null)
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            @T["Rekening Kas Kecil belum ada. Buat rekening berkode"] <strong>KAS-KECIL</strong> @T["(jenis Kas) di menu"]
+            <a asp-controller="CashAccounts" asp-action="Index">@T["Kas & Bank"]</a>.
+        </div>
+    }
+    else
+    {
+        <!-- FILTER CARD -->
+        <div class="card supplier-card supplier-filter">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-funnel"></i>
+                    <span class="fw-semibold">@T["Filter"]</span>
+                </div>
+                <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse show" id="filterCollapse">
+                <div class="card-body">
+                    <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label" for="dateFrom">@T["Dari"]</label>
+                            <input type="date" class="form-control" id="dateFrom" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="dateTo">@T["Sampai"]</label>
+                            <input type="date" class="form-control" id="dateTo" name="dateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label" for="pageSize">@T["Per Halaman"]</label>
+                            <select class="form-select" id="pageSize" name="pageSize">
+                                @foreach (var size in new[] { 10, 25, 50, 100 })
+                                {
+                                    <option value="@size" selected="@(pageSize == size)">@size</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-auto d-flex gap-2">
+                            <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                                <i class="bi bi-search"></i>
+                                @T["Terapkan"]
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RINGKASAN -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="card supplier-card h-100 mb-0"><div class="card-body">
+                    <div class="text-white-50 small">@T["Saldo"] @s.Account.Name</div>
+                    <div class="fs-4 fw-bold text-white">@Acc.Money(s.Account.Balance)</div>
+                    <div class="text-white-50 small">@T["Akun"] @s.Account.CoaCode @s.Account.CoaName</div>
+                </div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card supplier-card h-100 mb-0"><div class="card-body">
+                    <div class="text-white-50 small">@T["Plafon persetujuan pengeluaran"]</div>
+                    <div class="fs-4 fw-bold text-white">@(s.ApprovalLimit == null ? T["Tanpa plafon"] : Acc.Money(s.ApprovalLimit.Value))</div>
+                    <div class="text-white-50 small">@T["Pengeluaran ≥ plafon disimpan draft dan diajukan ke Kotak Persetujuan; jurnal diposting otomatis setelah disetujui."]</div>
+                </div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card supplier-card h-100 mb-0"><div class="card-body">
+                    <div class="text-white-50 small">@T["Draft / menunggu persetujuan"]</div>
+                    <div class="fs-4 fw-bold text-white">@s.DraftCount</div>
+                </div></div>
+            </div>
+        </div>
+
+        <!-- DATA TABLE CARD -->
+        <div class="card supplier-card supplier-table-card">
+            <partial name="_ListHeader" model="header" />
+
+            <div class="collapse show" id="listBody">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 140px;">@T["NO."]</th>
+                            <th style="width: 100px;">@T["TANGGAL"]</th>
+                            <th>@T["KETERANGAN"]</th>
+                            <th>@T["AKUN / SUMBER"]</th>
+                            <th class="text-end" style="width: 150px;">@T["MASUK / (KELUAR)"]</th>
+                            <th style="width: 150px;">@T["STATUS"]</th>
+                            <th class="text-center" style="width: 130px;">@T["AKSI"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (list.Data.Count == 0)
+                        {
+                            <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada transaksi Kas Kecil."]</td></tr>
+                        }
+                        @foreach (var t in list.Data)
+                        {
+                            var (label, css) = t.StatusBadge;
+                            var approvalUrl = Url.Action("Document", "Approvals", new { docType = t.Status == "draft" ? "petty_cash_expense" : "cash_transaction_unpost", docUid = t.Uid });
+                            <tr>
+                                <td class="ps-4 text-white">@t.TrxNo</td>
+                                <td class="text-white small">@Acc.Date(t.TrxDate)</td>
+                                <td class="text-white">
+                                    @(t.Description ?? "-")
+                                    @if (!string.IsNullOrEmpty(t.Attachment))
+                                    {
+                                        <a href="@assetBase/@t.Attachment" target="_blank" class="text-info ms-1" title="@T["Bukti"]"><i class="bi bi-paperclip"></i></a>
+                                    }
+                                </td>
+                                <td class="text-white-50 small">@(t.Type == "transfer" ? T["dari {0}", t.CashAccountName] : $"{t.CounterCode} {t.CounterName}")</td>
+                                <td class="text-end fw-semibold @(t.Signed >= 0 ? "text-success" : "text-danger")">@Acc.Money(t.Signed)</td>
+                                <td>
+                                    <span class="badge @css">@T[label]</span>
+                                    @if (t.ApprovalStatus != null)
+                                    {
+                                        <a href="@approvalUrl" class="d-block small text-info text-decoration-none mt-1"><i class="bi bi-diagram-2 me-1"></i>@T["Panel persetujuan"]</a>
+                                    }
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    <div class="row-actions">
+                                    @if (t.ApprovalPending)
+                                    {
+                                        <a href="@approvalUrl" class="act-btn act-other" title="@T["Menunggu persetujuan — buka panel"]"><i class="bi bi-hourglass-split"></i></a>
+                                    }
+                                    else if (t.Status == "draft")
+                                    {
+                                        <form method="post" asp-action="Post" asp-route-uid="@t.Uid" data-perm="update"
+                                              onsubmit='return confirm(@Json.Serialize(T[t.RequiresApproval ? "Ajukan {0} untuk persetujuan?" : "Posting {0}?", t.TrxNo]));'>
+                                            @if (t.RequiresApproval)
+                                            {
+                                                <button type="submit" class="act-btn act-other" title="@T["Ajukan persetujuan"]"><i class="bi bi-send"></i></button>
+                                            }
+                                            else
+                                            {
+                                                <button type="submit" class="act-btn act-other" title="@T["Posting"]"><i class="bi bi-check2-circle"></i></button>
+                                            }
+                                        </form>
+                                        <form method="post" asp-action="Delete" asp-route-uid="@t.Uid" data-perm="delete"
+                                              onsubmit='return confirm(@Json.Serialize(T["Hapus draft {0}?", t.TrxNo]));'>
+                                            <button type="submit" class="act-btn act-delete" title="@T["Hapus draft"]"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    }
+                                    @if (t.Status == "posted" && !t.ApprovalPending)
+                                    {
+                                        <button type="button" class="act-btn act-delete btn-void" data-perm="update" title="@T["Batalkan"]"
+                                                data-uid="@t.Uid" data-no="@t.TrxNo" data-date="@t.TrxDate.ToString("yyyy-MM-dd")"><i class="bi bi-x-circle"></i></button>
+                                    }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <partial name="_ListPagination" model="new ListPaginationModel { Page = list.Page, PageSize = list.PageSize, TotalCount = list.TotalCount, PageUrl = PageUrl }" />
+            </div>
+        </div>
+
+        <!-- ISI DANA -->
+        <div class="modal fade" id="topupModal" tabindex="-1">
+            <div class="modal-dialog">
+                <form method="post" asp-action="Topup" class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@T["Isi Dana Kas Kecil"]</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label" for="tDate">@T["Tanggal"]</label>
+                                <input type="date" class="form-control" name="trxDate" id="tDate" value="@today" required />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="tAmount">@T["Nominal"]</label>
+                                <input type="number" step="0.01" min="0.01" class="form-control text-end" name="amount" id="tAmount" required />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="tSource">@T["Dari rekening"]</label>
+                                <select class="form-select" name="sourceId" id="tSource" required>
+                                    <option value="">@T["— Pilih —"]</option>
+                                    @foreach (var src in s.Sources)
+                                    {
+                                        <option value="@src.Id">@src.Name (@T["saldo"] @Acc.Money(src.Balance))</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="tDesc">@T["Keterangan"]</label>
+                                <input type="text" class="form-control" name="description" id="tDesc" maxlength="255" placeholder="@T["Isi dana Kas Kecil"]" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="tRef">@T["Referensi"]</label>
+                                <input type="text" class="form-control" name="reference" id="tRef" maxlength="100" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                        <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1"></i>@T["Isi & Posting"]</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- PENGELUARAN -->
+        <div class="modal fade" id="expenseModal" tabindex="-1">
+            <div class="modal-dialog">
+                <form method="post" asp-action="Expense" enctype="multipart/form-data" class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@T["Pengeluaran Kas Kecil"]</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label" for="eDate">@T["Tanggal"]</label>
+                                <input type="date" class="form-control" name="trxDate" id="eDate" value="@today" required />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="eAmount">@T["Nominal"]</label>
+                                <input type="number" step="0.01" min="0.01" class="form-control text-end" name="amount" id="eAmount" required />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="eAccount">@T["Akun beban / lawan"]</label>
+                                <select class="form-select" name="counterAccountId" id="eAccount" required>
+                                    <option value="">@T["— Pilih akun —"]</option>
+                                    @foreach (var a in Model.ExpenseAccounts)
+                                    {
+                                        <option value="@a.Id" data-type="@a.Type">@a.Label</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="eCc">@T["Cost center"]</label>
+                                <select class="form-select" name="costCenterId" id="eCc">
+                                    <option value="">@T["— Tanpa —"]</option>
+                                    @foreach (var cc in Model.Dimensions.CostCenters)
+                                    {
+                                        <option value="@cc.Id">@cc.Code — @cc.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="ePrj">@T["Project"]</label>
+                                <select class="form-select" name="projectId" id="ePrj">
+                                    <option value="">@T["— Tanpa —"]</option>
+                                    @foreach (var p in Model.Dimensions.Projects)
+                                    {
+                                        <option value="@p.Id">@p.Code — @p.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="eDesc">@T["Keterangan"]</label>
+                                <input type="text" class="form-control" name="description" id="eDesc" maxlength="255" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="eRef">@T["Referensi / No. nota"]</label>
+                                <input type="text" class="form-control" name="reference" id="eRef" maxlength="100" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="eFile">@T["Bukti (gambar/PDF, maks 4 MB)"]</label>
+                                <input type="file" class="form-control" name="attachment" id="eFile" accept=".jpg,.jpeg,.png,.webp,.pdf" />
+                            </div>
+                            @if (s.ApprovalLimit != null)
+                            {
+                                <div class="col-12 small text-muted">
+                                    @T["Pengeluaran ≥ {0} disimpan sebagai draft dan otomatis diajukan untuk persetujuan.", Acc.Money(s.ApprovalLimit.Value)]
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                        <button type="submit" name="saveMode" value="draft" class="btn btn-outline-secondary">@T["Simpan Draft"]</button>
+                        <button type="submit" name="saveMode" value="post" class="btn btn-danger"><i class="bi bi-check2-circle me-1"></i>@T["Simpan & Posting"]</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- BATALKAN -->
+        <div class="modal fade" id="voidModal" tabindex="-1">
+            <div class="modal-dialog">
+                <form method="post" class="modal-content" id="voidForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="voidTitle">@T["Batalkan"]</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small">@T["Transaksi dibatalkan dengan jurnal pembalik dan tetap tercatat."]</p>
+                        <div class="mb-3">
+                            <label class="form-label" for="vDate">@T["Tanggal pembatalan"]</label>
+                            <input type="date" class="form-control" name="date" id="vDate" value="@today" required />
+                        </div>
+                        <label class="form-label" for="vReason">@T["Alasan (wajib)"]</label>
+                        <textarea class="form-control" name="reason" id="vReason" rows="3" maxlength="200" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                        <button type="submit" class="btn btn-danger">@T["Batalkan"]</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const el = document.getElementById('voidModal');
+            if (!el) return;
+            const modal = new bootstrap.Modal(el);
+            const voidUrl = '@Url.Action("Void")';
+            const txtVoid = @Json.Serialize(T["Batalkan"]);
+            document.querySelectorAll('.btn-void').forEach(b => b.addEventListener('click', () => {
+                document.getElementById('voidForm').action = `${voidUrl}/${b.dataset.uid}`;
+                document.getElementById('voidTitle').textContent = `${txtVoid} ${b.dataset.no}`;
+                document.getElementById('vDate').min = b.dataset.date;
+                document.getElementById('vReason').value = '';
+                modal.show();
+            }));
+        })();
+    </script>
+}

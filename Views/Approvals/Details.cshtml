@@ -1,0 +1,37 @@
+@model ERP.Web.Models.ApprovalDocumentViewModel
+@{
+    ViewData["Title"] = $"{T["Pengajuan"]} {T[Model.DocTypeLabel]} {Model.DocNo}";
+    var req = Model.Requests.FirstOrDefault();
+    var hasModule = req?.DocMenuUrl != null;
+    var canOpen = hasModule && req!.DocUid != null && await Access.CanAsync(req.DocMenuUrl!);
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@T["Pengajuan"] @T[Model.DocTypeLabel] @Model.DocNo</h3>
+        @if (canOpen)
+        {
+            <a href="/@Model.DetailPath" class="btn btn-light btn-sm"><i class="bi bi-box-arrow-up-right me-1"></i>@T["Buka Dokumen"]</a>
+        }
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    @if (!hasModule)
+    {
+        <div class="alert alert-secondary small py-2">
+            <i class="bi bi-info-circle me-1"></i>@T["Halaman dokumen jenis ini belum tersedia di versi .NET; keputusan tetap dapat diberikan di sini."]
+        </div>
+    }
+
+    <div class="card custom-card">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 text-white small">
+                <div class="col-md-3"><div class="text-white-50">@T["Jenis dokumen"]</div>@T[Model.DocTypeLabel]</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Nomor"]</div>@(Model.DocNo ?? "-")</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Nominal diajukan"]</div><span class="fs-5 fw-semibold">@Acc.Money(Model.Amount)</span></div>
+                <div class="col-md-3"><div class="text-white-50">@T["Pembuat dokumen"]</div>@(req?.DocCreatedByName ?? "-")</div>
+            </div>
+        </div>
+    </div>
+
+    <partial name="_ApprovalPanel" model="Model" />
+</div>

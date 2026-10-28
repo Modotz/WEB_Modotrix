@@ -75,9 +75,9 @@ public class RolesController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var role = await _api.GetRoleAsync(id);
+        var role = await _api.GetRoleAsync(uid);
 
         if (role == null)
             return NotFound();
@@ -89,10 +89,11 @@ public class RolesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(RoleViewModel model)
     {
-        if (!model.Id.HasValue)
+        // UID wajib untuk update (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
             TempData["Error"] =
-                "ID role tidak valid.";
+                "Role tidak ditemukan.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -138,10 +139,10 @@ public class RolesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
         var result =
-            await _api.DeleteRoleAsync(id);
+            await _api.DeleteRoleAsync(uid);
 
         TempData[result.Success
             ? "Success"

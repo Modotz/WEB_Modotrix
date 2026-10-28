@@ -1,0 +1,320 @@
+@model ERP.Web.Models.AssetMaintenanceIndexViewModel
+@{
+    ViewData["Title"] = T["Maintenance Aset"];
+    var list = Model.Rows;
+    var o = Model.Options;
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+    var pageSize = list.PageSize > 0 ? list.PageSize : 25;
+    var parts = new List<string>();
+    if (!string.IsNullOrWhiteSpace(Model.Q)) parts.Add("q=" + Uri.EscapeDataString(Model.Q));
+    if (!string.IsNullOrWhiteSpace(Model.Type)) parts.Add("type=" + Uri.EscapeDataString(Model.Type));
+    var query = string.Join("&", parts);
+    var qs = query.Length > 0 ? "?" + query : "";
+    var header = new ListHeaderModel
+    {
+        Title = T["Riwayat Maintenance"],
+        Count = list.TotalCount,
+        Description = T["Perbaikan, servis & biaya pemeliharaan aset"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        AddOnClick = "bootstrap.Modal.getOrCreateInstance(document.getElementById('maintModal')).show()",
+        AddIcon = "bi-tools",
+        AddText = T["Catat Maintenance"]
+    };
+    string PageUrl(int p) => Url.Action("Index") + "?" + (query.Length > 0 ? query + "&" : "") + $"page={p}&pageSize={pageSize}";
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Maintenance Aset"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@Model.Q" placeholder="@T["No./nama aset, vendor, keterangan"]" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="type">@T["Jenis"]</label>
+                        <select class="form-select" id="type" name="type">
+                            <option value="">@T["Semua"]</option>
+                            @foreach (var (value, label) in AssetLabels.MaintenanceTypes)
+                            {
+                                <option value="@value" selected="@(value == Model.Type)">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="pageSize">@T["Per Halaman"]</label>
+                        <select class="form-select" id="pageSize" name="pageSize">
+                            @foreach (var size in new[] { 10, 25, 50, 100 })
+                            {
+                                <option value="@size" selected="@(pageSize == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Reminders.DueMaintenance.Count > 0 || Model.Reminders.WarrantyExpiring.Count > 0)
+    {
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="card supplier-card h-100 mb-0">
+                    <div class="card-header bg-transparent py-2"><span class="fw-semibold small"><i class="bi bi-alarm me-1"></i>@T["Jadwal maintenance ≤ 30 hari"]</span></div>
+                    <div class="card-body py-2 small">
+                        @if (Model.Reminders.DueMaintenance.Count == 0)
+                        {
+                            <span class="text-white-50">-</span>
+                        }
+                        @foreach (var r in Model.Reminders.DueMaintenance)
+                        {
+                            <div><a asp-controller="Assets" asp-action="Details" asp-route-uid="@r.AssetUid" class="text-info">@r.AssetNo</a> <span class="text-white">@r.AssetName</span> · <span class="text-warning">@Acc.Date(r.Date)</span></div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card supplier-card h-100 mb-0">
+                    <div class="card-header bg-transparent py-2"><span class="fw-semibold small"><i class="bi bi-shield-exclamation me-1"></i>@T["Garansi berakhir ≤ 30 hari"]</span></div>
+                    <div class="card-body py-2 small">
+                        @if (Model.Reminders.WarrantyExpiring.Count == 0)
+                        {
+                            <span class="text-white-50">-</span>
+                        }
+                        @foreach (var r in Model.Reminders.WarrantyExpiring)
+                        {
+                            <div><a asp-controller="Assets" asp-action="Details" asp-route-uid="@r.AssetUid" class="text-info">@r.AssetNo</a> <span class="text-white">@r.AssetName</span> · <span class="text-warning">@Acc.Date(r.Date)</span></div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["TANGGAL"]</th>
+                        <th>@T["ASET"]</th>
+                        <th>@T["JENIS"]</th>
+                        <th>@T["KETERANGAN"]</th>
+                        <th class="text-end">@T["BIAYA"]</th>
+                        <th>@T["JURNAL"]</th>
+                        <th>@T["JADWAL BERIKUT"]</th>
+                        <th class="text-center" style="width: 80px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (list.Data.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada catatan maintenance."]</td></tr>
+                    }
+                    @foreach (var m in list.Data)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white small">@Acc.Date(m.MaintenanceDate)</td>
+                            <td><a asp-controller="Assets" asp-action="Details" asp-route-uid="@m.AssetUid" class="text-info text-decoration-none">@m.AssetNo</a><div class="text-white-50 small">@m.AssetName</div></td>
+                            <td class="text-white small">@T[AssetLabels.MaintenanceType(m.Type)]</td>
+                            <td class="text-white">@(m.Description ?? "-")<div class="text-white-50 small">@m.Vendor</div></td>
+                            <td class="text-end text-white">@Acc.Money(m.Cost)</td>
+                            <td class="small">
+                                @if (m.JournalUid != null)
+                                {
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@m.JournalUid" class="text-info">@m.JournalNo</a>
+                                    <div class="text-white-50">@m.CashAccountName · @m.ExpenseAccountLabel</div>
+                                }
+                                else
+                                {
+                                    <span class="text-white-50">@T["Hanya catatan"]</span>
+                                }
+                            </td>
+                            <td class="text-white small">@Acc.Date(m.NextDueDate)</td>
+                            <td class="text-center">
+                                <div class="row-actions">
+                                <button type="button" class="act-btn act-delete btn-del-maint" data-perm="delete" title="@T["Hapus"]"
+                                        data-uid="@m.Uid" data-journal="@(m.JournalUid != null ? "1" : "0")"><i class="bi bi-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_ListPagination" model="new ListPaginationModel { Page = list.Page > 0 ? list.Page : Model.Page, PageSize = pageSize, TotalCount = list.TotalCount, PageUrl = PageUrl }" />
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="maintModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="post" asp-action="Create" class="modal-content">
+            <input type="hidden" name="returnTo" value="@(Model.PreselectAssetUid != null ? "asset" : "")" />
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Catat Maintenance"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label" for="mtAsset">@T["Aset"]</label>
+                        <select class="form-select" name="assetUid" id="mtAsset" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var a in o.Assets)
+                            {
+                                <option value="@a.Uid" selected="@(a.Uid == Model.PreselectAssetUid)">@a.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="mtDate">@T["Tanggal"]</label>
+                        <input type="date" class="form-control" name="maintenanceDate" id="mtDate" value="@today" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="mtType">@T["Jenis"]</label>
+                        <select class="form-select" name="type" id="mtType">
+                            @foreach (var (value, label) in AssetLabels.MaintenanceTypes)
+                            {
+                                <option value="@value">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label" for="mtDesc">@T["Keterangan"]</label>
+                        <input type="text" class="form-control" name="description" id="mtDesc" maxlength="255" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="mtVendor">@T["Vendor"]</label>
+                        <input type="text" class="form-control" name="vendor" id="mtVendor" maxlength="150" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="mtCost">@T["Biaya"]</label>
+                        <input type="number" step="0.01" min="0" class="form-control text-end" name="cost" id="mtCost" value="0" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="mtNext">@T["Jadwal berikutnya"]</label>
+                        <input type="date" class="form-control" name="nextDueDate" id="mtNext" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mtCash">@T["Dibayar dari rekening"]</label>
+                        <select class="form-select" name="cashAccountId" id="mtCash">
+                            <option value="">@T["— Tidak dibayar (hanya catatan) —"]</option>
+                            @foreach (var c in o.CashAccounts)
+                            {
+                                <option value="@c.Id">@c.Name (@T["saldo"] @Acc.Money(c.Balance))</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mtExpense">@T["Akun beban"]</label>
+                        <select class="form-select" name="expenseAccountId" id="mtExpense">
+                            @foreach (var e in o.ExpenseAccounts)
+                            {
+                                <option value="@e.Id" selected="@(e.Id == o.DefaultMaintenanceExpenseId)">@e.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mtStatus">@T["Status aset"]</label>
+                        <select class="form-select" name="setStatus" id="mtStatus">
+                            <option value="">@T["— Tidak diubah —"]</option>
+                            <option value="in_repair">@T["Perbaikan"]</option>
+                            <option value="active">@T["Aktif"]</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mtNote">@T["Catatan"]</label>
+                        <input type="text" class="form-control" name="note" id="mtNote" maxlength="255" />
+                    </div>
+                    <div class="col-12 form-text">@T["Bila rekening dipilih: jurnal Dr akun beban / Cr kas-bank (saldo dicek). Tanpa rekening = hanya catatan."]</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="delMaintModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Delete" class="modal-content" id="delMaintForm">
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Hapus Catatan Maintenance"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="delJournalBox">
+                    <p class="small">@T["Biaya maintenance ini sudah dijurnal; jurnalnya dibalik dengan jurnal pembalik."]</p>
+                    <div class="mb-3">
+                        <label class="form-label" for="dmDate">@T["Tanggal jurnal pembalik"]</label>
+                        <input type="date" class="form-control" name="date" id="dmDate" value="@today" />
+                    </div>
+                    <label class="form-label" for="dmReason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="dmReason" rows="2" maxlength="200"></textarea>
+                </div>
+                <p class="small mb-0" id="delPlainBox">@T["Hapus catatan maintenance ini?"]</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                <button type="submit" class="btn btn-danger">@T["Hapus"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const delUrl = '@Url.Action("Delete")';
+            const delModal = new bootstrap.Modal(document.getElementById('delMaintModal'));
+            document.querySelectorAll('.btn-del-maint').forEach(b => b.addEventListener('click', () => {
+                const withJournal = b.dataset.journal === '1';
+                document.getElementById('delMaintForm').action = delUrl + '/' + b.dataset.uid;
+                document.getElementById('delJournalBox').classList.toggle('d-none', !withJournal);
+                document.getElementById('delPlainBox').classList.toggle('d-none', withJournal);
+                document.getElementById('dmReason').required = withJournal;
+                delModal.show();
+            }));
+            const cash = document.getElementById('mtCash'), exp = document.getElementById('mtExpense');
+            const sync = () => exp.disabled = !cash.value;
+            cash.addEventListener('change', sync);
+            sync();
+            @if (Model.PreselectAssetUid != null)
+            {
+                <text>new bootstrap.Modal(document.getElementById('maintModal')).show();</text>
+            }
+        })();
+    </script>
+}

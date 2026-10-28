@@ -1,7 +1,7 @@
 @model PagedResult<ERP.Web.Models.CustomerGroupsViewModel>
 
 @{
-    ViewData["Title"] = "Kelompok Customer";
+    ViewData["Title"] = T["Kelompok Customer"];
 }
 
 <style>
@@ -360,7 +360,7 @@
          ===================================================== -->
 
     <h3 class="customer-group-title">
-        Kelompok Customer
+        @T["Kelompok Customer"]
     </h3>
 
 
@@ -374,7 +374,7 @@
 
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-funnel"></i>
-                <span class="fw-semibold">Filter</span>
+                <span class="fw-semibold">@T["Filter"]</span>
             </div>
 
             <button type="button"
@@ -407,7 +407,7 @@
                         <label for="search"
                                class="form-label">
 
-                            Cari (kode / nama)
+                            @T["Cari (kode / nama)"]
 
                         </label>
 
@@ -416,7 +416,7 @@
                                id="search"
                                name="search"
                                value="@Context.Request.Query["search"]"
-                               placeholder="Cari kode atau nama..." />
+                               placeholder="@T["Cari kode atau nama..."]" />
 
                     </div>
 
@@ -428,7 +428,7 @@
                         <label for="isActive"
                                class="form-label">
 
-                            Status
+                            @T["Status"]
 
                         </label>
 
@@ -439,21 +439,21 @@
                             <option value=""
                                     selected="@(Context.Request.Query["isActive"] == "")">
 
-                                -- Semua --
+                                -- @T["Semua"] --
 
                             </option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["isActive"] == "true")">
 
-                                Aktif
+                                @T["Aktif"]
 
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["isActive"] == "false")">
 
-                                Non-Aktif
+                                @T["Non-Aktif"]
 
                             </option>
 
@@ -469,7 +469,7 @@
                         <label for="pageSize"
                                class="form-label">
 
-                            Per Halaman
+                            @T["Per Halaman"]
 
                         </label>
 
@@ -510,13 +510,13 @@
                                 class="btn btn-primary d-flex align-items-center gap-2">
 
                             <i class="bi bi-search"></i>
-                            Terapkan
+                            @T["Terapkan"]
 
                         </button>
 
                         <a asp-action="Index"
                            class="btn btn-outline-secondary"
-                           title="Reset Filter">
+                           title="@T["Reset Filter"]">
 
                             <i class="bi bi-arrow-counterclockwise"></i>
 
@@ -552,7 +552,7 @@
             <div class="d-flex align-items-center gap-2">
 
                 <span class="title">
-                    Kelompok Customer
+                    @T["Kelompok Customer"]
                 </span>
 
                 <span class="customer-group-count">
@@ -560,7 +560,7 @@
                 </span>
 
                 <span class="description ms-1">
-                    Pengelompokan pelanggan (Retail/Grosir/VIP) &amp; diskon default
+                    @T["Pengelompokan pelanggan (Retail/Grosir/VIP) & diskon default"]
                 </span>
 
             </div>
@@ -645,12 +645,12 @@
 
     <!-- ADD -->
 
-    <a asp-controller="CustomerGroups"
+    <a data-perm="create" asp-controller="CustomerGroups"
        asp-action="Create"
        class="btn btn-customer-group-add btn-sm">
 
         <i class="bi bi-plus-circle"></i>
-        Tambah Kelompok
+        @T["Tambah Kelompok"]
 
     </a>
 
@@ -683,35 +683,35 @@
                                 </th>
 
                                 <th style="width: 120px;">
-                                    KODE
+                                    @T["KODE"]
                                 </th>
 
                                 <th>
-                                    NAMA KELOMPOK
+                                    @T["NAMA KELOMPOK"]
                                 </th>
 
                                 <th class="text-end"
                                     style="width: 150px;">
 
-                                    DISKON DEFAULT
+                                    @T["DISKON DEFAULT"]
 
                                 </th>
 
                                 <th>
-                                    KETERANGAN
+                                    @T["KETERANGAN"]
                                 </th>
 
                                 <th class="text-center"
                                     style="width: 100px;">
 
-                                    STATUS
+                                    @T["STATUS"]
 
                                 </th>
 
                                 <th class="text-center"
                                     style="width: 100px;">
 
-                                    AKSI
+                                    @T["AKSI"]
 
                                 </th>
 
@@ -794,7 +794,7 @@
                                             {
 
                                                 <span class="customer-group-status-active">
-                                                    Aktif
+                                                    @T["Aktif"]
                                                 </span>
 
                                             }
@@ -802,7 +802,7 @@
                                             {
 
                                                 <span class="customer-group-status-inactive">
-                                                    Tidak Aktif
+                                                    @T["Tidak Aktif"]
                                                 </span>
 
                                             }
@@ -814,17 +814,15 @@
 
                                         <td class="text-center">
 
-                                            <div class="d-flex
-                                                        justify-content-center
-                                                        gap-1">
+                                            <div class="row-actions">
 
                                                 <!-- EDIT -->
 
-                                                <a asp-controller="CustomerGroups"
+                                                <a data-perm="update" asp-controller="CustomerGroups"
                                                    asp-action="Edit"
-                                                   asp-route-id="@item.Id"
-                                                   class="btn btn-sm customer-group-action customer-group-edit"
-                                                   title="Edit">
+                                                   asp-route-uid="@item.Uid"
+                                                   class="act-btn act-edit"
+                                                   title="@T["Edit"]">
 
                                                     <i class="bi bi-pencil"></i>
 
@@ -833,7 +831,7 @@
 
                                                 <!-- DELETE -->
 
-                                                <form asp-controller="CustomerGroups"
+                                                <form data-perm="delete" asp-controller="CustomerGroups"
                                                       asp-action="Delete"
                                                       method="post"
                                                       class="d-inline"
@@ -842,12 +840,12 @@
                                                     @Html.AntiForgeryToken()
 
                                                     <input type="hidden"
-                                                           name="id"
-                                                           value="@item.Id" />
+                                                           name="uid"
+                                                           value="@item.Uid" />
 
                                                     <button type="submit"
-                                                            class="btn btn-sm customer-group-action customer-group-delete"
-                                                            title="Delete">
+                                                            class="act-btn act-delete"
+                                                            title="@T["Hapus"]">
 
                                                         <i class="bi bi-trash"></i>
 
@@ -874,7 +872,7 @@
                                     <td colspan="7"
                                         class="text-center customer-group-empty">
 
-                                        Tidak ada data kelompok customer.
+                                        @T["Tidak ada data kelompok customer."]
 
                                     </td>
 
@@ -900,7 +898,7 @@
 
                     <small>
 
-                        Menampilkan
+                        @T["Menampilkan"]
 
                         <strong>
                             @(Model.TotalData == 0
@@ -916,13 +914,13 @@
                                 Model.TotalData))
                         </strong>
 
-                        dari
+                        @T["dari"]
 
                         <strong>
                             @Model.TotalData
                         </strong>
 
-                        data
+                        @T["data"]
 
                     </small>
 
@@ -948,7 +946,7 @@
                                        asp-route-search="@ViewBag.Search"
                                        asp-route-isActive="@ViewBag.IsActive">
 
-                                        Sebelumnya
+                                        @T["Sebelumnya"]
 
                                     </a>
 
@@ -989,7 +987,7 @@
                                        asp-route-search="@ViewBag.Search"
                                        asp-route-isActive="@ViewBag.IsActive">
 
-                                        Berikutnya
+                                        @T["Berikutnya"]
 
                                     </a>
 
@@ -1019,7 +1017,7 @@
     function confirmDeleteCustomerGroup() {
 
         return confirm(
-            "Yakin ingin menghapus kelompok customer ini?"
+            @Json.Serialize(T["Yakin ingin menghapus kelompok customer ini?"])
         );
 
     }

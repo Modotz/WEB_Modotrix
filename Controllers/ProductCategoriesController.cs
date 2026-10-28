@@ -8,10 +8,12 @@ namespace ERP.Web.Controllers;
 public class ProductCategoriesController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public ProductCategoriesController(ApiClient api)
+    public ProductCategoriesController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     [HttpGet]
@@ -51,9 +53,9 @@ public class ProductCategoriesController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var category = await _api.GetProductCategoryAsync(id);
+        var category = await _api.GetProductCategoryAsync(uid);
 
         if (category is null)
             return NotFound();
@@ -115,10 +117,11 @@ public class ProductCategoriesController : Controller
     {
         Console.WriteLine($"EDIT IsActive = {model.IsActive}");
 
-        if (!model.Id.HasValue)
+        // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
             TempData["Error"] =
-                "ID kategori tidak valid.";
+                "Kategori tidak ditemukan.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -164,10 +167,10 @@ public class ProductCategoriesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
         var result =
-            await _api.DeleteProductCategoryAsync(id);
+            await _api.DeleteProductCategoryAsync(uid);
 
         TempData[result.Success
             ? "Success"
@@ -216,9 +219,9 @@ public class ProductCategoriesController : Controller
         var worksheet = workbook.Worksheets.Add("ProductCategories");
 
         worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Kode";
-        worksheet.Cell(1, 3).Value = "Nama";
-        worksheet.Cell(1, 9).Value = "Status";
+        worksheet.Cell(1, 2).Value = _t["Kode"];
+        worksheet.Cell(1, 3).Value = _t["Nama"];
+        worksheet.Cell(1, 9).Value = _t["Status"];
 
         var header = worksheet.Range("A1:I1");
 
@@ -235,7 +238,7 @@ public class ProductCategoriesController : Controller
             worksheet.Cell(row, 2).Value = item.Code;
             worksheet.Cell(row, 3).Value = item.Name;
             worksheet.Cell(row, 9).Value =
-                item.IsActive ? "Aktif" : "Nonaktif";
+                item.IsActive ? _t["Aktif"] : _t["Nonaktif"];
 
             row++;
             no++;
@@ -282,9 +285,9 @@ public class ProductCategoriesController : Controller
                     {
                         text.Span("Category").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span(_t["Dicetak: {0}", DateTime.Now.ToString("dd/MM/yyyy HH:mm")]).FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {listCategories.Count} data").FontColor("#6c757d");
+                        text.Span(_t["Total: {0} data", listCategories.Count]).FontColor("#6c757d");
                     });
                 });
 
@@ -331,7 +334,7 @@ public class ProductCategoriesController : Controller
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(no.ToString());
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Code ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Name ?? "");
-                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? "Aktif" : "Nonaktif");
+                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? _t["Aktif"] : _t["Nonaktif"]);
 
                         no++;
                     }
@@ -352,7 +355,7 @@ public class ProductCategoriesController : Controller
                 page.Footer()
                     .AlignLeft()
                     .PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f)
                     .FontColor("#888888");
             });

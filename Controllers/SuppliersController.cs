@@ -9,10 +9,12 @@ namespace ERP.Web.Controllers;
 public class SuppliersController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public SuppliersController(ApiClient api)
+    public SuppliersController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     [HttpGet]
@@ -35,9 +37,9 @@ public class SuppliersController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var supplier = await _api.GetSupplierAsync(id);
+        var supplier = await _api.GetSupplierAsync(uid);
 
         if (supplier is null)
             return NotFound();
@@ -118,6 +120,13 @@ public class SuppliersController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
+        {
+            TempData["Error"] = "Supplier tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var result = await _api.UpdateSupplierAsync(model);
 
         TempData[result.Success ? "Success" : "Error"] =
@@ -131,9 +140,15 @@ public class SuppliersController : Controller
     // DELETE di MVC juga POST.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
-        var result = await _api.DeleteSupplierAsync(id);
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] = "Supplier tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var result = await _api.DeleteSupplierAsync(uid);
 
         TempData[result.Success ? "Success" : "Error"] =
             result.Success
@@ -154,8 +169,8 @@ public class SuppliersController : Controller
         var worksheet = workbook.Worksheets.Add("Supplier");
 
         worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Kode";
-        worksheet.Cell(1, 3).Value = "Nama Supplier";
+        worksheet.Cell(1, 2).Value = _t["Kode"];
+        worksheet.Cell(1, 3).Value = _t["Nama Supplier"];
         worksheet.Cell(1, 4).Value = "Contact Person";
         worksheet.Cell(1, 5).Value = "Phone";
         worksheet.Cell(1, 6).Value = "Email";
@@ -183,7 +198,7 @@ public class SuppliersController : Controller
             worksheet.Cell(row, 7).Value = item.Npwp;
             worksheet.Cell(row, 8).Value = item.Address;
             worksheet.Cell(row, 9).Value =
-                item.IsActive ? "Aktif" : "Nonaktif";
+                item.IsActive ? _t["Aktif"] : _t["Nonaktif"];
 
             row++;
             no++;
@@ -228,11 +243,11 @@ public class SuppliersController : Controller
 
                     col.Item().PaddingTop(2).Text(text =>
                     {
-                        text.Span("Supplier").FontColor("#6c757d");
+                        text.Span(_t["Supplier"]).FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span($"{_t["Dicetak"]}: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {listSuppliers.Count} data").FontColor("#6c757d");
+                        text.Span($"{_t["Total"]}: {listSuppliers.Count} {_t["data"]}").FontColor("#6c757d");
                     });
                 });
 
@@ -291,7 +306,7 @@ public class SuppliersController : Controller
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Phone ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Email ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Npwp ?? "");
-                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? "Aktif" : "Nonaktif");
+                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? _t["Aktif"] : _t["Nonaktif"]);
 
                         no++;
                     }
@@ -312,7 +327,7 @@ public class SuppliersController : Controller
                 page.Footer()
                     .AlignLeft()
                     .PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f)
                     .FontColor("#888888");
             });

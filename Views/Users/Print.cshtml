@@ -12,7 +12,7 @@
 <head>
     <meta charset="utf-8" />
 
-    <title>Daftar User</title>
+    <title>@T["Daftar User"]</title>
 
     <style>
         * {
@@ -152,13 +152,13 @@
 
         <div class="print-button">
             <button type="button" onclick="window.print()">
-                Cetak
+                @T["Cetak"]
             </button>
 
             <button type="button"
                     class="close-button"
                     onclick="window.close()">
-                Tutup
+                @T["Tutup"]
             </button>
         </div>
 
@@ -167,16 +167,16 @@
             <h1>ERP-LITE</h1>
 
             <div class="header-info">
-                <span>Daftar User</span>
+                <span>@T["Daftar User"]</span>
                 <span>•</span>
                 <span>
-                    Dicetak:
+                    @T["Dicetak"]:
                     @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
                 </span>
                 <span>•</span>
                 <span>
                     Total:
-                    @Model.TotalData data
+                    @Model.TotalData @T["data"]
                 </span>
             </div>
 
@@ -223,7 +223,7 @@
                         </td>
 
                         <td class="status">
-                            @(item.IsActive ? "Aktif" : "Nonaktif")
+                            @(item.IsActive ? T["Aktif"] : T["Nonaktif"])
                         </td>
                     </tr>
 
@@ -235,7 +235,7 @@
         </table>
 
         <div class="footer">
-            Dokumen dihasilkan otomatis oleh sistem.
+            @T["Dokumen dihasilkan otomatis oleh sistem."]
         </div>
 
     </div>

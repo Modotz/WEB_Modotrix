@@ -1,0 +1,149 @@
+@model ERP.Web.Models.AssetPurchaseRequestDetailsPageViewModel
+@{
+    var r = Model.Request;
+    ViewData["Title"] = $"{T["PR Aset"]} {r.AprNo}";
+    var needsApproval = Model.Approval?.RequiresApproval == true;
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T["PR Aset"] @r.AprNo</h3>
+        <span class="badge @AssetPurchaseLabels.Css(r.Status) me-auto">@T[AssetPurchaseLabels.Label(AssetPurchaseLabels.RequestStatuses, r.Status)]</span>
+
+        @if (r.Status == "draft")
+        {
+            <a asp-action="Edit" asp-route-uid="@r.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil me-1"></i>@T["Ubah"]</a>
+            <form method="post" asp-action="Submit" asp-route-uid="@r.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(needsApproval ? T["Ajukan PR Aset {0} untuk persetujuan?", r.AprNo] : T["Setujui PR Aset {0}? Tidak ada alur persetujuan untuk nominal ini.", r.AprNo]));'>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi @(needsApproval ? "bi-send-check" : "bi-check2-circle") me-1"></i>@(needsApproval ? T["Ajukan Persetujuan"] : T["Setujui"])
+                </button>
+            </form>
+            <form method="post" asp-action="Delete" asp-route-uid="@r.Uid" class="d-inline" data-perm="delete"
+                  onsubmit='return confirm(@Json.Serialize(T["Hapus PR Aset {0}?", r.AprNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus"]</button>
+            </form>
+        }
+        @if (r.Status == "approved")
+        {
+            @if (Model.CanCreateRfq)
+            {
+                <a asp-controller="AssetRfqs" asp-action="Create" asp-route-prUid="@r.Uid" class="btn btn-outline-info btn-sm"><i class="bi bi-envelope-paper me-1"></i>@T["Buat RFQ"]</a>
+            }
+            <button type="button" class="btn btn-success btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#convertModal">
+                <i class="bi bi-arrow-right-circle me-1"></i>@T["Konversi ke PO"]
+            </button>
+        }
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    <div class="card custom-card mb-3">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 text-white small">
+                <div class="col-md-2"><div class="text-white-50">@T["Tanggal PR"]</div>@Acc.Date(r.AprDate)</div>
+                <div class="col-md-2"><div class="text-white-50">@T["Tanggal dibutuhkan"]</div>@Acc.Date(r.NeededDate)</div>
+                <div class="col-md-2"><div class="text-white-50">@T["Pemohon"]</div>@(r.Requester ?? "-")</div>
+                <div class="col-md-2"><div class="text-white-50">@T["Departemen"]</div>@(r.Department ?? "-")</div>
+                <div class="col-md-2"><div class="text-white-50">@T["Total estimasi"]</div><span class="fw-semibold">@Acc.Money(r.TotalAmount)</span></div>
+                <div class="col-md-2"><div class="text-white-50">@T["Dibuat oleh"]</div>@(r.CreatedByName ?? "-")</div>
+                <div class="col-md-12"><div class="text-white-50">@T["Catatan"]</div>@(string.IsNullOrWhiteSpace(r.Note) ? "-" : r.Note)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card custom-card mb-3">
+        <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Aset yang diminta"]</span></div>
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="fw-bold">#</th>
+                        <th class="fw-bold">@T["NAMA ASET"]</th>
+                        <th class="fw-bold">@T["KATEGORI"]</th>
+                        <th class="fw-bold">@T["KETERANGAN"]</th>
+                        <th class="fw-bold text-end">@T["QTY"]</th>
+                        <th class="fw-bold text-end">@T["EST. HARGA"]</th>
+                        <th class="fw-bold text-end">@T["SUBTOTAL"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ var no = 1; }
+                    @foreach (var i in r.Items)
+                    {
+                        <tr>
+                            <td class="text-white-50">@(no++)</td>
+                            <td class="text-white">@i.Name</td>
+                            <td class="text-white">@(i.CategoryName ?? "-")</td>
+                            <td class="text-white small">@(i.Description ?? "-")</td>
+                            <td class="text-end text-white">@i.Quantity</td>
+                            <td class="text-end text-white">@Acc.Money(i.Price)</td>
+                            <td class="text-end text-white fw-semibold">@Acc.Money(i.Subtotal)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr><th colspan="6" class="text-end text-white">@T["Total"]</th><th class="text-end text-white">@Acc.Money(r.TotalAmount)</th></tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    @if (r.Rfqs.Count > 0 || r.Orders.Count > 0)
+    {
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white"><i class="bi bi-link-45deg me-1"></i>@T["Dokumen lanjutan"]</span></div>
+            <div class="card-body px-4 py-3 small text-white">
+                @foreach (var x in r.Rfqs)
+                {
+                    <div class="mb-1">@T["RFQ Aset"]: <a asp-controller="AssetRfqs" asp-action="Details" asp-route-uid="@x.Uid" class="text-info">@x.No</a>
+                        <span class="badge @AssetPurchaseLabels.Css(x.Status)">@T[AssetPurchaseLabels.Label(AssetPurchaseLabels.RfqStatuses, x.Status)]</span> · @Acc.Money(x.Amount)</div>
+                }
+                @foreach (var x in r.Orders)
+                {
+                    <div class="mb-1">@T["PO Aset"]: <a asp-controller="AssetPurchaseOrders" asp-action="Details" asp-route-uid="@x.Uid" class="text-info">@x.No</a>
+                        <span class="badge @AssetPurchaseLabels.Css(x.Status)">@T[AssetPurchaseLabels.Label(AssetPurchaseLabels.OrderStatuses, x.Status)]</span> · @Acc.Money(x.Amount)</div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (Model.Approval != null)
+    {
+        <partial name="_ApprovalPanel" model="Model.Approval" />
+    }
+</div>
+
+@if (r.Status == "approved")
+{
+    <div class="modal fade" id="convertModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="post" asp-action="ConvertToPo" asp-route-uid="@r.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-arrow-right-circle me-1"></i>@T["Konversi PR Aset ke PO Aset"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Tutup"]"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-white-50">@T["PO Aset draft dibuat dengan baris & harga estimasi PR ini; lengkapi harga, diskon dan PPN lalu ajukan persetujuan. PR menjadi selesai."]</p>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1" for="supplierId">@T["Supplier"]</label>
+                        <select class="form-select form-select-sm" name="supplierId" id="supplierId">
+                            <option value="">@T["— Pilih nanti —"]</option>
+                            @foreach (var s in Model.Suppliers)
+                            {
+                                <option value="@s.Id">@s.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label small mb-1" for="apoDate">@T["Tanggal PO"]</label>
+                        <input type="date" class="form-control form-control-sm" name="apoDate" id="apoDate" value="@today" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@T["Batal"]</button>
+                    <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check2 me-1"></i>@T["Buat PO Aset"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

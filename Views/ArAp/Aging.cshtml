@@ -1,0 +1,145 @@
+@model ERP.Web.Models.AgingViewModel
+@{
+    ViewData["Title"] = T[Model.Title];
+    var ctl = Model.Control;
+    var qs = "?asOf=" + Model.AsOf.ToString("yyyy-MM-dd");
+    var header = new ListHeaderModel
+    {
+        Title = T[Model.Title],
+        Count = Model.Rows.Count,
+        Description = T["Per tanggal"] + " " + Acc.Date(Model.AsOf),
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T[Model.Title]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="asOf">@T["Per tanggal"]</label>
+                        <input type="date" class="form-control" id="asOf" name="asOf" value="@Model.AsOf.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                    <div class="col-md d-flex align-items-end">
+                        <span class="text-muted small">@T["Umur dihitung dari jatuh tempo (atau tanggal faktur bila kosong). Pembayaran sesudah tanggal ini belum dihitung."]</span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert @(ctl.IsReconciled ? "alert-success" : "alert-danger") small py-2">
+        <i class="bi @(ctl.IsReconciled ? "bi-check-circle" : "bi-exclamation-octagon") me-1"></i>
+        @T["Cek akun kontrol {0} {1}: total rincian {2} vs saldo buku besar {3}", ctl.AccountCode, ctl.AccountName, Acc.Money(ctl.SubledgerTotal), Acc.Money(ctl.LedgerBalance)]
+        @if (!ctl.IsReconciled)
+        {
+            <span> — @T["selisih"] <strong>@Acc.Money(ctl.Difference)</strong> @T["(mis. saldo awal akun kontrol tanpa rincian faktur)."]</span>
+        }
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4 text-start">@(T[Model.PartyLabel].ToUpperInvariant())</th>
+                        <th class="text-end">@T["BELUM JT"]</th>
+                        <th class="text-end">1–30</th>
+                        <th class="text-end">31–60</th>
+                        <th class="text-end">61–90</th>
+                        <th class="text-end">@T["> 90 HARI"]</th>
+                        <th class="text-end">@T["TOTAL"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Tidak ada saldo terbuka."]</td></tr>
+                    }
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr class="aging-row" role="button" data-target="inv-@r.PartyId">
+                            <td class="ps-4 text-start text-white"><i class="bi bi-chevron-right small me-1"></i>@r.PartyName</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.Current)</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.Days1To30)</td>
+                            <td class="text-end text-warning">@Acc.MoneyOrBlank(r.Days31To60)</td>
+                            <td class="text-end text-warning">@Acc.MoneyOrBlank(r.Days61To90)</td>
+                            <td class="text-end text-danger">@Acc.MoneyOrBlank(r.Over90)</td>
+                            <td class="text-end text-white fw-semibold">@Acc.Money(r.Total)</td>
+                        </tr>
+                        <tr class="d-none" id="inv-@r.PartyId">
+                            <td colspan="7" class="ps-5 text-start">
+                                <table class="table table-sm mb-0 aging-detail">
+                                    @foreach (var i in r.Invoices.OrderBy(x => x.DueDate))
+                                    {
+                                        <tr>
+                                            <td><a asp-controller="@Model.InvoiceController" asp-action="Details" asp-route-uid="@i.Uid" class="text-info">@i.InvoiceNo</a></td>
+                                            <td class="text-white-50 small">@Acc.Date(i.InvoiceDate)</td>
+                                            <td class="text-white-50 small">@T["JT"] @Acc.Date(i.DueDate)</td>
+                                            <td class="small @(i.DaysOverdue > 0 ? "text-danger" : "text-white-50")">@(i.DaysOverdue > 0 ? T["lewat {0} hari", i.DaysOverdue] : T["belum jatuh tempo"])</td>
+                                            <td class="text-end text-white-50 small">@(Acc.IsForeign(i.CurrencyCode) ? Acc.Fx(i.ForeignOutstanding, i.CurrencyCode) : "")</td>
+                                            <td class="text-end text-white">@Acc.Money(i.Outstanding)</td>
+                                        </tr>
+                                    }
+                                </table>
+                                <a asp-controller="@Model.CardController" asp-action="Index" asp-route-partyUid="@r.PartyUid" class="small text-info">@(T[$"Lihat kartu {Model.PartyLabel.ToLowerInvariant()}"])</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td class="ps-4 text-start text-white">@T["TOTAL"]</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Totals.Current)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Totals.Days1To30)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Totals.Days31To60)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Totals.Days61To90)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Totals.Over90)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Totals.Total)</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.aging-row').forEach(r => r.addEventListener('click', () => {
+            document.getElementById(r.dataset.target).classList.toggle('d-none');
+            const icon = r.querySelector('.bi');
+            icon.classList.toggle('bi-chevron-right');
+            icon.classList.toggle('bi-chevron-down');
+        }));
+    </script>
+}

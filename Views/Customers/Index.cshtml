@@ -41,7 +41,7 @@
 
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-funnel"></i>
-                <span class="fw-semibold">Filter</span>
+                <span class="fw-semibold">@T["Filter"]</span>
             </div>
 
             <button class="btn btn-sm text-muted p-0"
@@ -70,7 +70,7 @@
                     <div class="col-md-4">
 
                         <label for="search" class="form-label">
-                            Cari
+                            @T["Cari"]
                         </label>
 
                         <input type="text"
@@ -78,7 +78,7 @@
                                id="search"
                                name="search"
                                value="@search"
-                               placeholder="Cari customer..." />
+                               placeholder="@T["Cari customer..."]" />
 
                     </div>
 
@@ -92,15 +92,15 @@
                         <select class="form-select" id="isActive" name="isActive">
 
                             <option value="" selected="@(selectedIsActive == null)">
-                                -- Semua --
+                                @T["-- Semua --"]
                             </option>
 
                             <option value="true" selected="@(selectedIsActive == true)">
-                                Aktif
+                                @T["Aktif"]
                             </option>
 
                             <option value="false" selected="@(selectedIsActive == false)">
-                                Non-Aktif
+                                @T["Non-Aktif"]
                             </option>
 
                         </select>
@@ -111,7 +111,7 @@
                     <div class="col-md-2">
 
                         <label for="pageSize" class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select class="form-select" id="pageSize" name="pageSize">
@@ -132,7 +132,7 @@
                                 class="btn btn-primary d-flex align-items-center gap-2">
 
                             <i class="bi bi-search"></i>
-                            Terapkan
+                            @T["Terapkan"]
 
                         </button>
 
@@ -171,7 +171,7 @@
                 </span>
 
                 <span class="menu-description small ms-1">
-                    Kelola data customers
+                    @T["Kelola data customers"]
                 </span>
 
             </div>
@@ -241,13 +241,13 @@
                 </button>
 
                 <!-- TAMBAH -->
-                <a asp-action="Create"
+                <a data-perm="create" asp-action="Create"
                    asp-controller="Customers"
                    class="btn btn-teal btn-custom-action">
 
                     <i class="bi bi-plus-circle"></i>
 
-                    <span>Tambah Customer</span>
+                    <span>@T["Tambah Customer"]</span>
 
                 </a>
 
@@ -268,15 +268,15 @@
                         <thead>
                             <tr>
                                 <th class="ps-4" style="width: 50px;">#</th>
-                                <th style="width: 70px;">FOTO</th>
+                                <th style="width: 70px;">@T["FOTO"]</th>
                                 <th>FULL NAME</th>
                                 <th>EMAIL</th>
                                 <th>PHONE</th>
                                 <th>NPWP</th>
-                                <th>KELOMPOK</th>
+                                <th>@T["KELOMPOK"]</th>
                                 <th>SALES</th>
-                                <th class="text-center">STATUS</th>
-                                <th class="text-center" style="width: 120px;">AKSI</th>
+                                <th class="text-center">@T["STATUS"]</th>
+                                <th class="text-center" style="width: 120px;">@T["AKSI"]</th>
                             </tr>
                         </thead>
 
@@ -397,32 +397,32 @@
                                         <td class="text-center">
                                             @if (customer.IsActive)
                                             {
-                                                <span class="badge bg-success">Aktif</span>
+                                                <span class="badge bg-success">@T["Aktif"]</span>
                                             }
                                             else
                                             {
-                                                <span class="badge bg-secondary">Nonaktif</span>
+                                                <span class="badge bg-secondary">@T["Nonaktif"]</span>
                                             }
                                         </td>
 
                                         <!-- AKSI -->
                                         <td class="text-center">
 
-                                            <div class="d-flex justify-content-center gap-1">
+                                            <div class="row-actions">
 
                                                 <!-- EDIT -->
-                                                <a asp-action="Edit"
+                                                <a data-perm="update" asp-action="Edit"
                                                    asp-controller="Customers"
-                                                   asp-route-id="@customer.Id"
-                                                   class="btn btn-sm menu-action-edit"
-                                                   title="Edit">
+                                                   asp-route-uid="@customer.Uid"
+                                                   class="act-btn act-edit"
+                                                   title="@T["Edit"]">
 
                                                     <i class="bi bi-pencil"></i>
 
                                                 </a>
 
                                                 <!-- DELETE / NONAKTIFKAN -->
-                                                <form asp-action="Delete"
+                                                <form data-perm="delete" asp-action="Delete"
                                                       asp-controller="Customers"
                                                       method="post"
                                                       class="d-inline"
@@ -431,12 +431,12 @@
                                                     @Html.AntiForgeryToken()
 
                                                     <input type="hidden"
-                                                           name="id"
-                                                           value="@customer.Id" />
+                                                           name="uid"
+                                                           value="@customer.Uid" />
 
                                                     <button type="submit"
-                                                            class="btn btn-sm menu-action-delete"
-                                                            title="Hapus / Nonaktifkan">
+                                                            class="act-btn act-delete"
+                                                            title="@T["Hapus / Nonaktifkan"]">
 
                                                         <i class="bi bi-trash"></i>
 
@@ -455,7 +455,7 @@
                             {
                                 <tr>
                                     <td colspan="10" class="text-center py-4">
-                                        Tidak ada data customer.
+                                        @T["Tidak ada data customer."]
                                     </td>
                                 </tr>
                             }
@@ -474,19 +474,19 @@
                 <!-- INFO -->
                 <small class="menu-description">
 
-                    Menampilkan
+                    @T["Menampilkan"]
 
                     <strong>
                         @startItem – @endItem
                     </strong>
 
-                    dari
+                    @T["dari"]
 
                     <strong>
                         @total
                     </strong>
 
-                    data
+                    @T["data"]
 
                 </small>
 
@@ -510,12 +510,12 @@
                                            page = currentPage - 1,
                                            pageSize = currentPageSize
                                        })">
-                                        Sebelumnya
+                                        @T["Sebelumnya"]
                                     </a>
                                 }
                                 else
                                 {
-                                    <span class="page-link">Sebelumnya</span>
+                                    <span class="page-link">@T["Sebelumnya"]</span>
                                 }
 
                             </li>
@@ -552,12 +552,12 @@
                                            page = currentPage + 1,
                                            pageSize = currentPageSize
                                        })">
-                                        Berikutnya
+                                        @T["Berikutnya"]
                                     </a>
                                 }
                                 else
                                 {
-                                    <span class="page-link">Berikutnya</span>
+                                    <span class="page-link">@T["Berikutnya"]</span>
                                 }
 
                             </li>
@@ -764,9 +764,7 @@
     function confirmDelete(name) {
 
         return confirm(
-            'Apakah kamu yakin ingin menghapus customer "' +
-            name +
-            '"?'
+            @(Json.Serialize(T["Apakah kamu yakin ingin menghapus customer \"{0}\"?"])).replace('{0}', name)
         );
 
     }
@@ -774,9 +772,7 @@
     function confirmActivate(name) {
 
         return confirm(
-            'Aktifkan kembali customer "' +
-            name +
-            '"?'
+            @(Json.Serialize(T["Aktifkan kembali customer \"{0}\"?"])).replace('{0}', name)
         );
 
     }

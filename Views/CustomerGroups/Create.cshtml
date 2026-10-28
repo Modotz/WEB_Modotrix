@@ -1,7 +1,7 @@
 @model ERP.Web.Models.CustomerGroupsViewModel
 
 @{
-    ViewData["Title"] = "Tambah Kelompok Customer";
+    ViewData["Title"] = T["Tambah Kelompok Customer"];
 }
 
 <style>
@@ -239,7 +239,7 @@
          ===================================================== -->
 
     <h3 class="customer-group-form-title">
-        Tambah Kelompok Customer
+        @T["Tambah Kelompok Customer"]
     </h3>
 
 
@@ -253,7 +253,7 @@
 
             <i class="bi bi-info-circle-fill me-1"></i>
 
-            Panduan Pengisian — Kelompok Customer
+            @T["Panduan Pengisian"] — @T["Kelompok Customer"]
 
             <button type="button"
                     class="btn btn-sm text-info float-end p-0"
@@ -275,24 +275,20 @@
                 <ol>
 
                     <li>
-                        Isi <strong>Kode</strong> unik
-                        (mis. <em>RTL, GRS, VIP</em>)
-                        dan <strong>Nama kelompok</strong> — wajib.
+                        @Html.Raw(T["Isi <strong>Kode</strong> unik (mis. <em>RTL, GRS, VIP</em>) dan <strong>Nama kelompok</strong>"]) — @T["wajib."]
                     </li>
 
                     <li>
-                        <strong>Diskon Default (%)</strong> opsional —
-                        potongan bawaan untuk pelanggan di kelompok ini
-                        (0 = tanpa diskon).
+                        <strong>@T["Diskon Default (%)"]</strong> @T["opsional"] —
+                        @T["potongan bawaan untuk pelanggan di kelompok ini (0 = tanpa diskon)."]
                     </li>
 
                     <li>
-                        <strong>Keterangan</strong> opsional untuk catatan singkat.
+                        <strong>@T["Keterangan"]</strong> @T["opsional untuk catatan singkat."]
                     </li>
 
                     <li>
-                        Matikan <strong>Aktif</strong> bila kelompok
-                        tak dipakai lagi (data lama tetap aman).
+                        @T["Matikan"] <strong>@T["Aktif"]</strong> @T["bila kelompok tak dipakai lagi (data lama tetap aman)."]
                     </li>
 
                 </ol>
@@ -311,7 +307,7 @@
     <div class="card customer-group-form-card">
 
         <div class="card-header">
-            Tambah Kelompok Customer
+            @T["Tambah Kelompok Customer"]
         </div>
 
 
@@ -339,14 +335,14 @@
                         <label asp-for="Code"
                                class="form-label">
 
-                            Kode
+                            @T["Kode"]
                             <span class="required-mark">*</span>
 
                         </label>
 
                         <input asp-for="Code"
                                class="form-control"
-                               placeholder="Masukkan kode kelompok"
+                               placeholder="@T["Masukkan kode kelompok"]"
                                maxlength="30"
                                autocomplete="off"
                                required />
@@ -367,14 +363,14 @@
                         <label asp-for="Name"
                                class="form-label">
 
-                            Nama Kelompok
+                            @T["Nama Kelompok"]
                             <span class="required-mark">*</span>
 
                         </label>
 
                         <input asp-for="Name"
                                class="form-control"
-                               placeholder="Masukkan nama kelompok"
+                               placeholder="@T["Masukkan nama kelompok"]"
                                maxlength="100"
                                autocomplete="off"
                                required />
@@ -395,7 +391,7 @@
                         <label asp-for="DiscountPercent"
                                class="form-label">
 
-                            Diskon Default (%)
+                            @T["Diskon Default (%)"]
 
                         </label>
 
@@ -432,7 +428,7 @@
                         <label asp-for="PriceListId"
                                class="form-label">
 
-                            Price List (Harga Kelompok)
+                            @T["Price List (Harga Kelompok)"]
 
                         </label>
 
@@ -441,7 +437,7 @@
                                 id="PriceListId">
 
                             <option value="">
-                                — Tanpa price list (harga default) —
+                                — @T["Tanpa price list (harga default)"] —
                             </option>
 
                             @if (ViewBag.PriceLists != null)
@@ -458,9 +454,7 @@
 
                         <div class="customer-group-price-info">
 
-                            Semua customer di kelompok ini memakai price list ini
-                            (bila customer tak punya list sendiri).
-                            Diskon default di atas tetap ditumpuk.
+                            @T["Semua customer di kelompok ini memakai price list ini (bila customer tak punya list sendiri). Diskon default di atas tetap ditumpuk."]
 
                         </div>
 
@@ -480,13 +474,13 @@
                         <label asp-for="Description"
                                class="form-label">
 
-                            Keterangan
+                            @T["Keterangan"]
 
                         </label>
 
                         <input asp-for="Description"
                                class="form-control"
-                               placeholder="Masukkan keterangan"
+                               placeholder="@T["Masukkan keterangan"]"
                                maxlength="255" />
 
                         <span asp-validation-for="Description"
@@ -514,7 +508,7 @@
                             <label class="form-check-label ms-2"
                                    for="IsActive">
 
-                                Aktif
+                                @T["Aktif"]
 
                             </label>
 
@@ -537,7 +531,7 @@
                         class="btn btn-sm customer-group-save">
 
                     <i class="bi bi-save me-1"></i>
-                    Simpan
+                    @T["Simpan"]
 
                 </button>
 
@@ -546,7 +540,7 @@
                    asp-action="Index"
                    class="btn btn-sm customer-group-cancel">
 
-                    Batal
+                    @T["Batal"]
 
                 </a>
 

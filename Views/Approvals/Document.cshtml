@@ -1,0 +1,32 @@
+@model ERP.Web.Models.ApprovalDocumentViewModel
+@{
+    ViewData["Title"] = $"{T[Model.DocTypeLabel]} {Model.DocNo}";
+    var cashDoc = Model.DocType is "petty_cash_expense" or "cash_transaction_unpost";
+    var canOpenCash = cashDoc && await Access.CanAsync("cash-transactions");
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@T[Model.DocTypeLabel] @Model.DocNo</h3>
+        @if (canOpenCash)
+        {
+            <a asp-controller="CashTransactions" asp-action="Details" asp-route-uid="@Model.DocUid" class="btn btn-light btn-sm">
+                <i class="bi bi-box-arrow-up-right me-1"></i>@T["Buka Transaksi"]
+            </a>
+        }
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    <div class="card custom-card">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 text-white small">
+                <div class="col-md-3"><div class="text-white-50">@T["Jenis dokumen"]</div>@T[Model.DocTypeLabel]</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Nomor"]</div>@(Model.DocNo ?? "-")</div>
+                <div class="col-md-2"><div class="text-white-50">@T["Nominal"]</div><span class="fs-5 fw-semibold">@Acc.Money(Model.Amount)</span></div>
+                <div class="col-md-2"><div class="text-white-50">@T["Status dokumen"]</div>@T[ERP.Web.Models.Appr.DocStatusLabel(Model.DocStatus)]</div>
+                <div class="col-md-2"><div class="text-white-50">@T["Pembuat"]</div>@(Model.DocCreatedByName ?? "-")</div>
+            </div>
+        </div>
+    </div>
+
+    <partial name="_ApprovalPanel" model="Model" />
+</div>

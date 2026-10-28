@@ -9,10 +9,12 @@ namespace ERP.Web.Controllers;
 public class WorkCentersController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public WorkCentersController(ApiClient api)
+    public WorkCentersController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     // =========================
@@ -56,10 +58,10 @@ public class WorkCentersController : Controller
     // =========================
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
         var data =
-            await _api.GetWorkCenterAsync(id);
+            await _api.GetWorkCenterAsync(uid);
 
         if (data is null)
             return NotFound();
@@ -71,16 +73,9 @@ public class WorkCentersController : Controller
     // CREATE
     // =========================
 
+    // Form tambah/edit berupa modal di halaman Index; tidak ada halaman Create/Edit terpisah.
     [HttpGet]
-    public IActionResult Create()
-    {
-        return View(
-            new WorkCenterViewModel
-            {
-                IsActive = true,
-                CostPerHour = 0
-            });
-    }
+    public IActionResult Create() => RedirectToAction(nameof(Index));
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -89,7 +84,8 @@ public class WorkCentersController : Controller
     {
         if (!ModelState.IsValid)
         {
-            return View(model);
+            TempData["Error"] = FirstModelError() ?? "Data Work Center belum lengkap.";
+            return RedirectToAction(nameof(Index));
         }
 
         var result =
@@ -97,12 +93,8 @@ public class WorkCentersController : Controller
 
         if (!result.Success)
         {
-            ModelState.AddModelError(
-                "",
-                result.Error ??
-                "Gagal menambahkan Work Center.");
-
-            return View(model);
+            TempData["Error"] = result.Error ?? "Gagal menambahkan Work Center.";
+            return RedirectToAction(nameof(Index));
         }
 
         TempData["Success"] =
@@ -116,34 +108,26 @@ public class WorkCentersController : Controller
     // =========================
 
     [HttpGet]
-    public async Task<IActionResult> Edit(long id)
-    {
-        var data =
-            await _api.GetWorkCenterAsync(id);
-
-        if (data is null)
-            return NotFound();
-
-        return View(data);
-    }
+    public IActionResult Edit(Guid uid) => RedirectToAction(nameof(Index));
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(
         WorkCenterViewModel model)
     {
-        if (!model.Id.HasValue)
+        // UID wajib untuk update (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
-            ModelState.AddModelError(
-                "",
-                "ID Work Center tidak valid.");
+            TempData["Error"] =
+                "Work Center tidak ditemukan.";
 
-            return View(model);
+            return RedirectToAction(nameof(Index));
         }
 
         if (!ModelState.IsValid)
         {
-            return View(model);
+            TempData["Error"] = FirstModelError() ?? "Data Work Center belum lengkap.";
+            return RedirectToAction(nameof(Index));
         }
 
         var result =
@@ -151,12 +135,8 @@ public class WorkCentersController : Controller
 
         if (!result.Success)
         {
-            ModelState.AddModelError(
-                "",
-                result.Error ??
-                "Gagal mengubah Work Center.");
-
-            return View(model);
+            TempData["Error"] = result.Error ?? "Gagal mengubah Work Center.";
+            return RedirectToAction(nameof(Index));
         }
 
         TempData["Success"] =
@@ -165,16 +145,19 @@ public class WorkCentersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    private string? FirstModelError() =>
+        ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
+
     // =========================
     // DELETE
     // =========================
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
         var result =
-            await _api.DeleteWorkCenterAsync(id);
+            await _api.DeleteWorkCenterAsync(uid);
 
         TempData[result.Success
             ? "Success"
@@ -197,9 +180,9 @@ public class WorkCentersController : Controller
         var worksheet = workbook.Worksheets.Add("WorkCenters");
 
         worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Kode";
-        worksheet.Cell(1, 3).Value = "Nama";
-        worksheet.Cell(1, 4).Value = "Tarif / Jam";
+        worksheet.Cell(1, 2).Value = _t["Kode"];
+        worksheet.Cell(1, 3).Value = _t["Nama"];
+        worksheet.Cell(1, 4).Value = _t["Tarif / Jam"];
         worksheet.Cell(1, 5).Value = "Status";
 
         var header = worksheet.Range("A1:E1");
@@ -217,7 +200,7 @@ public class WorkCentersController : Controller
             worksheet.Cell(row, 3).Value = item.Name;
             worksheet.Cell(row, 4).Value = item.CostPerHour;
             worksheet.Cell(row, 4).Style.NumberFormat.Format = "#,##0";
-            worksheet.Cell(row, 5).Value = item.IsActive ? "Aktif" : "Nonaktif";
+            worksheet.Cell(row, 5).Value = item.IsActive ? _t["Aktif"] : _t["Nonaktif"];
 
             row++;
             no++;
@@ -256,9 +239,9 @@ public class WorkCentersController : Controller
                     {
                         text.Span("Work Center").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span(_t["Dicetak"] + $": {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {list.Count} data").FontColor("#6c757d");
+                        text.Span(_t["Total: {0} data", list.Count]).FontColor("#6c757d");
                     });
                 });
 
@@ -276,9 +259,9 @@ public class WorkCentersController : Controller
                     table.Header(header =>
                     {
                         header.Cell().Element(HeaderStyle).Text("No");
-                        header.Cell().Element(HeaderStyle).Text("Kode");
-                        header.Cell().Element(HeaderStyle).Text("Nama");
-                        header.Cell().Element(HeaderStyle).AlignRight().Text("Tarif / Jam");
+                        header.Cell().Element(HeaderStyle).Text(_t["Kode"]);
+                        header.Cell().Element(HeaderStyle).Text(_t["Nama"]);
+                        header.Cell().Element(HeaderStyle).AlignRight().Text(_t["Tarif / Jam"]);
                         header.Cell().Element(HeaderStyle).Text("Status");
 
                         static QuestPDF.Infrastructure.IContainer HeaderStyle(
@@ -299,7 +282,7 @@ public class WorkCentersController : Controller
                         table.Cell().Element(c => Cell(c, bg)).Text(item.Code ?? "");
                         table.Cell().Element(c => Cell(c, bg)).Text(item.Name ?? "");
                         table.Cell().Element(c => Cell(c, bg)).AlignRight().Text(item.CostPerHour.ToString("N0"));
-                        table.Cell().Element(c => Cell(c, bg)).Text(item.IsActive ? "Aktif" : "Nonaktif");
+                        table.Cell().Element(c => Cell(c, bg)).Text(item.IsActive ? _t["Aktif"] : _t["Nonaktif"]);
 
                         no++;
                     }
@@ -313,7 +296,7 @@ public class WorkCentersController : Controller
                 });
 
                 page.Footer().AlignLeft().PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f).FontColor("#888888");
             });
         });

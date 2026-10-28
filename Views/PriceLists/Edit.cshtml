@@ -22,18 +22,18 @@
 .pl-edit .form-control,
 .pl-edit .form-select,
 .pl-edit .input-group-text {
-    height: 34px;
-    min-height: 34px;
-    padding-top: .25rem;
-    padding-bottom: .25rem;
-    font-size: .875rem;
+    height: 27px;
+    min-height: 27px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    font-size: 12px;
 }
 
 /* Tombol Tambah / Reset / Tambahkan Semua ikut tinggi yang sama */
 .pl-edit #btnAddProduct,
 .pl-edit #btnResetFilter,
 .pl-edit #btnAddAll {
-    height: 34px;
+    height: 27px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -98,7 +98,7 @@
     <!-- ================= CARD 1 : DATA PRICE LIST ================= -->
     <form asp-action="Edit" method="post" id="priceListForm">
         @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="Uid" />
 
         <div class="card supplier-card mb-4">
 
@@ -110,13 +110,13 @@
                 <div class="row g-3">
 
                     <div class="col-md-5">
-                        <label asp-for="Code" class="form-label small mb-1">Kode <span class="text-danger">*</span></label>
+                        <label asp-for="Code" class="form-label small mb-1">@T["Kode"] <span class="text-danger">*</span></label>
                         <input asp-for="Code" class="form-control form-control-sm" />
                         <span asp-validation-for="Code" class="text-danger"></span>
                     </div>
 
                     <div class="col-md-5">
-                        <label asp-for="Name" class="form-label small mb-1">Nama <span class="text-danger">*</span></label>
+                        <label asp-for="Name" class="form-label small mb-1">@T["Nama"] <span class="text-danger">*</span></label>
                         <input asp-for="Name" class="form-control form-control-sm" />
                         <span asp-validation-for="Name" class="text-danger"></span>
                     </div>
@@ -124,12 +124,12 @@
                     <div class="col-md-2 d-flex align-items-center">
                         <div class="form-check form-switch mt-md-4">
                             <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch" />
-                            <label asp-for="IsActive" class="form-check-label">Aktif</label>
+                            <label asp-for="IsActive" class="form-check-label">@T["Aktif"]</label>
                         </div>
                     </div>
 
                     <div class="col-12">
-                        <label asp-for="Note" class="form-label small mb-1">Catatan</label>
+                        <label asp-for="Note" class="form-label small mb-1">@T["Catatan"]</label>
                         <input asp-for="Note" class="form-control form-control-sm" />
                     </div>
 
@@ -139,11 +139,11 @@
             <div class="card-footer bg-transparent d-flex gap-2">
                 <button type="submit" class="btn btn-teal btn-custom-action">
                     <i class="bi bi-save"></i>
-                    <span>Simpan</span>
+                    <span>@T["Simpan"]</span>
                 </button>
                 <a asp-action="Index" class="btn btn-danger btn-custom-action pl-btn-cancel">
                     <i class="bi bi-x-lg"></i>
-                    <span>Batal</span>
+                    <span>@T["Batal"]</span>
                 </a>
             </div>
         </div>
@@ -157,26 +157,26 @@
 
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-tag"></i>
-                <span class="fw-bold">Harga Produk</span>
+                <span class="fw-bold">@T["Harga Produk"]</span>
                 <span class="badge badge-count">@items.Count</span>
             </div>
 
             <button type="button" id="btnAddAll" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-plus-square me-1"></i>Tambahkan Semua Produk
+                <i class="bi bi-plus-square me-1"></i>@T["Tambahkan Semua Produk"]
             </button>
         </div>
 
         <div class="card-body">
 
             <p class="product-filter-help mb-3">
-                Harga di sini menggantikan harga default; diskon kelompok tetap berlaku di atasnya.
+                @T["Harga di sini menggantikan harga default; diskon kelompok tetap berlaku di atasnya."]
             </p>
 
             <!-- FORM TAMBAH PRODUK (satu baris sejajar) -->
             <div class="row g-3 align-items-end mb-1">
 
                 <div class="col-lg-5">
-                    <label class="form-label small mb-1" for="productSelect">Produk</label>
+                    <label class="form-label small mb-1" for="productSelect">@T["Produk"]</label>
                     <select id="productSelect" class="form-select form-select-sm">
                         <option value=""></option>
                         @foreach (var product in products)
@@ -190,7 +190,7 @@
                 </div>
 
                 <div class="col-lg-3 col-md-6">
-                    <label class="form-label small mb-1" for="productPrice">Harga</label>
+                    <label class="form-label small mb-1" for="productPrice">@T["Harga"]</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text pl-rp">Rp</span>
                         <input type="number" id="productPrice" class="form-control form-control-sm"
@@ -199,16 +199,16 @@
                 </div>
 
                 <div class="col-lg-2 col-md-3">
-                    <label class="form-label small mb-1 d-block">Incl. PPN?</label>
+                    <label class="form-label small mb-1 d-block">@T["Incl. PPN?"]</label>
                     <div class="form-check form-switch d-inline-block">
                         <input class="form-check-input ms-0 mt-0" type="checkbox" role="switch" id="productTax" />
-                        <label class="form-check-label" for="productTax">Termasuk PPN</label>
+                        <label class="form-check-label" for="productTax">@T["Termasuk PPN"]</label>
                     </div>
                 </div>
 
                 <div class="col-lg-2 col-md-3">
                     <button type="button" id="btnAddProduct" class="btn btn-sm btn-success w-100 text-nowrap">
-                        <i class="bi bi-plus-lg me-1"></i>Tambah
+                        <i class="bi bi-plus-lg me-1"></i>@T["Tambah"]
                     </button>
                 </div>
 
@@ -217,10 +217,10 @@
             <!-- Teks bantuan: di baris sendiri supaya kontrol di atas tetap sejajar -->
             <div class="row g-3 mb-4">
                 <div class="col-lg-5">
-                    <div class="product-filter-help">Produk yang sudah ada di list tidak muncul di sini.</div>
+                    <div class="product-filter-help">@T["Produk yang sudah ada di list tidak muncul di sini."]</div>
                 </div>
                 <div class="col-lg-3">
-                    <div class="product-filter-help">Otomatis terisi harga default saat produk dipilih (bisa diubah).</div>
+                    <div class="product-filter-help">@T["Otomatis terisi harga default saat produk dipilih (bisa diubah)."]</div>
                 </div>
             </div>
 
@@ -228,31 +228,31 @@
             <div class="pl-filter-bar">
 
                 <input type="text" id="filterSearch" class="form-control form-control-sm"
-                       placeholder="Cari No. Produk / Nama / SKU..." />
+                       placeholder="@T["Cari No. Produk / Nama / SKU..."]" />
 
                 <select id="filterCategory" class="form-select form-select-sm">
-                    <option value="">Semua Kategori</option>
+                    <option value="">@T["Semua Kategori"]</option>
                     @foreach (var c in categories) { <option value="@c">@c</option> }
                 </select>
 
                 <select id="filterBrand" class="form-select form-select-sm">
-                    <option value="">Semua Brand</option>
+                    <option value="">@T["Semua Brand"]</option>
                     @foreach (var b in brands) { <option value="@b">@b</option> }
                 </select>
 
                 <select id="filterType" class="form-select form-select-sm">
-                    <option value="">Semua Jenis</option>
+                    <option value="">@T["Semua Jenis"]</option>
                     @foreach (var t in types) { <option value="@t">@t</option> }
                 </select>
 
                 <button type="button" id="btnResetFilter" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                    <i class="bi bi-arrow-clockwise me-1"></i>@T["Reset"]
                 </button>
 
             </div>   
 
              <button type="button" id="btnDeleteSelected" class="btn btn-sm btn-danger mb-2 d-none">
-                 <i class="bi bi-trash me-1"></i>Hapus Terpilih (<span id="selectedCount">0</span>)
+                 <i class="bi bi-trash me-1"></i>@T["Hapus Terpilih"] (<span id="selectedCount">0</span>)
              </button>
 
             <!-- TABEL PRODUK -->
@@ -262,21 +262,21 @@
                         <tr>
                         
                         <th style="width:40px;" class="text-center">
-                             <input type="checkbox" class="form-check-input" id="checkAll" title="Pilih semua" />
+                             <input type="checkbox" class="form-check-input" id="checkAll" title="@T["Pilih semua"]" />
                          </th>
-                            <th>NO.</th>
-                            <th>NO. PRODUK</th>
-                            <th>PRODUK</th>
+                            <th>@T["NO."]</th>
+                            <th>@T["NO. PRODUK"]</th>
+                            <th>@T["PRODUK"]</th>
                             <th>SKU</th>
-                            <th>KATEGORI</th>
+                            <th>@T["KATEGORI"]</th>
                             <th>BRAND</th>
-                            <th>JENIS</th>
+                            <th>@T["JENIS"]</th>
                             <th>UNIT</th>
                             <th class="text-end">COST PRICE</th>
                             <th class="text-end">SELL PRICE</th>
-                            <th style="width:220px;">HARGA PRICE LIST</th>
-                            <th class="text-center">INCL. PPN</th>
-                            <th class="text-center" style="width:80px;">AKSI</th>
+                            <th style="width:220px;">@T["HARGA PRICE LIST"]</th>
+                            <th class="text-center">@T["INCL. PPN"]</th>
+                            <th class="text-center" style="width:80px;">@T["AKSI"]</th>
                         </tr>
                     </thead>
 
@@ -286,14 +286,14 @@
                             var no = 1;
                             foreach (var item in items)
                             {
-                                <tr data-item-id="@item.Id"
+                                <tr data-item-uid="@item.Uid"
                                     data-category="@item.CategoryName"
                                     data-brand="@item.BrandName"
                                     data-type="@item.ProductType"
                                     data-search="@($"{item.ProductNumber} {item.ProductName} {item.Sku}".ToLower())">
 
                                     <td class="text-center">
-                                        <input type="checkbox" class="form-check-input row-check" data-id="@item.Id" />
+                                        <input type="checkbox" class="form-check-input row-check" data-uid="@item.Uid" />
                                      </td>
 
                                     <td class="row-no">@no</td>
@@ -315,7 +315,7 @@
                                                      value="@item.Price.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
                                                      min="0" step="0.01" />
                                               <button type="button" class="btn btn-success btn-save-item"
-                                                      data-id="@item.Id" title="Simpan">
+                                                      data-uid="@item.Uid" title="@T["Simpan"]">
                                                   <i class="bi bi-check-lg"></i>
                                               </button>
                                           </div>
@@ -329,10 +329,10 @@
                                     </td>
 
                                     <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-1">
-                                            
-                                            <button type="button" class="btn btn-sm menu-action-delete btn-delete-item"
-                                                    data-id="@item.Id" title="Hapus">
+                                        <div class="row-actions">
+
+                                            <button type="button" class="act-btn act-delete btn-delete-item"
+                                                    data-uid="@item.Uid" title="@T["Hapus"]">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -344,7 +344,7 @@
 
                         <tr id="emptyRow" class="@(items.Any() ? "d-none" : "")">
                             <td colspan="14" class="text-center py-4">
-                                <span class="menu-description">Belum ada produk dalam Price List.</span>
+                                <span class="menu-description">@T["Belum ada produk dalam Price List."]</span>
                             </td>
                         </tr>
                     </tbody>
@@ -361,7 +361,7 @@
         <div class="modal-content">
 
             <div class="modal-header">
-                <h5 class="modal-title" id="confirmModalTitle">Konfirmasi</h5>
+                <h5 class="modal-title" id="confirmModalTitle">@T["Konfirmasi"]</h5>
                 <button type="button" class="btn-close btn-close-white"
                         data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -369,8 +369,8 @@
             <div class="modal-body" id="confirmModalBody"></div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-danger" id="confirmModalOk">Ya</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="button" class="btn btn-danger" id="confirmModalOk">@T["Ya"]</button>
             </div>
 
         </div>
@@ -381,8 +381,8 @@
 @section Scripts {
 
     <script>
-        // Id bertipe long -> kirim sebagai angka
-        const priceListId = Number(@Model.Id);
+        // Identitas price list memakai uid (bukan id angka)
+        const priceListUid = "@Model.Uid";
 
         const getToken = () =>
             document.querySelector('input[name="__RequestVerificationToken"]').value;
@@ -402,7 +402,7 @@
 const confirmModalEl = document.getElementById("confirmModal");
 const confirmModal = new bootstrap.Modal(confirmModalEl);
 
-function confirmDialog(message, okText = "Ya", okClass = "btn-danger") {
+function confirmDialog(message, okText = @Json.Serialize(T["Ya"]), okClass = "btn-danger") {
     return new Promise(resolve => {
         document.getElementById("confirmModalBody").textContent = message;
 
@@ -437,11 +437,11 @@ function confirmDialog(message, okText = "Ya", okClass = "btn-danger") {
             const productId = document.getElementById("productSelect").value;
             const price = document.getElementById("productPrice").value;
 
-            if (!productId) { alert("Silakan pilih produk."); return; }
-            if (price === "" || Number(price) < 0) { alert("Harga belum diisi."); return; }
+            if (!productId) { alert(@Json.Serialize(T["Silakan pilih produk."])); return; }
+            if (price === "" || Number(price) < 0) { alert(@Json.Serialize(T["Harga belum diisi."])); return; }
 
             const res = await postJson("/PriceLists/AddItem", {
-                priceListId: priceListId,
+                priceListUid: priceListUid,
                 productId: Number(productId),
                 price: Number(price),
                 taxInclusive: document.getElementById("productTax").checked
@@ -455,11 +455,11 @@ function confirmDialog(message, okText = "Ya", okClass = "btn-danger") {
         document.getElementById("btnAddAll").addEventListener("click", async function () {
 
         const ok = await confirmDialog(
-          "Tambahkan SEMUA produk yang belum ada ke price list ini (dengan harga default)?");
+          @Json.Serialize(T["Tambahkan SEMUA produk yang belum ada ke price list ini (dengan harga default)?"]));
 
         if (!ok) return;
 
-        const res = await postJson("/PriceLists/AddAllItems", { priceListId: priceListId });
+        const res = await postJson("/PriceLists/AddAllItems", { priceListUid: priceListUid });
 
         if (!res.ok) { alert(await res.text()); return; }
          location.reload();
@@ -471,12 +471,12 @@ function confirmDialog(message, okText = "Ya", okClass = "btn-danger") {
                 const row = this.closest("tr");
 
                 const res = await postJson("/PriceLists/UpdateItem", {
-                    id: Number(this.dataset.id),
+                    uid: this.dataset.uid,
                     price: Number(row.querySelector(".item-price").value),
                     taxInclusive: row.querySelector(".item-tax").checked
                 });
 
-                alert(res.ok ? "Harga berhasil diubah." : "Gagal mengubah harga.");
+                alert(res.ok ? @Json.Serialize(T["Harga berhasil diubah."]) : @Json.Serialize(T["Gagal mengubah harga."]));
             });
         });
 
@@ -484,12 +484,12 @@ function confirmDialog(message, okText = "Ya", okClass = "btn-danger") {
         document.querySelectorAll(".btn-delete-item").forEach(btn => {
          btn.addEventListener("click", async function () {
 
-        const ok = await confirmDialog("Hapus produk ini dari Price List?");
+        const ok = await confirmDialog(@Json.Serialize(T["Hapus produk ini dari Price List?"]));
         if (!ok) return;
 
-        const res = await postJson("/PriceLists/DeleteItem", { id: Number(this.dataset.id) });
+        const res = await postJson("/PriceLists/DeleteItem", { uid: this.dataset.uid });
 
-        if (!res.ok) { alert("Gagal menghapus produk."); return; }
+        if (!res.ok) { alert(@Json.Serialize(T["Gagal menghapus produk."])); return; }
         location.reload();
       });
     });
@@ -504,7 +504,7 @@ function confirmDialog(message, okText = "Ya", okClass = "btn-danger") {
             const q = fSearch.value.trim().toLowerCase();
             let visible = 0;
 
-            document.querySelectorAll("#priceListItemsTable tbody tr[data-item-id]").forEach(tr => {
+            document.querySelectorAll("#priceListItemsTable tbody tr[data-item-uid]").forEach(tr => {
                 const ok =
                     (!q || tr.dataset.search.includes(q)) &&
                     (!fCat.value   || tr.dataset.category === fCat.value) &&
@@ -546,7 +546,7 @@ function confirmDialog(message, okText = "Ya", okClass = "btn-danger") {
 
   checkAll.addEventListener("change", function () {
      document
-        .querySelectorAll("#priceListItemsTable tbody tr[data-item-id]:not(.d-none) .row-check")
+        .querySelectorAll("#priceListItemsTable tbody tr[data-item-uid]:not(.d-none) .row-check")
         .forEach(c => c.checked = this.checked);
     refreshSelection();
    });
@@ -556,15 +556,15 @@ function confirmDialog(message, okText = "Ya", okClass = "btn-danger") {
  });
 
 btnDeleteSelected.addEventListener("click", async function () {
-    const ids = [...document.querySelectorAll("#priceListItemsTable .row-check:checked")]
-        .map(c => Number(c.dataset.id));
+    const uids = [...document.querySelectorAll("#priceListItemsTable .row-check:checked")]
+        .map(c => c.dataset.uid);
 
-    if (ids.length === 0) return;
+    if (uids.length === 0) return;
 
-    const ok = await confirmDialog(`Hapus ${ids.length} produk dari Price List?`);
+    const ok = await confirmDialog(@(Json.Serialize(T["Hapus {0} produk dari Price List?"])).replace('{0}', uids.length));
     if (!ok) return;
 
-    const res = await postJson("/PriceLists/DeleteItems", { ids: ids });
+    const res = await postJson("/PriceLists/DeleteItems", { uids: uids });
 
     if (!res.ok) { alert(await res.text()); return; }
     location.reload();

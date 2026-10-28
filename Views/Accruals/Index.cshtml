@@ -1,0 +1,92 @@
+@model ERP.Web.Models.AccrualsIndexViewModel
+@{
+    ViewData["Title"] = T["Jurnal Akrual & Pembalik"];
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Jurnal Akrual & Pembalik"]</h3>
+
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+        <div>
+            <label class="form-label text-white small mb-1" for="fFrom">@T["Tanggal jurnal dari"]</label>
+            <input type="date" class="form-control form-control-sm" name="from" id="fFrom" value="@Model.From?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label text-white small mb-1" for="fTo">@T["s/d"]</label>
+            <input type="date" class="form-control form-control-sm" name="to" id="fTo" value="@Model.To?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label text-white small mb-1" for="fStatus">@T["Status"]</label>
+            <select class="form-select form-select-sm" name="status" id="fStatus">
+                <option value="">@T["-- Semua --"]</option>
+                @foreach (var s in new[] { "pending", "reversed", "voided" })
+                {
+                    <option value="@s" selected="@(s == Model.Status)">@T[ERP.Web.Models.AccrualsIndexViewModel.Badge(s).Label]</option>
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>@T["Terapkan"]</button>
+        <a asp-controller="Journals" asp-action="Create" class="btn btn-outline-info btn-sm ms-auto" data-perm="journals:create"><i class="bi bi-plus-lg me-1"></i>@T["Jurnal Akrual Baru"]</a>
+    </form>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Akrual = jurnal umum biasa dengan \"Tgl balik (akrual)\", mis. D Beban Listrik / K 2-1600 Biaya Masih Harus Dibayar per 31/10, balik 1/11. Tombol \"Jurnal Balik Akrual\" di detail jurnal membuat jurnal BARU bertanggal balik dengan debit/kredit tertukar; jurnal asal tidak diubah. Tidak ada pembalikan otomatis terjadwal."]
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["JURNAL"]</th>
+                        <th>@T["TANGGAL"]</th>
+                        <th>@T["TGL BALIK"]</th>
+                        <th>@T["KETERANGAN"]</th>
+                        <th class="text-end">@T["NOMINAL"]</th>
+                        <th>@T["STATUS"]</th>
+                        <th class="pe-4">@T["PEMBALIK"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada jurnal akrual."]</td></tr>
+                    }
+                    @foreach (var r in Model.Rows)
+                    {
+                        var badge = ERP.Web.Models.AccrualsIndexViewModel.Badge(r.Status);
+                        <tr>
+                            <td class="ps-4 small"><a asp-controller="Journals" asp-action="Details" asp-route-uid="@r.Uid" class="text-info text-nowrap">@r.JournalNo</a></td>
+                            <td class="text-white small">@Acc.Date(r.JournalDate)</td>
+                            <td class="small @(r.IsDue ? "text-warning fw-semibold" : "text-white")">@Acc.Date(r.ReversalDate)</td>
+                            <td class="text-white small">@r.Description<div class="text-white-50">@r.Reference</div></td>
+                            <td class="text-end text-white">@Acc.Money(r.Amount)</td>
+                            <td>
+                                <span class="badge @badge.Css">@T[badge.Label]</span>
+                                @if (r.IsDue)
+                                {
+                                    <div class="small text-warning">@T["sudah jatuh tempo"]</div>
+                                }
+                            </td>
+                            <td class="pe-4 small">
+                                @if (r.ReversalUid != null)
+                                {
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@r.ReversalUid" class="text-info text-nowrap">@r.ReversalNo</a>
+                                    <div class="text-white-50">@Acc.Date(r.ReversalJournalDate)</div>
+                                }
+                                else
+                                {
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@r.Uid" class="btn btn-outline-info btn-sm" data-perm="journals:update">
+                                        <i class="bi bi-arrow-repeat me-1"></i>@T["Buat pembalik"]
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

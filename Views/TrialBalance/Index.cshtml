@@ -1,0 +1,133 @@
+@model ERP.Web.Models.TrialBalanceViewModel
+
+@{
+    ViewData["Title"] = T["Neraca Saldo"];
+    var qs = $"?from={Model.From:yyyy-MM-dd}&to={Model.To:yyyy-MM-dd}&includeZero={Model.IncludeZero.ToString().ToLowerInvariant()}";
+    var header = new ListHeaderModel
+    {
+        Title = T["Neraca Saldo"],
+        Count = Model.Rows.Count,
+        Description = T["Periode {0} s/d {1}", Acc.Date(Model.From), Acc.Date(Model.To)],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("Print") + qs
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Neraca Saldo"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md">
+                        <label class="form-label" for="from">@T["Dari"]</label>
+                        <input type="date" class="form-control" id="from" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="to">@T["Sampai"]</label>
+                        <input type="date" class="form-control" id="to" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <div class="form-check mb-0 d-flex align-items-center gap-2" style="min-height: 27px; font-size: 12px;">
+                            <input class="form-check-input mt-0" type="checkbox" name="includeZero" value="true" id="includeZero" checked="@Model.IncludeZero" />
+                            <label class="form-check-label" for="includeZero">@T["Tampilkan akun bersaldo nol"]</label>
+                        </div>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.IsBalanced)
+    {
+        <div class="alert alert-danger small">
+            <i class="bi bi-exclamation-octagon me-1"></i>
+            @T["Neraca saldo tidak seimbang. Ini menandakan data jurnal rusak — hubungi administrator."]
+        </div>
+    }
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" rowspan="2" style="width: 110px;">@T["KODE"]</th>
+                        <th rowspan="2">@T["NAMA AKUN"]</th>
+                        <th class="text-center" colspan="2">@T["SALDO AWAL"]</th>
+                        <th class="text-center" colspan="2">@T["MUTASI"]</th>
+                        <th class="text-center" colspan="2">@T["SALDO AKHIR"]</th>
+                    </tr>
+                    <tr>
+                        <th class="text-end">@T["DEBIT"]</th>
+                        <th class="text-end">@T["KREDIT"]</th>
+                        <th class="text-end">@T["DEBIT"]</th>
+                        <th class="text-end">@T["KREDIT"]</th>
+                        <th class="text-end">@T["DEBIT"]</th>
+                        <th class="text-end">@T["KREDIT"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada saldo pada rentang ini."]</td></tr>
+                    }
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white">@r.Code</td>
+                            <td class="text-white">
+                                <a asp-controller="GeneralLedger" asp-action="Index" asp-route-accountUid="@r.Uid"
+                                   asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")"
+                                   class="text-white text-decoration-none">@r.Name</a>
+                            </td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.OpeningDebit)</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.OpeningCredit)</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.MovementDebit)</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.MovementCredit)</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.ClosingDebit)</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.ClosingCredit)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tbody>
+                    <tr class="fw-bold">
+                        <td colspan="2" class="ps-4 text-end text-white">@T["TOTAL"]</td>
+                        <td class="text-end text-white">@Acc.Money(Model.TotalOpeningDebit)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.TotalOpeningCredit)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.TotalMovementDebit)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.TotalMovementCredit)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.TotalClosingDebit)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.TotalClosingCredit)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>

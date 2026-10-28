@@ -1,0 +1,257 @@
+@using ERP.Web.Security
+@model ERP.Web.ViewComponents.SidebarModel
+
+@functions {
+    // Menu yang sudah punya halaman di .NET mendapat link; sisanya ditampilkan redup (belum dimigrasi).
+    string? HrefFor(SidebarMenuViewModel item) =>
+        MenuRegistry.TryGetPage(item.Url, out var page)
+            ? Url.Action(page.Action, page.Controller)
+            : null;
+
+    string IconFor(SidebarMenuViewModel item) =>
+        string.IsNullOrWhiteSpace(item.Icon) ? "bi bi-dot" : item.Icon;
+
+    // Teks yang dicocokkan pencarian menu: judul Indonesia + Inggris, jadi bisa dicari dengan dua bahasa.
+    string SearchText(SidebarMenuViewModel item) => $"{item.Title} {item.TitleEn}";
+}
+
+<div class="sidebar-search">
+    <div class="sidebar-search-box">
+        <i class="bi bi-search"></i>
+        <input type="search"
+               id="sidebarSearch"
+               class="sidebar-search-input"
+               placeholder="@T["Cari menu…"]"
+               autocomplete="off"
+               aria-label="@T["Cari menu"]" />
+        <kbd class="sidebar-search-kbd">Ctrl K</kbd>
+        <button type="button" class="sidebar-search-clear" title="@T["Hapus pencarian"]">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+</div>
+
+<nav class="sidebar-menu">
+    @foreach (var item in Model.Items)
+    {
+        if (item.Children.Count == 0)
+        {
+            var href = HrefFor(item);
+            <a href="@(href ?? "#")"
+               data-search="@SearchText(item)"
+               class="nav-link-main @(Model.IsActive(item) ? "active" : "") @(href == null ? "nav-disabled" : "")"
+               title="@(href == null ? T["Belum tersedia di versi .NET"] : T.Menu(item.Title, item.TitleEn))">
+                <i class="@IconFor(item)"></i>
+                <span class="nav-label">@T.Menu(item.Title, item.TitleEn)</span>
+                @if (Model.BadgeOf(item) > 0)
+                {
+                    <span class="badge rounded-pill bg-danger ms-auto">@Model.BadgeOf(item)</span>
+                }
+            </a>
+            continue;
+        }
+
+        var groupId = $"menuGroup{item.Id}";
+        var expanded = item.Children.Any(Model.IsActive);
+
+        <button class="nav-group @(expanded ? "" : "collapsed")"
+                type="button"
+                data-search="@SearchText(item)"
+                data-bs-toggle="collapse"
+                data-bs-target="#@groupId"
+                aria-expanded="@(expanded ? "true" : "false")">
+            <span>
+                <i class="@IconFor(item)"></i>
+                <span class="nav-label">@T.Menu(item.Title, item.TitleEn)</span>
+                @if (Model.GroupBadgeOf(item) > 0)
+                {
+                    <span class="badge rounded-pill bg-danger ms-1">@Model.GroupBadgeOf(item)</span>
+                }
+            </span>
+            <i class="bi bi-chevron-down"></i>
+        </button>
+
+        <div class="collapse @(expanded ? "show" : "")" id="@groupId">
+            @foreach (var child in item.Children)
+            {
+                var href = HrefFor(child);
+                <a href="@(href ?? "#")"
+                   data-search="@SearchText(child)"
+                   class="nav-sub @(Model.IsActive(child) ? "active" : "") @(href == null ? "nav-disabled" : "")"
+                   title="@(href == null ? T["Belum tersedia di versi .NET"] : T.Menu(child.Title, child.TitleEn))">
+                    <i class="@IconFor(child)"></i>
+                    <span class="nav-label">@T.Menu(child.Title, child.TitleEn)</span>
+                    @if (Model.BadgeOf(child) > 0)
+                    {
+                        <span class="badge rounded-pill bg-danger ms-1">@Model.BadgeOf(child)</span>
+                    }
+                </a>
+            }
+        </div>
+    }
+
+    <div class="sidebar-search-empty search-hidden">
+        <i class="bi bi-search"></i>
+        @T["Menu tidak ditemukan"]
+    </div>
+</nav>
+
+<script>
+    // Pencarian menu sidebar: saring per kata (semua kata harus cocok, urutan bebas),
+    // cocok ke judul Indonesia & Inggris, grup yang berisi hasil dibuka otomatis.
+    // Ctrl+K atau "/" = fokus ke kotak cari, ↑/↓ = pindah hasil, Enter = buka hasil pertama, Esc = hapus.
+    (function () {
+        const input = document.getElementById('sidebarSearch');
+        const menu = document.querySelector('#sidebar .sidebar-menu');
+        if (!input || !menu) return;
+
+        const sidebar = document.getElementById('sidebar');
+        const box = input.closest('.sidebar-search');
+        const clearBtn = box.querySelector('.sidebar-search-clear');
+        const empty = menu.querySelector('.sidebar-search-empty');
+
+        const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const esc = s => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        const singles = [...menu.querySelectorAll(':scope > .nav-link-main')];
+        const groups = [...menu.querySelectorAll(':scope > .nav-group')].map(btn => {
+            const panel = menu.querySelector(btn.dataset.bsTarget);
+            return { btn, panel, links: panel ? [...panel.querySelectorAll('.nav-sub')] : [], wasOpen: false };
+        });
+        menu.querySelectorAll('.nav-label').forEach(l => l.dataset.text = l.textContent.trim());
+
+        let searching = false;
+
+        const matches = (text, terms) => {
+            const t = norm(text);
+            return terms.every(term => t.includes(term));
+        };
+
+        function highlight(label, terms) {
+            const text = label.dataset.text;
+            if (!terms.length) { label.textContent = text; return; }
+            const lower = norm(text);
+            const marked = new Array(text.length).fill(false);
+            terms.forEach(term => {
+                for (let i = lower.indexOf(term); i >= 0; i = lower.indexOf(term, i + term.length))
+                    for (let k = i; k < i + term.length; k++) marked[k] = true;
+            });
+            let html = '', open = false;
+            for (let i = 0; i < text.length; i++) {
+                if (marked[i] !== open) { html += open ? '</mark>' : '<mark>'; open = marked[i]; }
+                html += esc(text[i]);
+            }
+            label.innerHTML = html + (open ? '</mark>' : '');
+        }
+
+        function setOpen(g, open) {
+            if (!g.panel) return;
+            g.panel.classList.toggle('show', open);
+            g.btn.classList.toggle('collapsed', !open);
+            g.btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        function show(el, visible, terms) {
+            el.classList.toggle('search-hidden', !visible);
+            const label = el.querySelector('.nav-label');
+            if (label) highlight(label, visible ? terms : []);
+        }
+
+        function results() {
+            return [...menu.querySelectorAll('.nav-link-main, .nav-sub')]
+                .filter(a => !a.classList.contains('search-hidden') && !a.classList.contains('nav-disabled')
+                    && (!a.closest('.collapse') || a.closest('.collapse').classList.contains('show')));
+        }
+
+        function filter() {
+            const terms = norm(input.value).split(/\s+/).filter(Boolean);
+            const active = terms.length > 0;
+
+            // Simpan grup yang terbuka sebelum mencari, supaya bisa dikembalikan setelah dihapus.
+            if (active && !searching) groups.forEach(g => g.wasOpen = !!g.panel?.classList.contains('show'));
+
+            let found = 0;
+            singles.forEach(a => {
+                const ok = !active || matches(a.dataset.search, terms);
+                show(a, ok, terms);
+                if (ok) found++;
+            });
+            groups.forEach(g => {
+                // Kata boleh tersebar di nama grup + nama menu, mis. "pembelian po" → Pembelian › PO Barang.
+                const groupHit = active && matches(g.btn.dataset.search, terms);
+                let childHits = 0;
+                g.links.forEach(a => {
+                    const ok = !active || groupHit || matches(g.btn.dataset.search + ' ' + a.dataset.search, terms);
+                    show(a, ok, terms);
+                    if (ok) childHits++;
+                });
+                const visible = !active || groupHit || childHits > 0;
+                show(g.btn, visible, groupHit ? terms : []);
+                if (active) setOpen(g, visible);
+                else if (searching) setOpen(g, g.wasOpen);
+                found += childHits;
+            });
+
+            searching = active;
+            menu.classList.toggle('is-searching', active);
+            box.classList.toggle('has-value', input.value.length > 0);
+            empty.classList.toggle('search-hidden', !active || found > 0);
+
+            menu.querySelectorAll('.is-first').forEach(a => a.classList.remove('is-first'));
+            if (active) {
+                results()[0]?.classList.add('is-first');
+                sidebar.scrollTop = 0;
+            }
+        }
+
+        function clear() {
+            input.value = '';
+            filter();
+        }
+
+        function focusSearch() {
+            // Sidebar sedang tersembunyi (dilipat / layar kecil) → tampilkan dulu.
+            if (sidebar.getBoundingClientRect().right <= 0) document.body.classList.toggle('sidebar-collapsed');
+            input.focus();
+            input.select();
+        }
+
+        input.addEventListener('input', filter);
+        clearBtn.addEventListener('click', () => { clear(); input.focus(); });
+
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                if (input.value) clear(); else input.blur();
+                e.preventDefault();
+            } else if (e.key === 'Enter') {
+                const first = results()[0];
+                if (searching && first) { e.preventDefault(); first.click(); }
+            } else if (e.key === 'ArrowDown') {
+                const first = results()[0];
+                if (first) { e.preventDefault(); first.focus(); }
+            }
+        });
+
+        // Navigasi panah di antara hasil.
+        menu.addEventListener('keydown', e => {
+            if (!searching || !['ArrowDown', 'ArrowUp', 'Escape'].includes(e.key)) return;
+            e.preventDefault();
+            if (e.key === 'Escape') { input.focus(); return; }
+            const list = results();
+            const i = list.indexOf(document.activeElement);
+            if (e.key === 'ArrowDown' && i < list.length - 1) list[i + 1].focus();
+            else if (e.key === 'ArrowUp') (i > 0 ? list[i - 1] : input).focus();
+        });
+
+        document.addEventListener('keydown', e => {
+            const typing = e.target.closest('input, textarea, select, [contenteditable="true"]');
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                focusSearch();
+            } else if (e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                focusSearch();
+            }
+        });
+    })();
+</script>

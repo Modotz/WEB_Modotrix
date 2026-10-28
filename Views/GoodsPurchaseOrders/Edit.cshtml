@@ -4,7 +4,7 @@
 @model GoodsPurchaseOrderViewModel
 
 @{
-    ViewData["Title"] = "Edit PO Barang";
+    ViewData["Title"] = T["Edit PO Barang"];
     var idCulture = new CultureInfo("id-ID"); 
     string FormatRupiah(decimal? value)
     {
@@ -58,7 +58,7 @@
 
  <div class="po-create-page">
      <div class="product-page-title">
-            Edit PO Barang
+            @T["Edit PO Barang"]
      </div>
 
       <div class="product-info-card">
@@ -67,7 +67,7 @@
                  data-bs-target="#productInfo">
                 <div>
                     <i class="bi bi-info-circle-fill me-2"></i>
-                    <strong>Panduan Pengisian - PO Barang </strong>
+                    <strong>@T["Panduan Pengisian - PO Barang"] </strong>
                 </div>
                 <i class="bi bi-chevron-down"></i>
             </div>
@@ -78,33 +78,30 @@
                 <div class="product-info-body">
                     <ol class="ps-3 mb-0">
                         <li>
-                            Isi <strong> Tanggal PO </strong>, pilih <strong>Supplier</strong> dan <strong>Gudang Tujuan.</strong>
-                            <i> Perkiraan Terima & Catatan opsional.</i>
+                            @Html.Raw(T["Isi <strong>Tanggal PO</strong>, pilih <strong>Supplier</strong> dan <strong>Gudang Tujuan.</strong> <i>Perkiraan Terima &amp; Catatan opsional.</i>"])
                         </li>
 
                         <li>
-                            Klik <strong> Tambah Baris, </strong> lalu pada kolom  <strong> Produk </strong> ketik nama/kode untuk mencari. Isi <strong>Qty,</strong>
-                            pilih <strong>Satuan, </strong>dan isi <strong>Harga</strong>
+                            @Html.Raw(T["Klik <strong>Tambah Baris,</strong> lalu pada kolom <strong>Produk</strong> ketik nama/kode untuk mencari. Isi <strong>Qty,</strong> pilih <strong>Satuan,</strong> dan isi <strong>Harga</strong>"])
                         </li>
 
                         <li>
-                            Bila perlu, isi <strong> Disk % </strong> dan <strong> Pajak % </strong> per baris - <i>Subtotal </i> dihitung otomatis.
+                            @Html.Raw(T["Bila perlu, isi <strong>Disk %</strong> dan <strong>Pajak %</strong> per baris - <i>Subtotal</i> dihitung otomatis."])
                         </li>
 
                         <li>
-                            Di bagian bawah bisa menambah <stong>Diskon Nota (Rp) </stong>dan <strong>Pajak (%) </strong>tingkat nota untuk memperoleh Total.
+                            @Html.Raw(T["Di bagian bawah bisa menambah <strong>Diskon Nota (Rp)</strong> dan <strong>Pajak (%)</strong> tingkat nota untuk memperoleh Total."])
                         </li>
 
                         <li>
-                            Klik <strong>Simpan Draft </strong>untuk menyimpan PO. <strong>Stok belum berubah</strong> di tahap ini — stok bertambah nanti saat barang diterima lewat menu
-                            <strong> Penerimaan.</strong>
+                            @Html.Raw(T["Klik <strong>Simpan Draft</strong> untuk menyimpan PO. <strong>Stok belum berubah</strong> di tahap ini — stok bertambah nanti saat barang diterima lewat menu <strong>Penerimaan.</strong>"])
                         </li>
 
                     </ol>
 
                     <div class="product-info-tip">
                         <i class="bi bi-lightbulb"></i>
-                        Tips : gunakan tombol <span class="required-mark"> x </span> untuk menghapus baris. Panel ini bisa ditutup dengan mengklik judulnya.
+                        @T["Tips : gunakan tombol"] <span class="required-mark"> x </span> @T["untuk menghapus baris. Panel ini bisa ditutup dengan mengklik judulnya."]
                     </div>
 
               </div>
@@ -118,13 +115,13 @@
 
         @Html.AntiForgeryToken()
 
-        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="Uid" />
         <input type="hidden" asp-for="PRId" />
         <input type="hidden" asp-for="RFQId" />
             <!-- FORM PURCHASE ORDER -->
             <div class="card po-detail-card">
                 <div class="card-header">
-                    <strong>Edit Purchase Order</strong>
+                    <strong>@T["Edit Purchase Order"]</strong>
                 </div>
 
                 <div class="card-body">
@@ -133,7 +130,7 @@
                      @if (!ViewData.ModelState.IsValid)
                         {
                             <div class="alert alert-danger mb-3">
-                                <strong>Data belum dapat disimpan.</strong>
+                                <strong>@T["Data belum dapat disimpan."]</strong>
 
                                 <ul class="mb-0 mt-2">
                                     @foreach (var item in ViewData.ModelState)
@@ -149,8 +146,8 @@
 
                                                 @(string.IsNullOrWhiteSpace(error.ErrorMessage)
                                                     ? error.Exception?.GetBaseException().Message
-                                                        ?? "Nilai yang dimasukkan tidak valid."
-                                                    : error.ErrorMessage)
+                                                        ?? T["Nilai yang dimasukkan tidak valid."]
+                                                    : T[error.ErrorMessage])
                                             </li>
                                         }
                                     }
@@ -161,27 +158,27 @@
                         @if (TempData["Error"] != null)
                         {
                             <div class="alert alert-danger">
-                                <strong>Gagal menyimpan:</strong>
-                                @TempData["Error"]
+                                <strong>@T["Gagal menyimpan:"]</strong>
+                                @T[TempData["Error"]?.ToString()]
                             </div>
                         }
 
                     <!-- INFORMASI PO -->
                     <div class="row g-2 mb-2">
                         <div class="col-md-4">
-                            <label class="form-label">No. PO</label>
+                            <label class="form-label">@T["No. PO"]</label>
                             <input type="text"
                                    class="form-control"
                                    id="PONo"
                                    name="PONo"
                                    value="@Model?.PONo"
-                                   placeholder="Nomor PO"
+                                   placeholder="@T["Nomor PO"]"
                                    readonly />
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">
-                                Tanggal PO <span class="text-danger">*</span>
+                                @T["Tanggal PO"] <span class="text-danger">*</span>
                             </label>
 
                             <input type="date"
@@ -193,7 +190,7 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label">Perkiraan Terima</label>
+                            <label class="form-label">@T["Perkiraan Terima"]</label>
 
                             <input type="date"
                                    class="form-control"
@@ -204,13 +201,13 @@
 
                         <div class="col-md-4">
                             <label class="form-label">
-                                Supplier <span class="text-danger">*</span>
+                                @T["Supplier"] <span class="text-danger">*</span>
                             </label>
                             <select class="form-select"
                                     id="SupplierId"
                                     name="SupplierId"
                                     required>
-                                <option value="">-- Pilih Supplier --</option>
+                                <option value="">@T["-- Pilih Supplier --"]</option>
 
                                 @foreach (var supplier in suppliers)
                                 {
@@ -224,13 +221,13 @@
 
                         <div class="col-md-4">
                             <label class="form-label">
-                                Gudang Tujuan <span class="text-danger">*</span>
+                                @T["Gudang Tujuan"] <span class="text-danger">*</span>
                             </label>
                             <select class="form-select"
                                     id="WarehouseId"
                                     name="WarehouseId"
                                     required>
-                                <option value="">-- Pilih Gudang --</option>
+                                <option value="">@T["-- Pilih Gudang --"]</option>
 
                                 @foreach (var warehouse in warehouses)
                                 {
@@ -243,7 +240,7 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label">Catatan</label>
+                            <label class="form-label">@T["Catatan"]</label>
                             <input type="text"
                                    class="form-control"
                                    id="Note"
@@ -258,11 +255,11 @@
             <!-- DETAIL ITEM -->
             <div class="card mt-2">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong>Detail Item</strong>
+                    <strong>@T["Detail Item"]</strong>
                     <button type="button"
                             class="btn btn-sm btn-add-row"
                             id="btnTambahBaris">
-                        <i class="bi bi-plus-lg"></i> Tambah Baris
+                        <i class="bi bi-plus-lg"></i> @T["Tambah Baris"]
                     </button>
                 </div>
 
@@ -272,13 +269,13 @@
                         <thead>
                             <tr>
                                 <th style="width:32px">#</th>
-                                <th>PRODUK<span class="text-danger">*</span></th>
-                                <th style="width:80px">QTY</th>
-                                <th style="width:85px">SATUAN</th>
-                                <th style="width:100px">HARGA</th>
-                                <th style="width:65px">DISK %</th>
-                                <th style="width:65px">PAJAK %</th>
-                                <th style="width:110px">SUBTOTAL</th>
+                                <th>@T["PRODUK"]<span class="text-danger">*</span></th>
+                                <th style="width:80px">@T["QTY"]</th>
+                                <th style="width:85px">@T["SATUAN"]</th>
+                                <th style="width:100px">@T["HARGA"]</th>
+                                <th style="width:65px">@T["DISK %"]</th>
+                                <th style="width:65px">@T["PAJAK %"]</th>
+                                <th style="width:110px">@T["SUBTOTAL"]</th>
                                 <th style="width:35px"></th>
                             </tr>
                         </thead>
@@ -296,13 +293,13 @@
                                         <select class="form-select form-select-sm product-select"
                                                 name="Details[@i].ProductId"
                                                 required>
-                                            <option value="">-- Cari produk --</option>
+                                            <option value="">@T["-- Cari produk --"]</option>
 
                                             @if (!orderedProducts.Any(p =>
                                                 Convert.ToInt64(p.Id) == Convert.ToInt64(detail.ProductId)))
                                             {
                                                 <option value="@detail.ProductId" selected>
-                                                    Produk ID @detail.ProductId
+                                                    @T["Produk ID {0}", detail.ProductId]
                                                 </option>
                                             }
 
@@ -387,7 +384,7 @@
                                         <td>
                                             <button type="button"
                                                     class="btn btn-sm btn-danger btn-hapus"
-                                                    title="Hapus baris">×</button>
+                                                    title="@T["Hapus baris"]">×</button>
                                         </td>
                                     </tr>
                                 }
@@ -404,7 +401,7 @@
                                 <table class="table table-sm table-bordered mb-0">
                                     <tbody>
                                         <tr>
-                                            <td>Subtotal</td> 
+                                            <td>@T["Subtotal"]</td> 
                                             <td>
                                                 <input type="text"
                                                        class="form-control form-control-sm text-end currency-input"
@@ -416,7 +413,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td>Diskon Nota (Rp)</td>
+                                            <td>@T["Diskon Nota (Rp)"]</td>
                                              <td>
                                                 <input type="text"
                                                        class="form-control form-control-sm text-end currency-input"
@@ -428,7 +425,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td>Pajak (%)</td>
+                                            <td>@T["Pajak (%)"]</td>
                                             <td>
                                                 <input type="number"
                                                        class="form-control form-control-sm text-end"
@@ -442,7 +439,7 @@
                                         </tr>
 
                                         <tr>
-                                            <td><strong>Total</strong></td>
+                                            <td><strong>@T["Total"]</strong></td>
                                             <td>
                                                 <input type="text"
                                                        class="form-control form-control-sm text-end currency-input"
@@ -463,13 +460,13 @@
 
                     <div class="po-form-actions">
                         <button type="submit" class="btn po-btn-save">
-                            <i class="bi bi-save"></i> Simpan Draft
+                            <i class="bi bi-save"></i> @T["Simpan Draft"]
                         </button>
 
                         <a asp-controller="GoodsPurchaseOrders"
                            asp-action="Index"
                            class="btn po-btn-cancel">
-                            Batal
+                            @T["Batal"]
                         </a>
                     </div>
                 </div>
@@ -545,7 +542,7 @@
             const groupedProducts = {};
 
             products.forEach(product => {
-                const category = product.categoryName?.trim() || 'Tanpa Kategori';
+                const category = product.categoryName?.trim() || @Json.Serialize(T["Tanpa Kategori"]);
 
                 if (!groupedProducts[category]) {
                     groupedProducts[category] = [];
@@ -555,14 +552,14 @@
             });
 
             const categories = Object.keys(groupedProducts).sort((a, b) => {
-                if (a === 'Tanpa Kategori') return -1;
-                if (b === 'Tanpa Kategori') return 1;
+                if (a === @Json.Serialize(T["Tanpa Kategori"])) return -1;
+                if (b === @Json.Serialize(T["Tanpa Kategori"])) return 1;
 
                 return a.localeCompare(b, 'id');
             });
 
             return `
-                <option value="">-- Pilih Produk --</option>
+                <option value="">@T["-- Pilih Produk --"]</option>
                 ${categories.map(category => `
                     <optgroup label="${escapeHtml(category)}">
                         ${groupedProducts[category]
@@ -596,7 +593,7 @@
             );
 
             return `
-                <option value="">-- Pilih Unit --</option>
+                <option value="">@T["-- Pilih Unit --"]</option>
                 ${sortedUnits.map(unit => `
                     <option
                         value="${escapeHtml(unit.id)}"
@@ -726,7 +723,7 @@
                     <button
                         type="button"
                         class="btn btn-sm btn-danger btn-hapus"
-                        title="Hapus baris">
+                        title="@T["Hapus baris"]">
                         ×
                     </button>
                 </td>
@@ -951,7 +948,7 @@
                 const response = await fetch(url);
 
                 if (!response.ok) {
-                    throw new Error('Gagal mengambil nomor PO.');
+                    throw new Error(@Json.Serialize(T["Gagal mengambil nomor PO."]));
                 }
 
                 const result = await response.json();
@@ -961,7 +958,7 @@
                 }
             } catch (error) {
                 console.error(
-                    'Gagal memperbarui nomor PO:',
+                    @Json.Serialize(T["Gagal memperbarui nomor PO:"]),
                     error
                 );
             }

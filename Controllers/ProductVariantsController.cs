@@ -10,41 +10,38 @@ public class ProductVariantsController : Controller
 {
     private readonly ApiClient _api;
     private readonly IWebHostEnvironment _environment;
+    private readonly Translator _t;
 
     public ProductVariantsController(
         ApiClient api,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        Translator t)
     {
         _api = api;
         _environment = environment;
+        _t = t;
     }
      
-    [HttpGet("product-variants/{id:long}")]
+    [HttpGet("product-variants/{uid:guid}")]
     public async Task<IActionResult> Index(
-        long id,
+        Guid uid,
         string? search = null,
         bool? isActive = null,
         bool? trackStock = null,
         int page = 1,
         int pageSize = 10)
     {
-        if (id <= 0)
-        {
-            return BadRequest("ID produk tidak valid.");
-        }
-
         // Ambil produk induk
-        var parentProduct = await _api.GetProductAsync(id);
+        var parentProduct = await _api.GetProductAsync(uid);
 
         if (parentProduct == null)
         {
-            return NotFound(
-                $"Produk dengan ID {id} tidak ditemukan."
-            );
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
 
         // Ambil semua variant dari produk induk
-        var allVariants = await _api.GetVariantsAsync(id);
+        var allVariants = await _api.GetVariantsAsync(uid);
 
         // SEARCH
         if (!string.IsNullOrWhiteSpace(search))
@@ -141,14 +138,14 @@ public class ProductVariantsController : Controller
     }
      
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
             return BadRequest();
         }
 
-        var product = await _api.GetProductAsync(id);
+        var product = await _api.GetProductAsync(uid);
 
         if (product == null)
         {
@@ -199,29 +196,28 @@ public class ProductVariantsController : Controller
     }
 
      
-    [HttpGet("product-variants/create/{id:long}")]
-    public async Task<IActionResult> Create(long id)
+    [HttpGet("product-variants/create/{uid:guid}")]
+    public async Task<IActionResult> Create(Guid uid)
     {
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
-            return BadRequest(
-                "ID produk induk tidak valid."
-            );
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
          
-        var parentProduct = await _api.GetProductAsync(id);
+        var parentProduct = await _api.GetProductAsync(uid);
 
         if (parentProduct == null)
         {
-            return NotFound(
-                $"Produk dengan ID {id} tidak ditemukan."
-            );
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
          
         var model = new ProductViewModel
         {
             // PENTING
             ParentId = parentProduct.Id,
+            ParentUid = parentProduct.Uid,
 
             // Mengikuti produk induk
             BrandId = parentProduct.BrandId,
@@ -267,9 +263,9 @@ public class ProductVariantsController : Controller
     public async Task<IActionResult> Create(
         ProductViewModel model)
     {
-        // ParentId harus berasal dari form hidden
-        if (!model.ParentId.HasValue ||
-            model.ParentId.Value <= 0)
+        // ParentUid (uid produk induk) harus berasal dari form hidden
+        if (!Guid.TryParse(model.ParentUid, out var parentUid) ||
+            parentUid == Guid.Empty)
         {
             TempData["Error"] =
                 "Produk induk tidak ditemukan.";
@@ -283,7 +279,7 @@ public class ProductVariantsController : Controller
         // Ambil produk induk
         var parentProduct =
             await _api.GetProductAsync(
-                model.ParentId.Value
+                parentUid
             );
 
         if (parentProduct == null)
@@ -302,7 +298,7 @@ public class ProductVariantsController : Controller
         {
             ModelState.AddModelError(
                 nameof(model.Sku),
-                "SKU wajib diisi."
+                _t["SKU wajib diisi."]
             );
         }
 
@@ -310,7 +306,7 @@ public class ProductVariantsController : Controller
         {
             ModelState.AddModelError(
                 nameof(model.Name),
-                "Nama Produk wajib diisi."
+                _t["Nama Produk wajib diisi."]
             );
         }
 
@@ -318,7 +314,7 @@ public class ProductVariantsController : Controller
         {
             ModelState.AddModelError(
                 nameof(model.ProductType),
-                "Jenis Produk wajib dipilih."
+                _t["Jenis Produk wajib dipilih."]
             );
         }
 
@@ -327,7 +323,7 @@ public class ProductVariantsController : Controller
         {
             ModelState.AddModelError(
                 nameof(model.UnitId),
-                "Unit wajib dipilih."
+                _t["Unit wajib dipilih."]
             );
         }
 
@@ -354,6 +350,7 @@ public class ProductVariantsController : Controller
             }
              
             model.ParentId = parentProduct.Id;
+            model.ParentUid = parentProduct.Uid;
               
             var result =
                 await _api.CreateProductAsync(model);
@@ -396,7 +393,7 @@ public class ProductVariantsController : Controller
                 nameof(Index),
                 new
                 {
-                    id = parentProduct.Id
+                    uid = parentProduct.Uid
                 }
             );
         }
@@ -483,76 +480,35 @@ public class ProductVariantsController : Controller
         return $"/uploads/products/{fileName}";
     }
 
-    //satuan
-    [HttpGet("product-variants/unit/{id:long}")]
-    public async Task<IActionResult> Unit(long id)
-    {
-        if (id <= 0)
-        {
-            return BadRequest(
-                "ID produk tidak valid."
-            );
-        }
-         
-        var product =
-            await _api.GetProductAsync(id);
-
-        if (product == null)
-        {
-            return NotFound(
-                $"Produk dengan ID {id} tidak ditemukan."
-            );
-        }
-         
-        ProductViewModel? parentProduct = null;
-
-        if (product.ParentId.HasValue &&
-            product.ParentId.Value > 0)
-        {
-            parentProduct =
-                await _api.GetProductAsync(
-                    product.ParentId.Value
-                );
-        }
-
-        ViewBag.ParentProduct = parentProduct; 
-        return View(
-            "~/Views/ProductVariants/Unit.cshtml",
-            product
-        );
-    }
-
     //edit
-    [HttpGet("product-variants/edit/{id:long}")]
-    public async Task<IActionResult> Edit(long id)
+    [HttpGet("product-variants/edit/{uid:guid}")]
+    public async Task<IActionResult> Edit(Guid uid)
     {
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
-            return BadRequest(
-                "ID produk tidak valid."
-            );
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
 
         // Ambil variant
         var product =
-            await _api.GetProductAsync(id);
+            await _api.GetProductAsync(uid);
 
         if (product == null)
         {
-            return NotFound(
-                $"Produk dengan ID {id} tidak ditemukan."
-            );
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
 
         // Ambil produk induk
         ProductViewModel? parentProduct = null;
 
-        if (product.ParentId.HasValue &&
-            product.ParentId.Value > 0)
+        if (Guid.TryParse(product.ParentUid, out var parentUid) &&
+            parentUid != Guid.Empty)
         {
             parentProduct =
                 await _api.GetProductAsync(
-                    product.ParentId.Value
+                    parentUid
                 );
         }
 
@@ -570,26 +526,25 @@ public class ProductVariantsController : Controller
     }
 
      
-    [HttpPost("product-variants/edit/{id:long}")]
+    [HttpPost("product-variants/edit/{uid:guid}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(
-        long id,
+        Guid uid,
         ProductViewModel model)
     {
-        // ID dari URL selalu menjadi ID variant
-        model.Id = id; 
+        // UID dari URL selalu menjadi UID variant
+        model.Uid = uid.ToString();
         var existingProduct =
-            await _api.GetProductAsync(id);
+            await _api.GetProductAsync(uid);
 
         if (existingProduct == null)
         {
-            return NotFound(
-                $"Produk dengan ID {id} tidak ditemukan."
-            );
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
          
-        if (!existingProduct.ParentId.HasValue ||
-            existingProduct.ParentId.Value <= 0)
+        if (!Guid.TryParse(existingProduct.ParentUid, out var parentUid) ||
+            parentUid == Guid.Empty)
         {
             TempData["Error"] =
                 "Produk induk tidak ditemukan.";
@@ -600,14 +555,15 @@ public class ProductVariantsController : Controller
             );
         } 
 
-        model.ParentId = existingProduct.ParentId; 
+        model.ParentId = existingProduct.ParentId;
+        model.ParentUid = existingProduct.ParentUid;
         model.HasVariants = existingProduct.HasVariants; 
         model.ProductNumber = existingProduct.ProductNumber;
 
         // Ambil produk induk
         var parentProduct =
             await _api.GetProductAsync(
-                existingProduct.ParentId.Value
+                parentUid
             );
 
         if (parentProduct == null)
@@ -690,7 +646,7 @@ public class ProductVariantsController : Controller
                 nameof(Index),
                 new
                 {
-                    id = existingProduct.ParentId.Value
+                    uid = parentUid
                 }
             );
         }
@@ -718,36 +674,34 @@ public class ProductVariantsController : Controller
     }
 
     //copy
-    [HttpGet("product-variants/copy/{id:long}")]
-    public async Task<IActionResult> Copy(long id)
+    [HttpGet("product-variants/copy/{uid:guid}")]
+    public async Task<IActionResult> Copy(Guid uid)
     {
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
-            return BadRequest(
-                "ID produk tidak valid."
-            );
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
 
         // Ambil variant
         var product =
-            await _api.GetProductAsync(id);
+            await _api.GetProductAsync(uid);
 
         if (product == null)
         {
-            return NotFound(
-                $"Produk dengan ID {id} tidak ditemukan."
-            );
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
 
         // Ambil produk induk
         ProductViewModel? parentProduct = null;
 
-        if (product.ParentId.HasValue &&
-            product.ParentId.Value > 0)
+        if (Guid.TryParse(product.ParentUid, out var parentUid) &&
+            parentUid != Guid.Empty)
         {
             parentProduct =
                 await _api.GetProductAsync(
-                    product.ParentId.Value
+                    parentUid
                 );
         }
 
@@ -765,25 +719,24 @@ public class ProductVariantsController : Controller
     }
 
 
-    [HttpPost("product-variants/copy/{id:long}")]
+    [HttpPost("product-variants/copy/{uid:guid}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Copy(
-        long id,
+        Guid uid,
         ProductViewModel model)
     {
-        // ID dari URL selalu menjadi ID variant
-        model.Id = id;
-        var existingProduct = await _api.GetProductAsync(id);
+        // UID dari URL selalu menjadi UID variant
+        model.Uid = uid.ToString();
+        var existingProduct = await _api.GetProductAsync(uid);
 
         if (existingProduct == null)
         {
-            return NotFound(
-                $"Produk dengan ID {id} tidak ditemukan."
-            );
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
 
-        if (!existingProduct.ParentId.HasValue ||
-            existingProduct.ParentId.Value <= 0)
+        if (!Guid.TryParse(existingProduct.ParentUid, out var parentUid) ||
+            parentUid == Guid.Empty)
         {
             TempData["Error"] =
                 "Produk induk tidak ditemukan.";
@@ -795,13 +748,14 @@ public class ProductVariantsController : Controller
         }
 
         model.ParentId = existingProduct.ParentId;
+        model.ParentUid = existingProduct.ParentUid;
         model.HasVariants = existingProduct.HasVariants;
         model.ProductNumber = existingProduct.ProductNumber;
 
         // Ambil produk induk
         var parentProduct =
             await _api.GetProductAsync(
-                existingProduct.ParentId.Value
+                parentUid
             );
 
         if (parentProduct == null)
@@ -884,7 +838,7 @@ public class ProductVariantsController : Controller
                 nameof(Index),
                 new
                 {
-                    id = existingProduct.ParentId.Value
+                    uid = parentUid
                 }
             );
         }
@@ -915,12 +869,12 @@ public class ProductVariantsController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(
-        long id)
+        Guid uid)
     {
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
             TempData["Error"] =
-                "ID produk tidak valid.";
+                "Produk tidak ditemukan.";
 
             return RedirectToAction(
                 "Index",
@@ -929,7 +883,7 @@ public class ProductVariantsController : Controller
         }
          
         var product =
-            await _api.GetProductAsync(id);
+            await _api.GetProductAsync(uid);
 
         if (product == null)
         {
@@ -942,9 +896,9 @@ public class ProductVariantsController : Controller
             );
         }
          
-        var parentId = product.ParentId;
+        var parentUidText = product.ParentUid;
 
-        var result = await _api.DeleteProductAsync(id);
+        var result = await _api.DeleteProductAsync(uid);
 
         TempData[
             result.Success
@@ -956,14 +910,14 @@ public class ProductVariantsController : Controller
                 : result.Error ??
                   "Gagal menghapus produk.";
 
-        if (parentId.HasValue &&
-            parentId.Value > 0)
+        if (Guid.TryParse(parentUidText, out var parentUid) &&
+            parentUid != Guid.Empty)
         {
             return RedirectToAction(
                 nameof(Index),
                 new
                 {
-                    id = parentId.Value
+                    uid = parentUid
                 }
             );
         }
@@ -1025,13 +979,13 @@ public class ProductVariantsController : Controller
             worksheet.Cell(row, 9).Value = item.MinStock;
             worksheet.Cell(row, 10).Value =
                 item.TrackStock
-                    ? "Ya"
-                    : "Tidak";
+                    ? _t["Ya"]
+                    : _t["Tidak"];
 
             worksheet.Cell(row, 11).Value =
                 item.IsActive
-                    ? "Aktif"
-                    : "Nonaktif";
+                    ? _t["Aktif"]
+                    : _t["Nonaktif"];
 
             worksheet.Cell(row, 12).Value =
                 item.Image;
@@ -1106,7 +1060,7 @@ public class ProductVariantsController : Controller
                                             .FontColor("#6c757d");
 
                                         text.Span(
-                                            $"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}"
+                                            _t["Dicetak: {0}", DateTime.Now.ToString("dd/MM/yyyy HH:mm")]
                                         )
                                         .FontColor("#6c757d");
 
@@ -1114,7 +1068,7 @@ public class ProductVariantsController : Controller
                                             .FontColor("#6c757d");
 
                                         text.Span(
-                                            $"Total: {listProducts.Count} data"
+                                            _t["Total: {0} data", listProducts.Count]
                                         )
                                         .FontColor("#6c757d");
                                     });
@@ -1288,8 +1242,8 @@ public class ProductVariantsController : Controller
                                             Cell(c, bgColor))
                                         .Text(
                                             item.TrackStock
-                                                ? "Ya"
-                                                : "Tidak"
+                                                ? _t["Ya"]
+                                                : _t["Tidak"]
                                         );
 
                                     table.Cell()
@@ -1297,8 +1251,8 @@ public class ProductVariantsController : Controller
                                             Cell(c, bgColor))
                                         .Text(
                                             item.IsActive
-                                                ? "Aktif"
-                                                : "Nonaktif"
+                                                ? _t["Aktif"]
+                                                : _t["Nonaktif"]
                                         );
 
                                     table.Cell()
@@ -1331,7 +1285,7 @@ public class ProductVariantsController : Controller
                             .AlignLeft()
                             .PaddingTop(10)
                             .Text(
-                                "Dokumen dihasilkan otomatis oleh sistem."
+                                _t["Dokumen dihasilkan otomatis oleh sistem."]
                             )
                             .FontSize(8.5f)
                             .FontColor("#888888");
@@ -1350,38 +1304,20 @@ public class ProductVariantsController : Controller
 
      
     [HttpGet]
-    public async Task<IActionResult> Print()
+    public async Task<IActionResult> UnitConversion(Guid uid)
     {
-        var products =
-            await _api.GetProductsForExportAsync();
-
-        var model =
-            new PagedResult<ProductViewModel>
-            {
-                Data = products,
-                Page = 1,
-                PageSize = products.Count,
-                TotalCount = products.Count,
-                TotalData = products.Count
-            };
-
-        return View(model);
-    }
-
-
-    [HttpGet]
-    public async Task<IActionResult> UnitConversion(long id)
-    {
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
-            return BadRequest("ID produk tidak valid.");
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
 
-        var product = await _api.GetProductAsync(id);
+        var product = await _api.GetProductAsync(uid);
 
         if (product is null)
         {
-            return NotFound($"Produk dengan ID {id} tidak ditemukan.");
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction("Index", "Products");
         }
 
         // Data dropdown satuan

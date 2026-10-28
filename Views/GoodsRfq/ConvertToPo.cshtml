@@ -3,7 +3,7 @@
 @using System.Globalization
 
 @{
-    ViewData["Title"] = "Jadikan PO — RFQ " + Model.RfqNo;
+    ViewData["Title"] = T["Jadikan PO — RFQ {0}", Model.RfqNo];
 
     var culture = new CultureInfo("id-ID");
     var items = Model.Items ?? new List<GoodsRfqItemViewModel>();
@@ -18,15 +18,15 @@
 <div class="po-create-page">
 
     <div class="product-page-title">
-        Jadikan PO — RFQ @Model.RfqNo
+        @T["Jadikan PO — RFQ {0}", Model.RfqNo]
     </div>
 
     <div class="card po-detail-card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Jadikan PO — RFQ @Model.RfqNo</strong>
+            <strong>@T["Jadikan PO — RFQ {0}", Model.RfqNo]</strong>
 
-            <a asp-action="Details" asp-route-id="@Model.Id"
-               class="btn btn-sm btn-secondary" title="Kembali">
+            <a asp-action="Details" asp-route-uid="@Model.Uid"
+               class="btn btn-sm btn-secondary" title="@T["Kembali"]">
                 <i class="bi bi-arrow-left"></i>
             </a>
         </div>
@@ -34,8 +34,8 @@
         <div class="card-body">
 
             <p class="mb-3">
-                Pilih gudang tujuan. Supplier &amp; harga penawaran RFQ akan disalin ke
-                <strong>PO draft</strong> (masih bisa diubah saat edit/approve PO).
+                @T["Pilih gudang tujuan. Supplier & harga penawaran RFQ akan disalin ke"]
+                <strong>@T["PO draft"]</strong> @T["(masih bisa diubah saat edit/approve PO)."]
             </p>
 
             <form method="post" id="convertForm">
@@ -43,14 +43,14 @@
                 <div class="row g-2 mb-3">
                     <div class="col-md-4">
                         <label class="form-label" for="WarehouseId">
-                            Gudang Tujuan <span class="text-danger">*</span>
+                            @T["Gudang Tujuan"] <span class="text-danger">*</span>
                         </label>
 
                         <select id="WarehouseId"
                                 name="WarehouseId"
                                 class="form-select"
                                 required>
-                            <option value="">-- Pilih --</option>
+                            <option value="">@T["-- Pilih --"]</option>
 
                             @foreach (var warehouse in warehouses)
                             {
@@ -65,10 +65,10 @@
                         <thead>
                             <tr>
                                 <th style="width:32px">#</th>
-                                <th>PRODUK</th>
-                                <th class="text-end" style="width:100px">QTY</th>
-                                <th class="text-end" style="width:150px">HARGA PENAWARAN</th>
-                                <th class="text-end" style="width:140px">SUBTOTAL</th>
+                                <th>@T["PRODUK"]</th>
+                                <th class="text-end" style="width:100px">@T["QTY"]</th>
+                                <th class="text-end" style="width:150px">@T["HARGA PENAWARAN"]</th>
+                                <th class="text-end" style="width:140px">@T["SUBTOTAL"]</th>
                             </tr>
                         </thead>
 
@@ -105,7 +105,7 @@
                             {
                                 <tr>
                                     <td colspan="5" class="text-center text-muted py-3">
-                                        Belum ada item.
+                                        @T["Belum ada item."]
                                     </td>
                                 </tr>
                             }
@@ -114,7 +114,7 @@
                         <tfoot>
                             <tr>
                                 <td colspan="4" class="text-end border-0">
-                                    <strong>Total</strong>
+                                    <strong>@T["Total"]</strong>
                                 </td>
                                 <td class="text-end border-0">
                                     <strong>@total.ToString("N0", culture)</strong>
@@ -127,17 +127,15 @@
                 <div class="po-summary-wrap">
                     <div class="po-form-actions">
 
-                        @* Tombol belum aktif: penyimpanan PO dibuat pada tahap berikutnya *@
                         <button type="submit"
                                 class="btn btn-success"
-                                disabled
-                                title="Belum tersedia">
-                            <i class="bi bi-arrow-right-circle"></i> Buat PO
+                                onclick='return confirm(@Json.Serialize(T["Buat PO draft dari RFQ ini?"]))'>
+                            <i class="bi bi-arrow-right-circle"></i> @T["Buat PO"]
                         </button>
 
-                        <a asp-action="Details" asp-route-id="@Model.Id"
+                        <a asp-action="Details" asp-route-uid="@Model.Uid"
                            class="btn btn-secondary">
-                            Batal
+                            @T["Batal"]
                         </a>
                     </div>
                 </div>

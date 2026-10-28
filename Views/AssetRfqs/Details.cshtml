@@ -1,0 +1,131 @@
+@model ERP.Web.Models.AssetRfqViewModel
+@{
+    var r = Model;
+    ViewData["Title"] = $"{T["RFQ Aset"]} {r.RfqNo}";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var canQuote = r.Status is "sent" or "quoted";
+    var quoted = r.Status is "quoted" or "converted";
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T["RFQ Aset"] @r.RfqNo</h3>
+        <span class="badge @AssetPurchaseLabels.Css(r.Status) me-auto">@T[AssetPurchaseLabels.Label(AssetPurchaseLabels.RfqStatuses, r.Status)]</span>
+
+        @if (r.Status == "draft")
+        {
+            <a asp-action="Edit" asp-route-uid="@r.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil me-1"></i>@T["Ubah"]</a>
+            <form method="post" asp-action="Send" asp-route-uid="@r.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T["Tandai RFQ {0} sudah dikirim ke supplier?", r.RfqNo]));'>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i>@T["Kirim ke Supplier"]</button>
+            </form>
+        }
+        @if (r.Status == "quoted")
+        {
+            <form method="post" asp-action="ConvertToPo" asp-route-uid="@r.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T["Jadikan RFQ {0} sebagai PO Aset draft?", r.RfqNo]));'>
+                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-arrow-right-circle me-1"></i>@T["Jadikan PO"]</button>
+            </form>
+        }
+        @if (r.Status is "draft" or "sent" or "quoted")
+        {
+            <form method="post" asp-action="Cancel" asp-route-uid="@r.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T["Batalkan RFQ {0}?", r.RfqNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-octagon me-1"></i>@T["Batalkan RFQ"]</button>
+            </form>
+        }
+        @if (r.Status is "draft" or "cancelled")
+        {
+            <form method="post" asp-action="Delete" asp-route-uid="@r.Uid" class="d-inline" data-perm="delete"
+                  onsubmit='return confirm(@Json.Serialize(T["Hapus RFQ {0}?", r.RfqNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus"]</button>
+            </form>
+        }
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    <div class="card custom-card mb-3">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 text-white small">
+                <div class="col-md-2"><div class="text-white-50">@T["Tanggal RFQ"]</div>@Acc.Date(r.RfqDate)</div>
+                <div class="col-md-2"><div class="text-white-50">@T["Berlaku s/d"]</div>@Acc.Date(r.ValidUntil)</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Supplier"]</div>@(r.SupplierName ?? "-")</div>
+                <div class="col-md-2">
+                    <div class="text-white-50">@T["PR Aset"]</div>
+                    @if (r.Request != null)
+                    {
+                        <a asp-controller="AssetPurchaseRequests" asp-action="Details" asp-route-uid="@r.Request.Uid" class="text-info">@r.Request.No</a>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </div>
+                <div class="col-md-3">
+                    <div class="text-white-50">@T["PO Aset"]</div>
+                    @if (r.Orders.Count == 0)
+                    {
+                        <span>-</span>
+                    }
+                    @foreach (var o in r.Orders)
+                    {
+                        <a asp-controller="AssetPurchaseOrders" asp-action="Details" asp-route-uid="@o.Uid" class="text-info me-2">@o.No</a>
+                    }
+                </div>
+                <div class="col-md-6"><div class="text-white-50">@T["Catatan"]</div>@(string.IsNullOrWhiteSpace(r.Note) ? "-" : r.Note)</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Dibuat oleh"]</div>@(r.CreatedByName ?? "-")</div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" asp-action="Quote" asp-route-uid="@r.Uid">
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header d-flex justify-content-between align-items-center py-3 px-4">
+                <span class="fw-semibold text-white">@T["Aset & Penawaran"]</span>
+                @if (canQuote)
+                {
+                    <button type="submit" class="btn btn-primary btn-sm" data-perm="update"><i class="bi bi-save me-1"></i>@T["Simpan Penawaran"]</button>
+                }
+            </div>
+            <div class="table-responsive">
+                <table class="table custom-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="fw-bold">@T["NAMA ASET"]</th>
+                            <th class="fw-bold">@T["KATEGORI"]</th>
+                            <th class="fw-bold text-end">@T["QTY"]</th>
+                            <th class="fw-bold text-end">@T["EST. HARGA"]</th>
+                            <th class="fw-bold text-end" style="width: 180px;">@T["HARGA PENAWARAN"]</th>
+                            <th class="fw-bold text-end">@T["SUBTOTAL"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var i in r.Items)
+                        {
+                            <tr>
+                                <td class="text-white">@i.Name<div class="text-white-50 small">@i.Description</div></td>
+                                <td class="text-white">@(i.CategoryName ?? "-")</td>
+                                <td class="text-end text-white">@i.Quantity</td>
+                                <td class="text-end text-white">@Acc.Money(i.Price)</td>
+                                <td class="text-end text-white">
+                                    @if (canQuote)
+                                    {
+                                        <input type="number" class="form-control form-control-sm text-end" name="quoted[@i.Uid]" min="0" step="0.01"
+                                               value="@(i.QuotedPrice > 0 ? i.QuotedPrice.ToString("0.##", inv) : "")" />
+                                    }
+                                    else
+                                    {
+                                        @(quoted ? Acc.Money(i.QuotedPrice) : "-")
+                                    }
+                                </td>
+                                <td class="text-end text-white fw-semibold">@Acc.Money(i.Subtotal)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr><th colspan="5" class="text-end text-white">@(quoted ? T["Total penawaran"] : T["Total estimasi"])</th><th class="text-end text-white">@Acc.Money(r.SubtotalAmount)</th></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </form>
+</div>

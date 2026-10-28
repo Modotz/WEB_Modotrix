@@ -1,0 +1,312 @@
+@model ERP.Web.Models.ChartOfAccountsIndexViewModel
+
+@{
+    ViewData["Title"] = T["Bagan Akun"];
+    var headers = Model.Accounts.Where(a => !a.IsPostable).ToList();
+    var query = string.Join("&", new[]
+    {
+        string.IsNullOrWhiteSpace(Model.Q) ? null : "q=" + Uri.EscapeDataString(Model.Q),
+        string.IsNullOrWhiteSpace(Model.Type) ? null : "type=" + Uri.EscapeDataString(Model.Type),
+        Model.Active == null ? null : "active=" + (Model.Active.Value ? "true" : "false")
+    }.Where(x => x != null));
+    var qs = query.Length > 0 ? "?" + query : "";
+    var header = new ListHeaderModel
+    {
+        Title = T["Daftar Akun"],
+        Count = Model.Accounts.Count,
+        Description = T["Akun header, akun postable dan akun kontrol"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        AddOnClick = "openAccountModal()",
+        AddText = T["Tambah Akun"]
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Bagan Akun"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@Model.Q" placeholder="@T["Kode atau nama akun"]" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="type">@T["Tipe"]</label>
+                        <select class="form-select" id="type" name="type">
+                            <option value="">@T["-- Semua --"]</option>
+                            @foreach (var (value, label) in Acc.Types)
+                            {
+                                <option value="@value" selected="@(value == Model.Type)">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="active">@T["Status"]</label>
+                        <select class="form-select" id="active" name="active">
+                            <option value="">@T["-- Semua --"]</option>
+                            <option value="true" selected="@(Model.Active == true)">@T["Aktif"]</option>
+                            <option value="false" selected="@(Model.Active == false)">@T["Nonaktif"]</option>
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="px-4 pb-3 small menu-description">
+            <span class="badge bg-info text-dark me-1">@T["Kontrol"]</span> @T["hanya diisi lewat dokumen (faktur, pembayaran, persediaan) — ditolak di Jurnal Umum."]
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 130px;">@T["KODE"]</th>
+                        <th>@T["NAMA AKUN"]</th>
+                        <th style="width: 110px;">@T["TIPE"]</th>
+                        <th style="width: 100px;">@T["SALDO NORMAL"]</th>
+                        <th style="width: 120px;">@T["ARUS KAS"]</th>
+                        <th style="width: 150px;">@T["KETERANGAN"]</th>
+                        <th class="text-center" style="width: 100px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Accounts.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Tidak ada akun."]</td></tr>
+                    }
+
+                    @foreach (var a in Model.Accounts)
+                    {
+                        <tr class="@(a.IsActive ? "" : "opacity-50")">
+                            <td class="ps-4 text-white @(a.IsPostable ? "" : "fw-bold")">@a.Code</td>
+                            <td class="text-white @(a.IsPostable ? "" : "fw-bold")">
+                                <span style="padding-left: @(a.Level * 18)px">@a.Name</span>
+                                @if (!a.IsPostable)
+                                {
+                                    <span class="badge bg-secondary ms-1">@T["Header"]</span>
+                                }
+                                @if (a.IsControl)
+                                {
+                                    <span class="badge bg-info text-dark ms-1">@T["Kontrol"]</span>
+                                }
+                                @if (!a.IsActive)
+                                {
+                                    <span class="badge bg-dark ms-1">@T["Nonaktif"]</span>
+                                }
+                            </td>
+                            <td class="text-white small">@T[Acc.TypeLabel(a.Type)]</td>
+                            <td class="text-white small">@(a.NormalBalance == "debit" ? T["Debit"] : T["Kredit"])</td>
+                            <td class="text-white-50 small">@(a.IsPostable ? T[Acc.CashFlowLabel(a.CashFlowCategory)] : "")</td>
+                            <td class="text-white-50 small">@(a.IsUsed ? T["Sudah dipakai jurnal"] : "")</td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                <button type="button" class="act-btn act-edit btn-edit-account" data-perm="update" title="@T["Ubah"]"
+                                        data-account="@System.Text.Json.JsonSerializer.Serialize(a)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                @if (!a.IsUsed && !a.HasChildren)
+                                {
+                                    <form method="post" asp-action="Delete" asp-route-uid="@a.Uid" data-perm="delete"
+                                          onsubmit='return confirm(@Json.Serialize(T["Hapus akun {0} {1}?", a.Code, a.Name]));'>
+                                        <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- FORM AKUN -->
+<div class="modal fade" id="accountModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="post" asp-action="Create" class="modal-content" id="accountForm">
+            <input type="hidden" name="Uid" id="accUid" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="accountModalTitle">@T["Tambah Akun"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small py-2 d-none" id="accUsedNote">
+                    @T["Akun sudah dipakai di jurnal: tipe, saldo normal dan status header tidak dapat diubah."]
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label" for="accCode">@T["Kode"]</label>
+                        <input type="text" class="form-control" name="Code" id="accCode" maxlength="30" required />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label" for="accName">@T["Nama Akun"]</label>
+                        <input type="text" class="form-control" name="Name" id="accName" maxlength="150" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="accType">@T["Tipe"]</label>
+                        <select class="form-select" name="Type" id="accType">
+                            @foreach (var (value, label) in Acc.Types)
+                            {
+                                <option value="@value">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="accNormal">@T["Saldo Normal"]</label>
+                        <select class="form-select" name="NormalBalance" id="accNormal">
+                            <option value="debit">@T["Debit"]</option>
+                            <option value="credit">@T["Kredit"]</option>
+                        </select>
+                        <div class="form-text">@T["Ubah hanya untuk akun kontra (mis. Akumulasi Penyusutan = kredit)."]</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="accParent">@T["Induk (akun header)"]</label>
+                        <select class="form-select" name="ParentId" id="accParent">
+                            <option value="">@T["— Tanpa induk —"]</option>
+                            @foreach (var h in headers)
+                            {
+                                <option value="@h.Id" data-type="@h.Type">@h.Code — @h.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="accCashFlow">@T["Kategori Arus Kas"]</label>
+                        <select class="form-select" name="CashFlowCategory" id="accCashFlow">
+                            <option value="">@T["Operasi (default)"]</option>
+                            <option value="investing">@T["Investasi"]</option>
+                            <option value="financing">@T["Pendanaan"]</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label" for="accDesc">@T["Deskripsi"]</label>
+                        <input type="text" class="form-control" name="Description" id="accDesc" maxlength="255" />
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="IsPostable" value="true" id="accPostable" checked />
+                            <input type="hidden" name="IsPostable" value="false" />
+                            <label class="form-check-label" for="accPostable">@T["Postable (bisa dipakai di jurnal; kosongkan untuk akun header)"]</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="IsControl" value="true" id="accControl" />
+                            <input type="hidden" name="IsControl" value="false" />
+                            <label class="form-check-label" for="accControl">@T["Akun kontrol"]</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="accActive" checked />
+                            <input type="hidden" name="IsActive" value="false" />
+                            <label class="form-check-label" for="accActive">@T["Aktif"]</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const modal = new bootstrap.Modal(document.getElementById('accountModal'));
+            const form = document.getElementById('accountForm');
+            const $ = (id) => document.getElementById(id);
+            const createUrl = '@Url.Action("Create")', updateUrl = '@Url.Action("Update")';
+            const txtEdit = @Json.Serialize(T["Ubah Akun"]), txtAdd = @Json.Serialize(T["Tambah Akun"]);
+            const defaultNormal = (t) => (t === 'asset' || t === 'expense') ? 'debit' : 'credit';
+
+            function filterParents() {
+                const type = $('accType').value;
+                for (const opt of $('accParent').options) {
+                    if (!opt.value) continue;
+                    opt.hidden = opt.dataset.type !== type;
+                }
+                const sel = $('accParent').selectedOptions[0];
+                if (sel && sel.value && sel.hidden) $('accParent').value = '';
+            }
+
+            function open(a) {
+                const isEdit = !!a;
+                form.action = isEdit ? updateUrl : createUrl;
+                $('accountModalTitle').textContent = isEdit ? `${txtEdit} ${a.Code}` : txtAdd;
+                $('accUid').value = isEdit ? a.Uid : '';
+                $('accCode').value = a?.Code ?? '';
+                $('accName').value = a?.Name ?? '';
+                $('accType').value = a?.Type ?? 'asset';
+                $('accNormal').value = a?.NormalBalance ?? 'debit';
+                $('accParent').value = a?.ParentId ?? '';
+                $('accCashFlow').value = a?.CashFlowCategory ?? '';
+                $('accDesc').value = a?.Description ?? '';
+                $('accPostable').checked = a ? a.IsPostable : true;
+                $('accControl').checked = a ? a.IsControl : false;
+                $('accActive').checked = a ? a.IsActive : true;
+
+                const locked = isEdit && a.IsUsed;
+                $('accUsedNote').classList.toggle('d-none', !locked);
+                $('accType').disabled = locked;
+                $('accNormal').disabled = locked;
+                $('accPostable').disabled = locked || (isEdit && a.HasChildren);
+                filterParents();
+                modal.show();
+            }
+
+            // Field disabled tidak ikut terkirim → kirim nilai aslinya lewat hidden sebelum submit.
+            form.addEventListener('submit', () => {
+                for (const id of ['accType', 'accNormal']) {
+                    const el = $(id);
+                    if (el.disabled) {
+                        const h = document.createElement('input');
+                        h.type = 'hidden'; h.name = el.name; h.value = el.value;
+                        form.appendChild(h);
+                    }
+                }
+                // Checkbox disabled tidak terkirim → nilai diambil dari hidden pasangannya.
+                form.querySelector('input[type=hidden][name=IsPostable]').value =
+                    $('accPostable').disabled && $('accPostable').checked ? 'true' : 'false';
+            });
+
+            $('accType').addEventListener('change', () => {
+                $('accNormal').value = defaultNormal($('accType').value);
+                filterParents();
+            });
+
+            window.openAccountModal = () => open(null);
+            document.querySelectorAll('.btn-edit-account').forEach(b =>
+                b.addEventListener('click', () => open(JSON.parse(b.dataset.account))));
+        })();
+    </script>
+}

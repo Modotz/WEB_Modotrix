@@ -1,0 +1,355 @@
+@model ERP.Web.Models.AccountingPeriodsIndexViewModel
+
+@{
+    ViewData["Title"] = T["Periode Akuntansi"];
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var nextYear = Model.Years.Count == 0 ? today.Year : Model.Years.Max() + 1;
+    var hasCurrent = Model.Periods.Any(p => p.StartDate <= today && p.EndDate >= today);
+    var lastPeriodEnd = Model.Years.Count == 0 ? (DateOnly?)null : Model.Periods.Count == 0 ? null : Model.Periods.Max(p => p.EndDate);
+    var qs = Model.Year == null ? "" : "?year=" + Model.Year;
+
+    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> generateForm =
+        @<form method="post" asp-action="Generate" class="d-flex align-items-center gap-1" data-perm="create">
+            <input type="number" class="form-control form-control-sm" name="year" value="@nextYear" min="2000" max="2100" style="width: 80px; height: 28px; min-height: 0; font-size: 12px; padding: 2px 6px;" title="@T["Tahun"]" />
+            <button type="submit" class="btn btn-light btn-custom-square text-primary" title="@T["Generate 1 Tahun"]"
+                    onclick='return confirm(@(Json.Serialize(T["Buat 12 periode bulanan untuk tahun {0}?"])).replace("{0}", this.form.year.value));'>
+                <i class="bi bi-calendar-plus"></i>
+            </button>
+        </form>;
+
+    var header = new ListHeaderModel
+    {
+        Title = T["Daftar Periode"],
+        Count = Model.Periods.Count,
+        Description = T["Periode bulanan untuk penguncian transaksi"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        AddOnClick = "openPeriodModal()",
+        AddText = T["Periode Manual"],
+        Extra = generateForm(null)
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Periode Akuntansi"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="year">@T["Tahun"]</label>
+                        <select class="form-select" id="year" name="year">
+                            <option value="">@T["-- Semua --"]</option>
+                            @foreach (var y in Model.Years)
+                            {
+                                <option value="@y" selected="@(Model.Year == y)">@y</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Year == null && !hasCurrent)
+    {
+        <div class="alert alert-warning small">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            @T["Belum ada periode untuk tanggal hari ini. Semua transaksi akan ditolak sampai periodenya dibuat (Generate)."]
+        </div>
+    }
+    else if (Model.Year == null && lastPeriodEnd is { } lastEnd && lastEnd.ToDateTime(TimeOnly.MinValue) <= DateTime.Today.AddMonths(3))
+    {
+        <div class="alert alert-info small">
+            <i class="bi bi-info-circle me-1"></i>
+            @T["Periode terakhir berakhir {0}. Generate tahun berikutnya sebelum periode habis.", Acc.Date(lastEnd)]
+        </div>
+    }
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="px-4 pb-3 small menu-description">
+            <i class="bi bi-info-circle me-1"></i>@T["Tutup berurutan dari bulan terlama; buka kembali berurutan dari bulan terakhir. Tanggal tanpa periode = terkunci."]
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["PERIODE"]</th>
+                        <th style="width: 200px;">@T["TANGGAL"]</th>
+                        <th style="width: 100px;">@T["STATUS"]</th>
+                        <th class="text-end" style="width: 110px;">@T["JURNAL"]</th>
+                        <th>@T["CATATAN TERAKHIR"]</th>
+                        <th class="text-center" style="width: 170px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Periods.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">@T["Belum ada periode. Gunakan tombol Generate."]</td></tr>
+                    }
+
+                    @foreach (var p in Model.Periods)
+                    {
+                        var isCurrent = p.StartDate <= today && p.EndDate >= today;
+                        <tr>
+                            <td class="ps-4 text-white">
+                                @p.Name
+                                @if (isCurrent)
+                                {
+                                    <span class="badge bg-primary ms-1">@T["Bulan ini"]</span>
+                                }
+                                @* Level 13: pekerjaan akhir bulan yang belum dijalankan — informasi, bukan syarat tutup bulan. *@
+                                @if (p.Tasks is { Any: true } tasks)
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        @if (tasks.PendingAccrualReversals > 0)
+                                        {
+                                            <a asp-controller="Accruals" asp-action="Index" asp-route-status="pending" class="badge bg-warning text-dark text-decoration-none" title="@T["Jurnal akrual yang tanggal baliknya di bulan ini belum dibalik"]">
+                                                <i class="bi bi-arrow-repeat me-1"></i>@T["{0} pembalik akrual", tasks.PendingAccrualReversals]
+                                            </a>
+                                        }
+                                        @if (tasks.PendingRecognitions > 0)
+                                        {
+                                            <a asp-controller="DeferralRecognition" asp-action="Index" asp-route-period="@p.StartDate.ToString("yyyy-MM")" class="badge bg-warning text-dark text-decoration-none" title="@T["Baris prepaid/deferred bulan ini belum diakui"]">
+                                                <i class="bi bi-calendar-check me-1"></i>@T["{0} rekognisi", tasks.PendingRecognitions]
+                                            </a>
+                                        }
+                                        @if (tasks.PendingDepreciations > 0)
+                                        {
+                                            <a asp-controller="AssetDepreciation" asp-action="Index" class="badge bg-warning text-dark text-decoration-none" title="@T["Penyusutan aset bulan ini belum diposting"]">
+                                                <i class="bi bi-graph-down me-1"></i>@T["{0} penyusutan", tasks.PendingDepreciations]
+                                            </a>
+                                        }
+                                    </div>
+                                }
+                            </td>
+                            <td class="text-white small">@Acc.Date(p.StartDate) – @Acc.Date(p.EndDate)</td>
+                            <td>
+                                @if (p.IsClosed)
+                                {
+                                    <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>@T["Closed"]</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success"><i class="bi bi-unlock me-1"></i>@T["Open"]</span>
+                                }
+                            </td>
+                            <td class="text-end text-white small">
+                                @p.PostedJournals
+                                @if (p.DraftJournals > 0)
+                                {
+                                    <span class="badge bg-secondary ms-1" title="@T["Jurnal draft"]">+@p.DraftJournals @T["draft"]</span>
+                                }
+                            </td>
+                            <td class="text-white-50 small">
+                                @if (p.LastEvent != null)
+                                {
+                                    <span>@(T[p.LastEvent.Action == "close" ? "Ditutup {0} oleh {1}:" : "Dibuka {0} oleh {1}:", p.LastEvent.CreatedAt.ToString("dd/MM/yyyy HH:mm"), p.LastEvent.Username ?? "-"]) @p.LastEvent.Note</span>
+                                }
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                @if (p.IsClosed)
+                                {
+                                    <button type="button" class="act-btn act-other btn-period-action" data-perm="update"
+                                            data-uid="@p.Uid" data-name="@p.Name" data-action="Reopen" title="@T["Buka kembali"]">
+                                        <i class="bi bi-unlock"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="act-btn act-other btn-period-action" data-perm="update"
+                                            data-uid="@p.Uid" data-name="@p.Name" data-action="Close" title="@T["Tutup periode"]">
+                                        <i class="bi bi-lock"></i>
+                                    </button>
+                                    <button type="button" class="act-btn act-edit btn-edit-period" data-perm="update" title="@T["Ubah"]"
+                                            data-uid="@p.Uid" data-name="@p.Name" data-start="@p.StartDate.ToString("yyyy-MM-dd")"
+                                            data-end="@p.EndDate.ToString("yyyy-MM-dd")" data-note="@p.Note">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                }
+                                <button type="button" class="act-btn act-view btn-period-history" title="@T["Riwayat"]"
+                                        data-uid="@p.Uid" data-name="@p.Name">
+                                    <i class="bi bi-clock-history"></i>
+                                </button>
+                                @if (!p.IsClosed && p.PostedJournals == 0 && p.DraftJournals == 0)
+                                {
+                                    <form method="post" asp-action="Delete" asp-route-uid="@p.Uid" asp-route-year="@Model.Year" data-perm="delete"
+                                          onsubmit='return confirm(@Json.Serialize(T["Hapus periode {0}?", p.Name]));'>
+                                        <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- TUTUP / BUKA -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" class="modal-content" id="statusForm">
+            <input type="hidden" name="year" value="@Model.Year" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small" id="statusInfo"></p>
+                <label class="form-label" for="statusNote">@T["Catatan (wajib)"]</label>
+                <textarea class="form-control" name="note" id="statusNote" rows="3" maxlength="255" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary" id="statusSubmit"></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- FORM PERIODE -->
+<div class="modal fade" id="periodModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Create" class="modal-content" id="periodForm">
+            <input type="hidden" name="uid" id="perUid" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="periodTitle">@T["Periode Manual"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="perName">@T["Nama"]</label>
+                    <input type="text" class="form-control" name="name" id="perName" maxlength="50" required />
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col">
+                        <label class="form-label" for="perStart">@T["Mulai"]</label>
+                        <input type="date" class="form-control" name="startDate" id="perStart" required />
+                    </div>
+                    <div class="col">
+                        <label class="form-label" for="perEnd">@T["Selesai"]</label>
+                        <input type="date" class="form-control" name="endDate" id="perEnd" required />
+                    </div>
+                </div>
+                <div class="form-text mb-2">@T["Tanggal hanya bisa diubah bila periode belum berisi jurnal."]</div>
+                <label class="form-label" for="perNote">@T["Keterangan"]</label>
+                <input type="text" class="form-control" name="note" id="perNote" maxlength="255" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- RIWAYAT -->
+<div class="modal fade" id="historyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="historyTitle">@T["Riwayat"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="historyBody"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const statusModal = new bootstrap.Modal($('statusModal'));
+            const periodModal = new bootstrap.Modal($('periodModal'));
+            const historyModal = new bootstrap.Modal($('historyModal'));
+            const L = {
+                closePeriod: @Json.Serialize(T["Tutup Periode"]), reopenPeriod: @Json.Serialize(T["Buka Kembali Periode"]),
+                closeInfo: @Json.Serialize(T["Setelah ditutup, tidak ada transaksi bertanggal di periode ini yang dapat diposting, diubah atau dibatalkan."]),
+                reopenInfo: @Json.Serialize(T["Membuka kembali periode mengizinkan transaksi bertanggal di periode ini lagi. Laporan yang sudah diterbitkan bisa berubah."]),
+                close: @Json.Serialize(T["Tutup"]), open: @Json.Serialize(T["Buka"]),
+                editPeriod: @Json.Serialize(T["Ubah Periode"]), manual: @Json.Serialize(T["Periode Manual"]),
+                history: @Json.Serialize(T["Riwayat"]), loading: @Json.Serialize(T["Memuat…"]),
+                noHistory: @Json.Serialize(T["Belum ada riwayat tutup/buka."]),
+                time: @Json.Serialize(T["Waktu"]), action: @Json.Serialize(T["Aksi"]), user: @Json.Serialize(T["User"]), note: @Json.Serialize(T["Catatan"])
+            };
+            const urls = {
+                Close: '@Url.Action("Close")', Reopen: '@Url.Action("Reopen")',
+                Create: '@Url.Action("Create")', Update: '@Url.Action("Update")', Events: '@Url.Action("Events")'
+            };
+
+            document.querySelectorAll('.btn-period-action').forEach(b => b.addEventListener('click', () => {
+                const close = b.dataset.action === 'Close';
+                $('statusForm').action = `${urls[b.dataset.action]}/${b.dataset.uid}`;
+                $('statusTitle').textContent = `${close ? L.closePeriod : L.reopenPeriod} ${b.dataset.name}`;
+                $('statusInfo').textContent = close
+                    ? L.closeInfo
+                    : L.reopenInfo;
+                $('statusSubmit').className = `btn ${close ? 'btn-danger' : 'btn-warning'}`;
+                $('statusSubmit').innerHTML = close ? '<i class="bi bi-lock me-1"></i>' + esc(L.close) : '<i class="bi bi-unlock me-1"></i>' + esc(L.open);
+                $('statusNote').value = '';
+                statusModal.show();
+            }));
+
+            function openPeriod(d) {
+                $('periodForm').action = d ? urls.Update : urls.Create;
+                $('periodTitle').textContent = d ? `${L.editPeriod} ${d.name}` : L.manual;
+                $('perUid').value = d?.uid ?? '';
+                $('perName').value = d?.name ?? '';
+                $('perStart').value = d?.start ?? '';
+                $('perEnd').value = d?.end ?? '';
+                $('perNote').value = d?.note ?? '';
+                periodModal.show();
+            }
+
+            window.openPeriodModal = () => openPeriod(null);
+            document.querySelectorAll('.btn-edit-period').forEach(b => b.addEventListener('click', () => openPeriod(b.dataset)));
+
+            document.querySelectorAll('.btn-period-history').forEach(b => b.addEventListener('click', async () => {
+                $('historyTitle').textContent = `${L.history} ${b.dataset.name}`;
+                $('historyBody').innerHTML = `<div class="text-muted">${esc(L.loading)}</div>`;
+                historyModal.show();
+                const res = await fetch(`${urls.Events}?uid=${b.dataset.uid}`);
+                const rows = res.ok ? await res.json() : [];
+                $('historyBody').innerHTML = rows.length === 0
+                    ? `<p class="text-muted mb-0">${esc(L.noHistory)}</p>`
+                    : `<table class="table table-sm"><thead><tr><th>${esc(L.time)}</th><th>${esc(L.action)}</th><th>${esc(L.user)}</th><th>${esc(L.note)}</th></tr></thead><tbody>${
+                        rows.map(r => `<tr><td>${esc(new Date(r.createdAt).toLocaleString('id-ID'))}</td><td>${esc(r.action === 'close' ? L.close : L.open)}</td><td>${esc(r.username ?? '-')}</td><td>${esc(r.note)}</td></tr>`).join('')
+                    }</tbody></table>`;
+            }));
+        })();
+    </script>
+}

@@ -1,0 +1,263 @@
+@model ERP.Web.Models.AssetCategoriesIndexViewModel
+@{
+    ViewData["Title"] = T["Kategori Aset"];
+    var list = Model.Categories;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var pageSize = list.PageSize > 0 ? list.PageSize : 25;
+    var query = string.IsNullOrWhiteSpace(Model.Q) ? "" : "q=" + Uri.EscapeDataString(Model.Q);
+    var qs = query.Length > 0 ? "?" + query : "";
+    var header = new ListHeaderModel
+    {
+        Title = T["Daftar Kategori"],
+        Count = list.TotalCount,
+        Description = T["Metode, umur manfaat & akun penyusutan per kategori"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        AddOnClick = "openCategoryModal()",
+        AddText = T["Tambah Kategori"]
+    };
+    string PageUrl(int p) => Url.Action("Index") + "?" + (query.Length > 0 ? query + "&" : "") + $"page={p}&pageSize={pageSize}";
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Kategori Aset"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@Model.Q" placeholder="@T["Kode atau nama kategori"]" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" for="pageSize">@T["Per Halaman"]</label>
+                        <select class="form-select" id="pageSize" name="pageSize">
+                            @foreach (var size in new[] { 10, 25, 50, 100 })
+                            {
+                                <option value="@size" selected="@(pageSize == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 110px;">@T["KODE"]</th>
+                        <th>@T["NAMA"]</th>
+                        <th>@T["METODE"]</th>
+                        <th class="text-end">@T["UMUR (BLN)"]</th>
+                        <th class="text-end">@T["RESIDU %"]</th>
+                        <th>@T["AKUN"]</th>
+                        <th class="text-end">@T["ASET"]</th>
+                        <th>@T["STATUS"]</th>
+                        <th class="text-center" style="width: 110px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (list.Data.Count == 0)
+                    {
+                        <tr><td colspan="9" class="text-center text-muted py-4">@T["Belum ada kategori aset."]</td></tr>
+                    }
+                    @foreach (var c in list.Data)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white">@c.Code</td>
+                            <td class="text-white">@c.Name</td>
+                            <td class="text-white small">
+                                @T[AssetLabels.Method(c.DepreciationMethod)]
+                                @if (c.DepreciationMethod == "declining_balance")
+                                {
+                                    <span class="text-white-50">× @c.DecliningFactor?.ToString("0.##", inv)</span>
+                                }
+                            </td>
+                            <td class="text-end text-white">@c.UsefulLifeMonths</td>
+                            <td class="text-end text-white">@c.SalvagePercent.ToString("0.##", inv)</td>
+                            <td class="text-white-50 small">
+                                <div>@c.AssetAccountLabel</div>
+                                <div>@c.AccumAccountLabel</div>
+                                <div>@c.ExpenseAccountLabel</div>
+                            </td>
+                            <td class="text-end text-white">@c.AssetCount</td>
+                            <td><span class="badge @(c.IsActive ? "bg-success" : "bg-secondary")">@(c.IsActive ? T["Aktif"] : T["Nonaktif"])</span></td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                <button type="button" class="act-btn act-edit btn-edit-category" data-perm="update" title="@T["Ubah"]"
+                                        data-category="@System.Text.Json.JsonSerializer.Serialize(c)"><i class="bi bi-pencil"></i></button>
+                                <form method="post" asp-action="Delete" asp-route-uid="@c.Uid" data-perm="delete"
+                                      onsubmit='return confirm(@Json.Serialize(T["Hapus kategori {0}?", c.Name]));'>
+                                    <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_ListPagination" model="new ListPaginationModel { Page = list.Page > 0 ? list.Page : Model.Page, PageSize = pageSize, TotalCount = list.TotalCount, PageUrl = PageUrl }" />
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="post" id="categoryForm" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Uid" id="catUid" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryModalTitle">@T["Tambah Kategori"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label" for="catCode">@T["Kode"]</label>
+                        <input type="text" class="form-control text-uppercase" name="Code" id="catCode" maxlength="30" required />
+                    </div>
+                    <div class="col-md-9">
+                        <label class="form-label" for="catName">@T["Nama"]</label>
+                        <input type="text" class="form-control" name="Name" id="catName" maxlength="100" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="catMethod">@T["Metode penyusutan"]</label>
+                        <select class="form-select" name="DepreciationMethod" id="catMethod">
+                            @foreach (var (value, label) in AssetLabels.Methods)
+                            {
+                                <option value="@value">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" for="catFactor">@T["Faktor"]</label>
+                        <input type="number" step="0.01" min="0.01" max="10" class="form-control" name="DecliningFactor" id="catFactor" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="catLife">@T["Umur manfaat (bulan)"]</label>
+                        <input type="number" min="0" max="1200" class="form-control" name="UsefulLifeMonths" id="catLife" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="catSalvage">@T["Residu (%)"]</label>
+                        <input type="number" step="0.01" min="0" max="100" class="form-control" name="SalvagePercent" id="catSalvage" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="catAssetAcc">@T["Akun aset tetap"]</label>
+                        <select class="form-select" name="AssetAccountId" id="catAssetAcc">
+                            @foreach (var a in Model.Options.AssetAccounts)
+                            {
+                                <option value="@a.Id">@a.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="catAccumAcc">@T["Akun akumulasi penyusutan"]</label>
+                        <select class="form-select" name="AccumAccountId" id="catAccumAcc">
+                            @foreach (var a in Model.Options.AccumAccounts)
+                            {
+                                <option value="@a.Id">@a.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="catExpenseAcc">@T["Akun beban penyusutan"]</label>
+                        <select class="form-select" name="ExpenseAccountId" id="catExpenseAcc">
+                            @foreach (var a in Model.Options.ExpenseAccounts)
+                            {
+                                <option value="@a.Id">@a.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 form-text">@T["Akun aset tetap & akumulasi harus akun kontrol (subledger) agar hanya bergerak lewat modul aset. Aset menyalin akun kategori saat dibuat."]</div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="catActive" checked />
+                            <input type="hidden" name="IsActive" value="false" />
+                            <label class="form-check-label" for="catActive">@T["Aktif"]</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+            const form = document.getElementById('categoryForm');
+            const $ = (id) => document.getElementById(id);
+            const createUrl = '@Url.Action("Create")', updateUrl = '@Url.Action("Update")';
+            const txtEdit = @Json.Serialize(T["Ubah Kategori"]), txtAdd = @Json.Serialize(T["Tambah Kategori"]);
+            const firstVal = (id, code) => {
+                const opt = Array.from($(id).options).find(o => o.textContent.startsWith(code));
+                return opt ? opt.value : ($(id).options[0]?.value ?? '');
+            };
+
+            function toggleFactor() {
+                const dec = $('catMethod').value === 'declining_balance';
+                $('catFactor').disabled = !dec;
+                if (dec && !$('catFactor').value) $('catFactor').value = '2';
+            }
+
+            function open(c) {
+                const isEdit = !!c;
+                form.action = isEdit ? updateUrl : createUrl;
+                $('categoryModalTitle').textContent = isEdit ? `${txtEdit} ${c.Code}` : txtAdd;
+                $('catUid').value = isEdit ? c.Uid : '';
+                $('catCode').value = c?.Code ?? '';
+                $('catName').value = c?.Name ?? '';
+                $('catMethod').value = c?.DepreciationMethod ?? 'straight_line';
+                $('catFactor').value = c?.DecliningFactor ?? '';
+                $('catLife').value = c?.UsefulLifeMonths ?? 48;
+                $('catSalvage').value = c?.SalvagePercent ?? 0;
+                $('catAssetAcc').value = c?.AssetAccountId ?? firstVal('catAssetAcc', '1-1500');
+                $('catAccumAcc').value = c?.AccumAccountId ?? firstVal('catAccumAcc', '1-1600');
+                $('catExpenseAcc').value = c?.ExpenseAccountId ?? firstVal('catExpenseAcc', '5-4000');
+                $('catActive').checked = c ? c.IsActive : true;
+                toggleFactor();
+                modal.show();
+            }
+
+            $('catMethod').addEventListener('change', toggleFactor);
+            window.openCategoryModal = () => open(null);
+            document.querySelectorAll('.btn-edit-category').forEach(b =>
+                b.addEventListener('click', () => open(JSON.parse(b.dataset.category))));
+        })();
+    </script>
+}

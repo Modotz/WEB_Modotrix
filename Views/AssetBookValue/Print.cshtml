@@ -1,0 +1,17 @@
+@model ERP.Web.Models.BookValueReportViewModel
+@{
+    Layout = "_ReportPrintLayout";
+    ViewData["Title"] = T["Nilai Buku Aset"];
+    ViewData["Print"] = true;
+}
+<h1>@T["Laporan Nilai Buku Aset"]</h1>
+<div class="meta">
+    @T["Per {0}", Acc.Date(Model.AsOf)]@(Model.CategoryName != null ? " · " + T["Kategori"] + " " + Model.CategoryName : "") · @T["Dicetak"] @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+</div>
+@if (!Model.IsReconciled)
+{
+    <div class="warn">@T["Subledger aset berbeda dengan saldo buku besar — periksa jurnal pada akun aset tetap."]</div>
+}
+<partial name="_Body" model="Model" view-data="ViewData" />
+<h3 style="font-size: 13px; margin: 16px 0 4px 0;">@T["Cek silang buku besar"]</h3>
+<partial name="_GlCheck" model="Model" view-data="ViewData" />

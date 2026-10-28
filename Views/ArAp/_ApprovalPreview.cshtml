@@ -1,0 +1,19 @@
+@model ERP.Web.Models.ApprovalPreviewViewModel
+@*
+    Isi kotak "jalur persetujuan" di form faktur/pembayaran (dirender LookupController.ApprovalPreview,
+    dimuat ulang oleh window.apprPreview(nominalIdr) setiap nominal berubah).
+*@
+@if (Model.Required)
+{
+    <div><i class="bi bi-diagram-2 me-1"></i><strong>@T["Perlu persetujuan"]</strong> — @Model.WorkflowName</div>
+    <ol class="mb-1 mt-1 ps-4">
+        @foreach (var l in Model.Levels)
+        {
+            <li>
+                <strong>@l.Name</strong> — @T[ERP.Web.Models.Appr.Quorum(l.QuorumType), l.QuorumCount ?? 0]
+                <span class="opacity-75">(@string.Join(", ", l.Approvers))</span>
+            </li>
+        }
+    </ol>
+    <div class="opacity-75">@T["\"Simpan & Posting\" akan mengajukan dokumen ini; jurnal dibuat otomatis setelah persetujuan terakhir."]</div>
+}

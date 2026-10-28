@@ -1,17 +1,17 @@
 @model BrandViewModel
 
 @{
-    ViewData["Title"] = "Tambah Brands";
+    ViewData["Title"] = T["Tambah Brands"];
 }
 
 <div class="page-header">
-    <h1>Tambah Brands</h1>
+    <h1>@T["Tambah Brands"]</h1>
 </div>
 
 <div class="brand-form-card">
 
     <div class="brand-form-header">
-        <h3>Tambah Brands</h3>
+        <h3>@T["Tambah Brands"]</h3>
     </div>
 
     <form asp-action="Create" method="post">
@@ -73,12 +73,12 @@
 
             <button type="submit"
                     class="btn btn-primary">
-                Simpan
+                @T["Simpan"]
             </button>
 
             <a asp-action="Index"
                class="btn btn-secondary">
-                Batal
+                @T["Batal"]
             </a>
 
         </div>

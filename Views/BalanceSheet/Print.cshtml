@@ -1,0 +1,13 @@
+@model ERP.Web.Models.BalanceSheetViewModel
+@{
+    Layout = "_ReportPrintLayout";
+    ViewData["Title"] = T["Neraca"];
+    ViewData["Print"] = true;
+}
+<h1>@T["Neraca"]</h1>
+<div class="meta">@T["Per {0}", Acc.Date(Model.AsOf)] · @T["Dicetak"] @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+@if (!Model.IsBalanced)
+{
+    <div class="warn">@T["PERINGATAN: neraca tidak seimbang (selisih {0}).", Acc.Money(Model.TotalAssets - Model.TotalLiabilitiesAndEquity)]</div>
+}
+<partial name="_Body" model="Model" view-data="ViewData" />

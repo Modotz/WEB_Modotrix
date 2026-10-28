@@ -1,0 +1,27 @@
+@model string
+@*
+    Kotak preview jalur persetujuan di form. Model = jenis dokumen persetujuan (mis. "purchase_invoices").
+    Script form memanggil window.apprPreview(nominalIdr); kotak tersembunyi bila tidak ada alur yang cocok.
+*@
+<div id="apprPreview" class="alert alert-info small d-none mb-3"></div>
+<script>
+    window.apprPreview = (function () {
+        const box = document.getElementById('apprPreview');
+        const url = '@Url.Action("ApprovalPreview", "Lookup")?docType=@Uri.EscapeDataString(Model)&amount=';
+        let timer = null, last = null;
+        return function (amount) {
+            clearTimeout(timer);
+            timer = setTimeout(async () => {
+                const key = Math.round((amount || 0) * 100) / 100;
+                if (key === last) return;
+                last = key;
+                if (!(key > 0)) { box.classList.add('d-none'); return; }
+                const res = await fetch(url + key);
+                if (!res.ok) return;
+                const html = (await res.text()).trim();
+                box.innerHTML = html;
+                box.classList.toggle('d-none', html === '');
+            }, 350);
+        };
+    })();
+</script>

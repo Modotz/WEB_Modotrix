@@ -12,10 +12,12 @@ namespace ERP.Web.Controllers;
 public class WarehouseController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public WarehouseController(ApiClient api)
+    public WarehouseController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
 
@@ -127,20 +129,20 @@ public class WarehouseController : Controller
 
 
     // ==========================================
-    // GET: /Warehouse/GetById/1
+    // GET: /Warehouse/GetById/{uid}
     // ==========================================
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
         // ==========================================
-        // VALIDATE ID
+        // VALIDATE UID
         // ==========================================
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
             return NotFound(new
             {
                 success = false,
-                message = "ID gudang tidak ditemukan."
+                message = _t["Data gudang tidak ditemukan."]
             });
         }
 
@@ -148,7 +150,7 @@ public class WarehouseController : Controller
         // GET DATA FROM API
         // ==========================================
         var warehouse =
-            await _api.GetWarehouseAsync(id);
+            await _api.GetWarehouseAsync(uid);
 
         // ==========================================
         // DATA NOT FOUND
@@ -158,7 +160,7 @@ public class WarehouseController : Controller
             return NotFound(new
             {
                 success = false,
-                message = "Data gudang tidak ditemukan."
+                message = _t["Data gudang tidak ditemukan."]
             });
         }
 
@@ -193,7 +195,7 @@ public class WarehouseController : Controller
                     .SelectMany(x =>
                         x.Value!.Errors.Select(error =>
                             string.IsNullOrWhiteSpace(error.ErrorMessage)
-                                ? $"{x.Key}: Input tidak valid."
+                                ? $"{x.Key}: {_t["Input tidak valid."]}"
                                 : $"{x.Key}: {error.ErrorMessage}"))
                     .ToList();
 
@@ -233,12 +235,12 @@ public class WarehouseController : Controller
         WarehouseViewModel model)
     {
         // ==========================================
-        // VALIDATE ID
+        // VALIDATE UID (record tidak diidentifikasi dengan id angka)
         // ==========================================
-        if (!model.Id.HasValue || model.Id.Value <= 0)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
             TempData["Error"] =
-                "ID gudang tidak ditemukan.";
+                "Data gudang tidak ditemukan.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -254,7 +256,7 @@ public class WarehouseController : Controller
                     .SelectMany(x =>
                         x.Value!.Errors.Select(error =>
                             string.IsNullOrWhiteSpace(error.ErrorMessage)
-                                ? $"{x.Key}: Input tidak valid."
+                                ? $"{x.Key}: {_t["Input tidak valid."]}"
                                 : $"{x.Key}: {error.ErrorMessage}"))
                     .ToList();
 
@@ -299,15 +301,15 @@ public class WarehouseController : Controller
     // ==========================================
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
         // ==========================================
-        // VALIDATE ID
+        // VALIDATE UID
         // ==========================================
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
             TempData["Error"] =
-                "ID gudang tidak ditemukan.";
+                "Data gudang tidak ditemukan.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -316,7 +318,7 @@ public class WarehouseController : Controller
         // SEND TO API
         // ==========================================
         var result =
-            await _api.DeleteWarehouseAsync(id);
+            await _api.DeleteWarehouseAsync(uid);
 
         // ==========================================
         // SUCCESS
@@ -353,7 +355,7 @@ public class WarehouseController : Controller
             new XLWorkbook();
 
         var worksheet =
-            workbook.Worksheets.Add("Gudang");
+            workbook.Worksheets.Add(_t["Gudang"]);
 
         worksheet.Cell(1, 1).Value = "No";
         worksheet.Cell(1, 2).Value = "Code";
@@ -389,13 +391,13 @@ public class WarehouseController : Controller
 
             worksheet.Cell(row, 7).Value =
                 item.IsDefault
-                    ? "Ya"
-                    : "Tidak";
+                    ? _t["Ya"]
+                    : _t["Tidak"];
 
             worksheet.Cell(row, 8).Value =
                 item.IsActive
-                    ? "Aktif"
-                    : "Nonaktif";
+                    ? _t["Aktif"]
+                    : _t["Nonaktif"];
 
             row++;
             no++;
@@ -456,21 +458,21 @@ public class WarehouseController : Controller
                                 .PaddingTop(2)
                                 .Text(text =>
                                 {
-                                    text.Span("Gudang")
+                                    text.Span(_t["Gudang"])
                                         .FontColor("#6c757d");
 
                                     text.Span(" · ")
                                         .FontColor("#6c757d");
 
                                     text.Span(
-                                        $"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                                        _t["Dicetak: {0}", DateTime.Now.ToString("dd/MM/yyyy HH:mm")])
                                         .FontColor("#6c757d");
 
                                     text.Span(" · ")
                                         .FontColor("#6c757d");
 
                                     text.Span(
-                                        $"Total: {listWarehouses.Count} data")
+                                        _t["Total: {0} data", listWarehouses.Count])
                                         .FontColor("#6c757d");
                                 });
                         });
@@ -604,8 +606,8 @@ public class WarehouseController : Controller
                                             backgroundColor))
                                     .Text(
                                         item.IsDefault
-                                            ? "Ya"
-                                            : "Tidak");
+                                            ? _t["Ya"]
+                                            : _t["Tidak"]);
 
                                 table.Cell()
                                     .Element(c =>
@@ -614,8 +616,8 @@ public class WarehouseController : Controller
                                             backgroundColor))
                                     .Text(
                                         item.IsActive
-                                            ? "Aktif"
-                                            : "Nonaktif");
+                                            ? _t["Aktif"]
+                                            : _t["Nonaktif"]);
 
                                 no++;
                             }
@@ -638,7 +640,7 @@ public class WarehouseController : Controller
                         .AlignLeft()
                         .PaddingTop(10)
                         .Text(
-                            "Dokumen dihasilkan otomatis oleh sistem.")
+                            _t["Dokumen dihasilkan otomatis oleh sistem."])
                         .FontSize(8.5f)
                         .FontColor("#888888");
                 });

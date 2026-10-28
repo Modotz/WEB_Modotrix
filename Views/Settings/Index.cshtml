@@ -1,0 +1,236 @@
+@model ERP.Web.Models.SettingsPageViewModel
+@inject ERP.Web.Services.BrandingService Branding
+
+@{
+    ViewData["Title"] = "App Settings";
+    var canUpdate = await Access.CanAsync("settings", "update");
+    var groups = Model.Settings
+        .Where(s => s.Key != "db_export_folder")
+        .GroupBy(s => s.Group ?? "general")
+        .OrderBy(g => g.Key == "general" ? 0 : 1)
+        .ToList();
+
+    string Fmt(long n) => n.ToString("N0", new System.Globalization.CultureInfo("id-ID"));
+}
+
+<div class="px-2">
+
+    <div class="mb-3">
+        <h3 class="fw-semibold text-white mb-0">App Settings</h3>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- ================= PENGATURAN ================= -->
+        <div class="col-xl-8">
+            <form method="post" asp-action="Save" enctype="multipart/form-data" id="settingsForm">
+
+                @foreach (var group in groups)
+                {
+                    <div class="card custom-card mb-3">
+                        <div class="card-header custom-card-header py-3 px-4">
+                            <span class="fw-semibold text-white fs-6">
+                                <i class="bi @ERP.Web.Models.SettingsPageViewModel.GroupIcon(group.Key) me-1"></i>
+                                @T[ERP.Web.Models.SettingsPageViewModel.GroupTitle(group.Key)]
+                            </span>
+                        </div>
+                        <div class="card-body px-4 py-3">
+                            <div class="row g-3">
+                                @foreach (var s in group)
+                                {
+                                    var name = $"settings[{s.Key}]";
+                                    var wide = s.Type is "textarea" or "image" || (s.Label?.Length ?? 0) > 60;
+
+                                    <div class="@(wide ? "col-12" : "col-md-6")">
+                                        <label class="form-label text-white small mb-1">@(string.IsNullOrWhiteSpace(s.Label) ? s.Key : T[s.Label])</label>
+
+                                        @switch (s.Type)
+                                        {
+                                            case "image":
+                                                var logoUrl = Branding.AssetUrl(s.Value);
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <div class="settings-logo-preview">
+                                                        @if (logoUrl != null)
+                                                        {
+                                                            <img src="@logoUrl" alt="Logo" onerror="this.replaceWith(Object.assign(document.createElement('i'), { className: 'bi bi-image' }))" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-image"></i>
+                                                        }
+                                                    </div>
+                                                    <input type="file" name="appLogo" class="form-control form-control-sm" accept="image/*" />
+                                                </div>
+                                                break;
+
+                                            case "boolean":
+                                                <div class="form-check form-switch">
+                                                    <input type="hidden" name="@name" value="0" />
+                                                    <input type="checkbox" class="form-check-input" name="@name" value="1" id="set_@s.Id" checked="@(s.Value == "1")" />
+                                                    <label class="form-check-label text-white-50 small" for="set_@s.Id">@T["Aktif"]</label>
+                                                </div>
+                                                break;
+
+                                            case "coa_account":
+                                                <select name="@name" class="form-select form-select-sm">
+                                                    <option value="">-- @T["Pilih akun"] --</option>
+                                                    @foreach (var a in Model.CoaAccounts)
+                                                    {
+                                                        <option value="@a.Id" selected="@(a.Id.ToString() == s.Value)">@a.Label</option>
+                                                    }
+                                                </select>
+                                                break;
+
+                                            case "select" when s.Key == "shop_warehouse_id":
+                                                <select name="@name" class="form-select form-select-sm">
+                                                    <option value="">-- @T["Pilih gudang"] --</option>
+                                                    @foreach (var w in Model.Warehouses)
+                                                    {
+                                                        <option value="@w.Id" selected="@(w.Id.ToString() == s.Value)">@w.Label</option>
+                                                    }
+                                                </select>
+                                                break;
+
+                                            case "select":
+                                                <select name="@name" class="form-select form-select-sm">
+                                                    @foreach (var (value, label) in ERP.Web.Models.SettingsPageViewModel.FixedOptions(s.Key))
+                                                    {
+                                                        <option value="@value" selected="@(value == s.Value)">@T[label]</option>
+                                                    }
+                                                </select>
+                                                break;
+
+                                            case "textarea":
+                                                <textarea name="@name" class="form-control form-control-sm" rows="3">@s.Value</textarea>
+                                                break;
+
+                                            default:
+                                                <input type="@(s.Type == "number" ? "number" : "text")" step="any" name="@name"
+                                                       class="form-control form-control-sm" value="@s.Value" />
+                                                break;
+                                        }
+
+                                        <small class="text-white-50">key: <code>@s.Key</code></small>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (canUpdate)
+                {
+                    <div class="d-flex justify-content-end mb-3">
+                        <button type="submit" class="btn btn-primary px-4 custom-btn-add">
+                            <i class="bi bi-save me-1"></i>@T["Simpan Pengaturan"]
+                        </button>
+                    </div>
+                }
+            </form>
+        </div>
+
+        <!-- ================= SAMPING ================= -->
+        <div class="col-xl-4">
+
+            <!-- INFO -->
+            <div class="card custom-card mb-3">
+                <div class="card-header custom-card-header py-3 px-4">
+                    <span class="fw-semibold text-white fs-6"><i class="bi bi-info-circle me-1"></i>Info</span>
+                </div>
+                <div class="card-body px-4 py-3 text-white small">
+                    <p class="mb-2">Database: <code>@Model.DatabaseName</code></p>
+                    <p class="mb-0 text-white-50">
+                        @T["Perubahan pengaturan tercatat per item di"] <a asp-controller="AuditLog" asp-action="Index" asp-route-module="app_settings">@T["Log Audit"]</a>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- BACKUP -->
+            <div class="card custom-card mb-3" data-perm="update">
+                <div class="card-header custom-card-header py-3 px-4">
+                    <span class="fw-semibold text-white fs-6"><i class="bi bi-database-down me-1"></i>Backup Database</span>
+                </div>
+                <div class="card-body px-4 py-3">
+                    <form method="post" asp-action="Backup" onsubmit='return confirm(@Json.Serialize(T["Backup database ke folder ini sekarang?"]))'>
+                        <label class="form-label text-white small mb-1" for="folder">@T["Folder tujuan (di komputer server)"]</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="bi bi-folder"></i></span>
+                            <input type="text" id="folder" name="folder" class="form-control"
+                                   value="@(string.IsNullOrWhiteSpace(Model.BackupFolder) ? @"D:\erp-backups" : Model.BackupFolder)" />
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-save2 me-1"></i>Backup</button>
+                        </div>
+                        <div class="form-text text-white-50">
+                            File <code>@(Model.DatabaseName)_tanggal_jam.bak</code> @T["(backup SQL Server, dipulihkan dengan RESTORE DATABASE)."]
+                            @T["Folder harus bisa ditulis oleh service SQL Server. Folder terakhir diingat."]
+                        </div>
+                    </form>
+                    <hr class="border-secondary" />
+                    <a asp-action="BackupDownload" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-download me-1"></i>@T["Unduh File Backup (.bak)"]
+                    </a>
+                </div>
+            </div>
+
+            <!-- PEMELIHARAAN -->
+            <div class="card custom-card mb-3" data-perm="update">
+                <div class="card-header custom-card-header py-3 px-4">
+                    <span class="fw-semibold text-white fs-6"><i class="bi bi-tools me-1"></i>@T["Pemeliharaan Data"]</span>
+                </div>
+                <div class="card-body px-4 py-3 text-white small">
+                    <p class="fw-semibold mb-1">@T["Log Audit"]</p>
+                    <ul class="mb-2 text-white-50">
+                        <li>@T["Total log"]: <strong class="text-white">@Fmt(Model.AuditCount)</strong> @T["baris"]</li>
+                        <li>@T["Log tertua"]: <strong class="text-white">@(Model.AuditOldest?.ToString("dd/MM/yyyy") ?? "-")</strong></li>
+                    </ul>
+                    <form method="post" asp-action="PruneLogs" onsubmit='return confirm(@Json.Serialize(T["Hapus log aktivitas yang lebih lama dari periode ini?"]))'>
+                        <label class="form-label small mb-1">@T["Simpan log berapa bulan terakhir?"]</label>
+                        <div class="input-group input-group-sm" style="max-width: 280px;">
+                            <input type="number" name="months" class="form-control" value="12" min="1" step="1" />
+                            <span class="input-group-text">@T["bulan"]</span>
+                            <button type="submit" class="btn btn-warning"><i class="bi bi-trash3 me-1"></i>@T["Bersihkan"]</button>
+                        </div>
+                    </form>
+
+                    <hr class="border-secondary" />
+
+                    <p class="fw-semibold mb-1">@T["Riwayat Gerak Serial"]</p>
+                    <ul class="mb-2 text-white-50">
+                        <li>@T["Total riwayat"]: <strong class="text-white">@Fmt(Model.SerialMovementCount)</strong> @T["baris"]</li>
+                        <li>@T["Tertua"]: <strong class="text-white">@(Model.SerialMovementOldest?.ToString("dd/MM/yyyy") ?? "-")</strong></li>
+                    </ul>
+                    <form method="post" asp-action="PruneSerialMovements" onsubmit='return confirm(@Json.Serialize(T["Hapus riwayat gerak serial yang lebih lama dari periode ini?"]))'>
+                        <label class="form-label small mb-1">@T["Simpan riwayat berapa bulan terakhir?"]</label>
+                        <div class="input-group input-group-sm" style="max-width: 280px;">
+                            <input type="number" name="months" class="form-control" value="24" min="1" step="1" />
+                            <span class="input-group-text">@T["bulan"]</span>
+                            <button type="submit" class="btn btn-warning"><i class="bi bi-trash3 me-1"></i>@T["Bersihkan"]</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- DANGER ZONE -->
+            <div class="card custom-card border border-danger" data-perm="delete">
+                <div class="card-header py-3 px-4 bg-danger bg-opacity-25">
+                    <span class="fw-semibold text-danger fs-6"><i class="bi bi-exclamation-octagon me-1"></i>Danger Zone</span>
+                </div>
+                <div class="card-body px-4 py-3 text-white small">
+                    <p class="mb-2">@T["Kosongkan seluruh data transaksi (stok, pembelian, penjualan, jurnal, dll). Produk & data master tetap."]</p>
+                    <a asp-action="Wipe" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Reset Data Transaksi"]</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@if (!canUpdate)
+{
+    @section Scripts {
+        <script>
+            // Tanpa izin ubah: halaman hanya-baca.
+            document.querySelectorAll('#settingsForm input, #settingsForm select, #settingsForm textarea')
+                .forEach(el => el.disabled = true);
+        </script>
+    }
+}

@@ -1,0 +1,184 @@
+@model ERP.Web.Models.ApprovalWorkflowListViewModel
+@{
+    ViewData["Title"] = T["Alur Persetujuan"];
+    string Range(decimal min, decimal? max) => max == null ? T["≥ {0}", Acc.Money(min)] : $"{Acc.Money(min)} – < {Acc.Money(max.Value)}";
+    string QuorumShort(ApprovalLevelDefViewModel l) => l.QuorumType switch
+    {
+        "any" => "ANY",
+        "count" => $"COUNT {l.QuorumCount}",
+        _ => "ALL"
+    };
+    var q = ViewData["Q"] as string;
+    var docType = ViewData["DocType"] as string;
+    var status = ViewData["Status"] as string;
+    var docTypes = ViewData["DocTypes"] as List<(string DocType, string DocTypeLabel)> ?? new();
+    var parts = new List<string>();
+    if (!string.IsNullOrWhiteSpace(q)) parts.Add("q=" + Uri.EscapeDataString(q));
+    if (!string.IsNullOrWhiteSpace(docType)) parts.Add("docType=" + Uri.EscapeDataString(docType));
+    if (!string.IsNullOrWhiteSpace(status)) parts.Add("status=" + Uri.EscapeDataString(status));
+    var qs = parts.Count > 0 ? "?" + string.Join("&", parts) : "";
+    var header = new ListHeaderModel
+    {
+        Title = T["Alur Persetujuan"],
+        Count = Model.Data.Count,
+        Description = T["Daftar alur persetujuan per jenis dokumen"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        AddUrl = Url.Action("Create"),
+        AddText = T["Buat Alur"]
+    };
+}
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Alur Persetujuan"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@q" placeholder="@T["Nama alur, keterangan"]" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="docType">@T["Jenis Dokumen"]</label>
+                        <select class="form-select" id="docType" name="docType">
+                            <option value="">@T["-- Semua --"]</option>
+                            @foreach (var (value, label) in docTypes)
+                            {
+                                <option value="@value" selected="@(value == docType)">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="status">@T["Status"]</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">@T["-- Semua --"]</option>
+                            <option value="active" selected="@(status == "active")">@T["Aktif"]</option>
+                            <option value="inactive" selected="@(status == "inactive")">@T["Nonaktif"]</option>
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>@T["Atur siapa yang harus menyetujui tiap jenis dokumen. Alur dipilih berdasarkan nominal dokumen (min ≤ nilai < maks) dan prioritas; level dijalankan berurutan, tiap level punya quorum ALL (semua), ANY (satu orang) atau COUNT (n orang berbeda). Pembuat dan pengaju dokumen tidak pernah boleh menyetujui dokumennya sendiri."]
+    </div>
+
+    @if (Model.Gaps.Count > 0)
+    {
+        <div class="alert alert-warning small">
+            <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1"></i>@T["Celah cakupan nominal — dokumen pada rentang ini TIDAK melalui persetujuan:"]</div>
+            <ul class="mb-0">
+                @foreach (var g in Model.Gaps)
+                {
+                    <li><strong>@T[g.Label]</strong>: @Range(g.From, g.To)</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4 text-start">@T["NAMA ALUR"]</th>
+                        <th>@T["JENIS DOKUMEN"]</th>
+                        <th class="text-end">@T["RENTANG NOMINAL"]</th>
+                        <th class="text-center">@T["PRIORITAS"]</th>
+                        <th>@T["LEVEL & APPROVER"]</th>
+                        <th class="text-center">@T["STATUS"]</th>
+                        <th class="text-center" style="width: 110px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada alur persetujuan."]</td></tr>
+                    }
+                    @foreach (var w in Model.Data)
+                    {
+                        <tr>
+                            <td class="ps-4 text-start text-white">
+                                <div class="fw-semibold">@w.Name</div>
+                                @if (!string.IsNullOrWhiteSpace(w.Description))
+                                {
+                                    <div class="small text-white-50">@w.Description</div>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">@T[w.DocTypeLabel]</span>
+                                @if (!w.Available)
+                                {
+                                    <div class="small text-warning mt-1" title="@T["Alur bisa disiapkan, tetapi dokumennya belum dibuat di versi .NET."]"><i class="bi bi-hourglass me-1"></i>@T["modul belum tersedia di .NET"]</div>
+                                }
+                            </td>
+                            <td class="text-end text-white small">@Range(w.MinAmount, w.MaxAmount)</td>
+                            <td class="text-center text-white">@w.Priority</td>
+                            <td class="text-white small">
+                                @foreach (var l in w.Levels)
+                                {
+                                    <div>
+                                        <span class="badge bg-info text-dark">L@(l.StepLevel) @QuorumShort(l)</span>
+                                        @string.Join(", ", l.Approvers.Select(a => a.Type == "role" ? $"{a.Name} ({T["role"]})" : a.Name))
+                                        @if (l.QuorumType == "count" && l.QuorumCount > l.PoolSize)
+                                        {
+                                            <i class="bi bi-exclamation-triangle text-warning" title="@T["Quorum melebihi ukuran pool saat ini ({0} user).", l.PoolSize]"></i>
+                                        }
+                                    </div>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <span class="badge @(w.IsActive ? "bg-success" : "bg-secondary")">@(w.IsActive ? T["Aktif"] : T["Nonaktif"])</span>
+                                @if (w.UsedCount > 0)
+                                {
+                                    <div class="small text-white-50">@T["dipakai {0}×", w.UsedCount]</div>
+                                }
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                <a asp-action="Edit" asp-route-uid="@w.Uid" class="act-btn act-edit" data-perm="update" title="@T["Ubah"]"><i class="bi bi-pencil"></i></a>
+                                @if (w.UsedCount == 0)
+                                {
+                                    <form method="post" asp-action="Delete" asp-route-uid="@w.Uid" data-perm="delete"
+                                          onsubmit='return confirm(@Json.Serialize(T["Hapus alur {0}?", w.Name]));'>
+                                        <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>

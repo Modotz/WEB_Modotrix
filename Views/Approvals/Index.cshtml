@@ -1,0 +1,208 @@
+@model ERP.Web.Models.ApprovalsIndexViewModel
+@{
+    ViewData["Title"] = T["Kotak Persetujuan"];
+    var list = Model.Requests;
+    var tabs = new List<(string Key, string Label, string Icon)>
+    {
+        ("mine", "Menunggu Saya", "bi-inbox"),
+        ("submitted", "Diajukan Saya", "bi-send"),
+        ("history", "Riwayat", "bi-clock-history")
+    };
+    if (Model.IsAdmin)
+    {
+        tabs.Add(("all", "Semua Pending", "bi-eye"));
+    }
+    var pageSize = list.PageSize > 0 ? list.PageSize : 25;
+    string PageUrl(int p) => Url.Action("Index", new { tab = Model.Tab, q = Model.Q, page = p, pageSize })!;
+    var returnUrl = Url.Action("Index", new { tab = Model.Tab, q = Model.Q, page = list.Page, pageSize });
+    var activeTab = tabs.First(t => t.Key == Model.Tab);
+    var header = new ListHeaderModel
+    {
+        Title = T["Daftar Pengajuan"],
+        Count = list.TotalCount,
+        Description = T[activeTab.Label],
+        PdfUrl = Url.Action("ExportPdf", new { tab = Model.Tab, q = Model.Q }),
+        ExcelUrl = Url.Action("ExportExcel", new { tab = Model.Tab, q = Model.Q }),
+        PrintUrl = Url.Action("PrintList", new { tab = Model.Tab, q = Model.Q })
+    };
+
+    // Link dokumen: halaman modul bila user boleh melihatnya, selain itu halaman pengajuan (approver lintas modul).
+    var links = new Dictionary<Guid, string>();
+    foreach (var r in list.Data)
+    {
+        links[r.Uid] = r.DocMenuUrl == null || !await Access.CanAsync(r.DocMenuUrl)
+            ? Url.Action("Details", new { uid = r.Uid })!
+            : "/" + r.DetailPath;
+    }
+}
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">
+        @T["Kotak Persetujuan"]
+        @if (Model.WaitingCount > 0)
+        {
+            <span class="badge bg-danger fs-6 align-middle">@Model.WaitingCount</span>
+        }
+    </h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <input type="hidden" name="tab" value="@Model.Tab" />
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@Model.Q" placeholder="@T["No. dokumen / nama alur"]" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="pageSize">@T["Per Halaman"]</label>
+                        <select class="form-select" id="pageSize" name="pageSize">
+                            @foreach (var size in new[] { 10, 25, 50, 100 })
+                            {
+                                <option value="@size" selected="@(pageSize == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" asp-route-tab="@Model.Tab" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Tab == "all")
+    {
+        <div class="alert alert-info small py-2"><i class="bi bi-info-circle me-1"></i>@T["Administrator melihat semua pengajuan yang menunggu (hanya baca). Pengajuan macet dapat ditarik; keputusan tetap oleh approver yang ditetapkan."]</div>
+    }
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <ul class="nav nav-tabs px-4 pt-2 small">
+            @foreach (var (key, label, icon) in tabs)
+            {
+                <li class="nav-item">
+                    <a class="nav-link @(Model.Tab == key ? "active" : "")" asp-action="Index" asp-route-tab="@key">
+                        <i class="bi @icon me-1"></i>@T[label]
+                        @if (key == "mine" && Model.WaitingCount > 0)
+                        {
+                            <span class="badge bg-danger ms-1">@Model.WaitingCount</span>
+                        }
+                    </a>
+                </li>
+            }
+        </ul>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4 text-start">@T["DOKUMEN"]</th>
+                        <th>@T["NOMOR"]</th>
+                        <th class="text-end" style="width: 140px;">@T["NOMINAL"]</th>
+                        <th>@T["DIAJUKAN"]</th>
+                        <th>@T["PROGRES"]</th>
+                        <th style="width: 120px;">@T["STATUS"]</th>
+                        <th style="width: 330px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (list.Data.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-check2-all fs-3 d-block mb-2"></i>
+                                @(Model.Tab == "mine" ? T["Tidak ada dokumen yang menunggu persetujuan Anda."] : T["Tidak ada data."])
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var r in list.Data)
+                    {
+                        var (label, css, icon) = ERP.Web.Models.Appr.RequestBadge(r.Status);
+                        <tr>
+                            <td class="ps-4 text-start text-white"><span class="badge bg-light text-dark border">@T[r.DocTypeLabel]</span></td>
+                            <td>
+                                <a href="@links[r.Uid]" class="text-info text-decoration-none fw-semibold">@(r.DocNo ?? "-")</a>
+                                <div class="small text-white-50">@r.WorkflowName</div>
+                                @if (!string.IsNullOrWhiteSpace(r.Reason))
+                                {
+                                    <div class="small text-white-50 text-truncate" style="max-width: 260px;" title="@r.Reason"><i class="bi bi-chat-left-text"></i> @r.Reason</div>
+                                }
+                            </td>
+                            <td class="text-end text-white">@Acc.Money(r.Amount)</td>
+                            <td class="text-white small">@r.RequestedByName<div class="text-white-50">@r.RequestedAt?.ToString("dd/MM/yyyy HH:mm")</div></td>
+                            <td class="text-white small">
+                                @if (r.Status == "pending")
+                                {
+                                    <div>@T["Level {0} dari {1}", r.CurrentLevel, r.LevelCount] — @r.CurrentLevelName</div>
+                                    <div class="text-white-50">@T["{0} dari {1} persetujuan", r.CurrentApproved, r.CurrentRequired]</div>
+                                }
+                                else
+                                {
+                                    <span class="text-white-50">@r.DecidedAt?.ToString("dd/MM/yyyy HH:mm")</span>
+                                }
+                            </td>
+                            <td><span class="badge @css"><i class="bi @icon me-1"></i>@T[label]</span></td>
+                            <td>
+                                @if (r.CanDecide)
+                                {
+                                    <form method="post" asp-action="Approve" asp-route-uid="@r.Uid" class="d-flex gap-1 align-items-center">
+                                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                        <input type="text" name="note" class="form-control form-control-sm" maxlength="255" placeholder="@T["Catatan (wajib bila tolak)"]" />
+                                        <button type="submit" class="act-btn act-other flex-shrink-0" title="@T["Setujui"]"
+                                                onclick='return confirm(@Json.Serialize(T["Setujui {0}?", r.DocNo]));'><i class="bi bi-check-lg"></i></button>
+                                        <button type="submit" class="act-btn act-delete flex-shrink-0" title="@T["Tolak"]" formaction="@Url.Action("Reject", new { uid = r.Uid })"
+                                                onclick='return apprRejectCheck(this, @Json.Serialize(T["Catatan penolakan wajib diisi."]), @Json.Serialize(T["Tolak {0}?", r.DocNo]));'><i class="bi bi-x-lg"></i></button>
+                                    </form>
+                                }
+                                else if (r.CanWithdraw)
+                                {
+                                    <form method="post" asp-action="Withdraw" asp-route-uid="@r.Uid" class="d-flex gap-1 align-items-center"
+                                          onsubmit='return confirm(@Json.Serialize(T["Tarik pengajuan {0}?", r.DocNo]));'>
+                                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                        <input type="text" name="note" class="form-control form-control-sm" maxlength="255" required placeholder="@T["Alasan penarikan (wajib)"]" />
+                                        <button type="submit" class="act-btn act-other flex-shrink-0" title="@T["Tarik Pengajuan"]"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <div class="row-actions"><a href="@links[r.Uid]" class="act-btn act-view" title="@T["Lihat"]"><i class="bi bi-eye"></i></a></div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_ListPagination" model="new ListPaginationModel { Page = Math.Max(list.Page, 1), PageSize = pageSize, TotalCount = list.TotalCount, PageUrl = PageUrl }" />
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function apprRejectCheck(btn, msgNote, msgConfirm) {
+            const note = btn.form.querySelector('input[name="note"]');
+            if (!note.value.trim()) { alert(msgNote); note.focus(); return false; }
+            return confirm(msgConfirm);
+        }
+    </script>
+}

@@ -1,0 +1,49 @@
+@model ERP.Web.Services.ListExport
+@{
+    Layout = "_ReportPrintLayout";
+    ViewData["Title"] = Model.Title;
+    var numeric = Model.NumericColumns();
+}
+<style>td.txt { white-space: pre-wrap; }</style>
+<h1>@Model.Title</h1>
+<div class="meta">
+    @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+    {
+        <span>@Model.Subtitle · </span>
+    }
+    @T["Dicetak"] @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+</div>
+<table>
+    <thead>
+        <tr>
+            @for (var i = 0; i < Model.Headers.Length; i++)
+            {
+                <th class="@(numeric[i] ? "num" : "")">@Model.Headers[i]</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Rows.Count == 0)
+        {
+            <tr><td colspan="@Model.Headers.Length" class="muted">@T["Tidak ada data."]</td></tr>
+        }
+        @foreach (var row in Model.Rows)
+        {
+            <tr>
+                @for (var i = 0; i < Model.Headers.Length; i++)
+                {
+                    <td class="@(numeric[i] ? "num" : "txt")">@(i < row.Length ? ERP.Web.Services.ListExport.Text(row[i]) : "")</td>
+                }
+            </tr>
+        }
+        @if (Model.Footer != null)
+        {
+            <tr class="grand">
+                @for (var i = 0; i < Model.Headers.Length; i++)
+                {
+                    <td class="@(numeric[i] ? "num" : "")">@(i < Model.Footer.Length ? ERP.Web.Services.ListExport.Text(Model.Footer[i]) : "")</td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,159 @@
+@model ERP.Web.Models.CashTransactionViewModel
+@{
+    ViewData["Title"] = $"{T["Transaksi"]} {Model.TrxNo}";
+    var (label, css) = Model.StatusBadge;
+    var attachmentUrl = ViewData["AttachmentUrl"] as string;
+    var apprExpense = ViewData["ApprovalExpense"] as ApprovalDocumentViewModel;
+    var apprUnpost = ViewData["ApprovalUnpost"] as ApprovalDocumentViewModel;
+    var unpostNeedsApproval = apprUnpost?.RequiresApproval == true;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T[Model.TypeLabel] @Model.TrxNo</h3>
+        <span class="badge @css me-auto">@T[label]</span>
+
+        @if (Model.Status == "draft" && !Model.ApprovalPending)
+        {
+            <a asp-action="Edit" asp-route-uid="@Model.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil me-1"></i>@T["Ubah"]</a>
+            <form method="post" asp-action="Post" asp-route-uid="@Model.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T[Model.RequiresApproval ? "Ajukan {0} untuk persetujuan?" : "Posting {0}?", Model.TrxNo]));'>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    @if (Model.RequiresApproval)
+                    {
+                        <i class="bi bi-send me-1"></i>@T["Ajukan Persetujuan"]
+                    }
+                    else
+                    {
+                        <i class="bi bi-check2-circle me-1"></i>@T["Posting"]
+                    }
+                </button>
+            </form>
+            <form method="post" asp-action="Delete" asp-route-uid="@Model.Uid" class="d-inline" data-perm="delete"
+                  onsubmit='return confirm(@Json.Serialize(T["Hapus draft {0}?", Model.TrxNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus Draft"]</button>
+            </form>
+        }
+        @if (Model.Status == "posted" && !Model.ApprovalPending)
+        {
+            <button type="button" class="btn btn-outline-danger btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#voidModal">
+                <i class="bi bi-x-circle me-1"></i>@T["Batalkan"]
+            </button>
+        }
+        <a asp-action="Print" asp-route-uid="@Model.Uid" target="_blank" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i>@T["Cetak Bukti"]</a>
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    @if (Model.RequiresApproval && Model.Status == "draft")
+    {
+        <div class="alert alert-warning small">
+            <i class="bi bi-person-check me-1"></i>
+            @T["Pengeluaran Kas Kecil ini wajib disetujui lewat Kotak Persetujuan; jurnal diposting otomatis setelah persetujuan akhir. Pembuat dan pengaju tidak boleh menyetujuinya sendiri."]
+        </div>
+    }
+
+    <div class="card custom-card">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 text-white small">
+                <div class="col-md-3"><div class="text-white-50">@T["Tanggal"]</div>@Acc.Date(Model.TrxDate)</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Nominal"]</div><span class="fs-5 fw-semibold">@Acc.Fx(Model.Amount, Model.CurrencyCode)</span></div>
+                <div class="col-md-3"><div class="text-white-50">@(Model.Type == "transfer" ? T["Dari rekening"] : T["Rekening"])</div>@Model.CashAccountName</div>
+                <div class="col-md-3">
+                    <div class="text-white-50">@(Model.Type == "transfer" ? T["Ke rekening"] : T["Akun lawan"])</div>
+                    @(Model.Type == "transfer" ? Model.DestCashAccountName : $"{Model.CounterCode} {Model.CounterName}")
+                    @if (Model.CostCenterCode != null)
+                                {
+                                    <span class="badge bg-secondary ms-1" title="@T["Cost center"]">@Model.CostCenterCode</span>
+                                }
+                                @if (Model.ProjectCode != null)
+                                {
+                                    <span class="badge bg-primary ms-1" title="@T["Project"]">@Model.ProjectCode</span>
+                                }
+                </div>
+                @if (Model.HasForeign)
+                {
+                    var posted = Model.Status != "draft";
+                    <div class="col-md-3"><div class="text-white-50">@T["Kurs"]</div>@Acc.Rate(Model.FxRate) IDR</div>
+                    @if (Model.Type == "transfer" && Model.DestCurrencyCode != Model.CurrencyCode)
+                    {
+                        <div class="col-md-3"><div class="text-white-50">@T["Diterima rekening tujuan"]</div>@Acc.Fx(Model.DestAmount ?? 0, Model.DestCurrencyCode)</div>
+                    }
+                    <div class="col-md-3"><div class="text-white-50">@T["Nilai IDR"]</div>@(posted ? "" : "≈ ")@Acc.Money(Model.FunctionalAmount)</div>
+                    <div class="col-md-3">
+                        <div class="text-white-50">@T["Selisih kurs terealisasi"]</div>
+                        @if (posted)
+                        {
+                            <span class="fw-semibold @(Model.FxGainLoss >= 0 ? "text-success" : "text-danger")">@Acc.Money(Model.FxGainLoss)</span>
+                        }
+                        else
+                        {
+                            <span class="text-white-50">@T["dihitung saat posting"]</span>
+                        }
+                    </div>
+                }
+                <div class="col-md-3"><div class="text-white-50">@T["Referensi"]</div>@(Model.Reference ?? "-")</div>
+                <div class="col-md-6"><div class="text-white-50">@T["Keterangan"]</div>@(Model.Description ?? "-")</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Dibuat"]</div>@(Model.CreatedByName ?? "-") · @Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm")</div>
+                <div class="col-md-3">
+                    <div class="text-white-50">@T["Jurnal"]</div>
+                    @if (Model.JournalUid != null)
+                    {
+                        <a asp-controller="Journals" asp-action="Details" asp-route-uid="@Model.JournalUid" class="text-info">@Model.JournalNo</a>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </div>
+                @if (attachmentUrl != null)
+                {
+                    <div class="col-md-3"><div class="text-white-50">@T["Lampiran"]</div><a href="@attachmentUrl" target="_blank" class="text-info"><i class="bi bi-paperclip"></i> @T["Lihat bukti"]</a></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (apprExpense != null && (apprExpense.Requests.Count > 0 || (Model.Status == "draft" && Model.RequiresApproval)))
+    {
+        apprExpense.Title = "Persetujuan Pengeluaran Kas Kecil";
+        <partial name="_ApprovalPanel" model="apprExpense" />
+    }
+    @if (apprUnpost != null && apprUnpost.Requests.Count > 0)
+    {
+        apprUnpost.Title = "Persetujuan Pembatalan";
+        <partial name="_ApprovalPanel" model="apprUnpost" />
+    }
+</div>
+
+@if (Model.Status == "posted")
+{
+    <div class="modal fade" id="voidModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="Void" asp-route-uid="@Model.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batalkan"] @Model.TrxNo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Jurnal transaksi ini dibalik dengan jurnal pembalik; transaksi berstatus Dibatalkan dan tetap tercatat."]</p>
+                    @if (unpostNeedsApproval)
+                    {
+                        <div class="alert alert-warning small py-2">
+                            <i class="bi bi-diagram-2 me-1"></i>@T["Pembatalan transaksi ini memerlukan persetujuan (alur {0}); jurnal pembalik dibuat setelah disetujui.", apprUnpost!.Preview.WorkflowName]
+                        </div>
+                    }
+                    <div class="mb-3">
+                        <label class="form-label" for="voidDate">@T["Tanggal pembatalan"]</label>
+                        <input type="date" class="form-control" name="date" id="voidDate" value="@DateTime.Today.ToString("yyyy-MM-dd")"
+                               min="@Model.TrxDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <label class="form-label" for="voidReason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="voidReason" rows="3" maxlength="200" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Batalkan Transaksi"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

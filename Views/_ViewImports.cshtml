@@ -1,3 +1,7 @@
 @using ERP.Web
 @using ERP.Web.Models
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@* Hak akses user, mis.: @if (await Access.CanAsync("brands", "create")) { ...tombol tambah... } *@
+@inject ERP.Web.Services.AccessService Access
+@* Terjemahan UI: @T["Teks Indonesia"] → Inggris bila bahasa EN (kamus di Resources/i18n/en/*.json) *@
+@inject ERP.Web.Services.Translator T

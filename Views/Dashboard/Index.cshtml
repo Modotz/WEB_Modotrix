@@ -1,0 +1,70 @@
+@using ERP.Web.Security
+@model ERP.Web.Models.UserAccessViewModel?
+
+@{
+    ViewData["Title"] = T["Dashboard"];
+    var user = Model?.User;
+
+    // Pintasan ke modul yang sudah tersedia di .NET dan boleh dilihat user ini.
+    var shortcuts = (Model?.Sidebar ?? new List<SidebarMenuViewModel>())
+        .SelectMany(m => m.Children.Count > 0 ? m.Children : new List<SidebarMenuViewModel> { m })
+        .Where(m => m.Url != "dashboard" && MenuRegistry.TryGetPage(m.Url, out _))
+        .ToList();
+}
+
+<div class="px-2">
+
+    <div class="mb-3">
+        <h3 class="fw-semibold text-white mb-0">@T["Dashboard"]</h3>
+    </div>
+
+    <div class="card custom-card mb-3">
+        <div class="card-body p-4 d-flex align-items-center gap-3">
+            <div class="user-avatar" style="width: 52px; height: 52px; font-size: 1.4rem;">
+                @(string.IsNullOrEmpty(user?.Name) ? "?" : user!.Name.Substring(0, 1).ToUpperInvariant())
+            </div>
+            <div>
+                <h5 class="fw-semibold text-white mb-1">@T["Selamat datang, {0}!", user?.Name]</h5>
+                <div class="text-white-50 small">
+                    <i class="bi bi-person me-1"></i>@user?.Username
+                    <span class="mx-2">•</span>
+                    <i class="bi bi-shield-check me-1"></i>@(user?.RoleName ?? "-")
+                    @if (Model?.IsAdmin == true)
+                    {
+                        <span class="badge text-bg-danger ms-2">@T["Akses penuh"]</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card custom-card">
+        <div class="card-header custom-card-header py-3 px-4">
+            <span class="fw-semibold text-white fs-6">@T["Akses Cepat"]</span>
+        </div>
+        <div class="card-body p-4">
+            @if (shortcuts.Count == 0)
+            {
+                <p class="text-white-50 mb-0">@T["Belum ada modul yang dapat Anda akses."]</p>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var item in shortcuts)
+                    {
+                        MenuRegistry.TryGetPage(item.Url, out var target);
+                        <div class="col-6 col-md-4 col-xl-3">
+                            <a asp-controller="@target.Controller" asp-action="@target.Action"
+                               class="d-flex align-items-center gap-2 p-3 rounded text-white text-decoration-none"
+                               style="background: rgba(255,255,255,0.05);">
+                                <i class="@(string.IsNullOrWhiteSpace(item.Icon) ? "bi bi-dot" : item.Icon) fs-5"></i>
+                                <span>@T.Menu(item.Title, item.TitleEn)</span>
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,26 @@
+@model ERP.Web.Models.CashTransactionViewModel
+@{
+    Layout = "_ReportPrintLayout";
+    ViewData["Title"] = $"{T["Bukti"]} {Model.TrxNo}";
+    var title = Model.Type switch { "in" => T["BUKTI KAS MASUK"], "out" => T["BUKTI KAS KELUAR"], _ => T["BUKTI TRANSFER"] };
+}
+<h1>@title</h1>
+<div class="meta">@T["No."] @Model.TrxNo · @T["Tanggal"] @Acc.Date(Model.TrxDate) · @T["Status"] @T[Model.StatusBadge.Label]</div>
+<table>
+    <tbody>
+        <tr><td style="width: 180px;">@(Model.Type == "transfer" ? T["Dari rekening"] : T["Rekening"])</td><td>@Model.CashAccountName</td></tr>
+        <tr><td>@(Model.Type == "transfer" ? T["Ke rekening"] : Model.Type == "in" ? T["Diterima dari (akun)"] : T["Dibayar untuk (akun)"])</td>
+            <td>@(Model.Type == "transfer" ? Model.DestCashAccountName : $"{Model.CounterCode} {Model.CounterName}")</td></tr>
+        <tr><td>@T["Keterangan"]</td><td>@(Model.Description ?? "-")</td></tr>
+        <tr><td>@T["Referensi"]</td><td>@(Model.Reference ?? "-")</td></tr>
+        <tr class="grand"><td>@T["Jumlah"]</td><td class="num">@Acc.Money(Model.Amount)</td></tr>
+        <tr><td>@T["No. Jurnal"]</td><td>@(Model.JournalNo ?? "-")</td></tr>
+    </tbody>
+</table>
+<table style="margin-top: 50px;">
+    <tr>
+        <td style="text-align: center; width: 33%;">@T["Dibuat oleh"]<br /><br /><br />(@(Model.CreatedByName ?? "................"))</td>
+        <td style="text-align: center; width: 33%;">@T["Disetujui"]<br /><br /><br />(................)</td>
+        <td style="text-align: center; width: 33%;">@(Model.Type == "in" ? T["Penyetor"] : T["Penerima"])<br /><br /><br />(................)</td>
+    </tr>
+</table>

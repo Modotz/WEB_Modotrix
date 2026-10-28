@@ -1,0 +1,319 @@
+@model ERP.Web.Models.CashAccountsIndexViewModel
+@{
+    ViewData["Title"] = T["Kas & Bank"];
+    var fq = ViewData["Q"] as string;
+    var ftype = ViewData["Type"] as string;
+    var factive = ViewData["Active"] as bool?;
+    var query = string.Join("&", new[]
+    {
+        string.IsNullOrWhiteSpace(fq) ? null : "q=" + Uri.EscapeDataString(fq),
+        string.IsNullOrWhiteSpace(ftype) ? null : "type=" + Uri.EscapeDataString(ftype),
+        factive == null ? null : "active=" + (factive.Value ? "true" : "false")
+    }.Where(x => x != null));
+    var qs = query.Length > 0 ? "?" + query : "";
+    var header = new ListHeaderModel
+    {
+        Title = T["Daftar Rekening"],
+        Count = Model.Accounts.Count,
+        Description = T["Rekening kas & bank beserta saldo buku besar"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        AddOnClick = "openCashModal()",
+        AddText = T["Tambah Rekening"]
+    };
+}
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Kas & Bank"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@fq" placeholder="@T["Kode, nama, bank, no. rekening"]" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="type">@T["Jenis"]</label>
+                        <select class="form-select" id="type" name="type">
+                            <option value="">@T["-- Semua --"]</option>
+                            <option value="cash" selected="@(ftype == "cash")">@T["Kas"]</option>
+                            <option value="bank" selected="@(ftype == "bank")">Bank</option>
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="active">@T["Status"]</label>
+                        <select class="form-select" id="active" name="active">
+                            <option value="">@T["-- Semua --"]</option>
+                            <option value="true" selected="@(factive == true)">@T["Aktif"]</option>
+                            <option value="false" selected="@(factive == false)">@T["Nonaktif"]</option>
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Saldo rekening = saldo akun COA-nya di buku besar. Satu akun COA hanya untuk satu rekening."]
+        @T["Rekening berkode"] <strong>KAS-KECIL</strong> @T["dipakai menu Kas Kecil."]
+        @T["Rekening valas (mis. USD) memakai akun COA baru yang belum pernah dipakai; saldonya dicatat dalam mata uang asli dan IDR."]
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 120px;">@T["KODE"]</th>
+                        <th>@T["NAMA"]</th>
+                        <th style="width: 80px;">@T["JENIS"]</th>
+                        <th>@T["BANK / NO. REKENING"]</th>
+                        <th>@T["AKUN COA"]</th>
+                        <th style="width: 80px;">@T["MATA UANG"]</th>
+                        <th class="text-end" style="width: 190px;">@T["SALDO"]</th>
+                        <th class="text-center" style="width: 100px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Accounts.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada rekening."]</td></tr>
+                    }
+                    @foreach (var c in Model.Accounts)
+                    {
+                        <tr class="@(c.IsActive ? "" : "opacity-50")">
+                            <td class="ps-4 text-white">@c.Code</td>
+                            <td class="text-white">
+                                <a asp-controller="CashTransactions" asp-action="Index" asp-route-cashAccountUid="@c.Uid" class="text-white text-decoration-none">@c.Name</a>
+                                @if (!c.IsActive)
+                                {
+                                    <span class="badge bg-dark ms-1">@T["Nonaktif"]</span>
+                                }
+                            </td>
+                            <td class="text-white small">@(c.Type == "bank" ? "Bank" : T["Kas"])</td>
+                            <td class="text-white-50 small">@(string.Join(" · ", new[] { c.BankName, c.AccountNo }.Where(x => !string.IsNullOrWhiteSpace(x))))</td>
+                            <td class="text-white small">@c.CoaCode @c.CoaName</td>
+                            <td class="small">
+                                @if (c.IsForeign)
+                                {
+                                    <span class="badge bg-info text-dark">@c.CurrencyCode</span>
+                                }
+                                else
+                                {
+                                    <span class="text-white-50">@c.CurrencyCode</span>
+                                }
+                            </td>
+                            <td class="text-end text-white fw-semibold">
+                                @if (c.IsForeign)
+                                {
+                                    <div>@Acc.Fx(c.ForeignBalance, c.CurrencyCode)</div>
+                                    <div class="small text-white-50 fw-normal" title="@T["Nilai buku (IDR)"]">≈ @Acc.Money(c.Balance)</div>
+                                }
+                                else
+                                {
+                                    @Acc.Money(c.Balance)
+                                    @if (c.ReconcileEnabled && c.InTransit != 0)
+                                    {
+                                        <div class="small text-white-50 fw-normal" title="@T["Saldo buku = bank + pelunasan dalam proses"]">
+                                            @T["Bank"] @Acc.Money(c.BankBalance) · @T["dalam proses"] @Acc.Money(c.InTransit)
+                                        </div>
+                                    }
+                                }
+                                @if (c.ReconcileEnabled)
+                                {
+                                    <div><span class="badge bg-info text-dark fw-normal" title="@T["Rekonsiliasi bank aktif sejak {0}", Acc.Date(c.ReconcileFrom)]"><i class="bi bi-bank me-1"></i>@T["Rekonsiliasi"]</span></div>
+                                }
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                <button type="button" class="act-btn act-edit btn-edit-cash" data-perm="update" title="@T["Ubah"]"
+                                        data-cash="@System.Text.Json.JsonSerializer.Serialize(c)"><i class="bi bi-pencil"></i></button>
+                                @if (!c.IsUsed)
+                                {
+                                    <form method="post" asp-action="Delete" asp-route-uid="@c.Uid" data-perm="delete"
+                                          onsubmit='return confirm(@Json.Serialize(T["Hapus rekening {0}?", c.Name]));'>
+                                        <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="cashModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Create" class="modal-content" id="cashForm">
+            <input type="hidden" name="Uid" id="cUid" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="cashTitle">@T["Tambah Rekening"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-5">
+                        <label class="form-label" for="cCode">@T["Kode"]</label>
+                        <input type="text" class="form-control" name="Code" id="cCode" maxlength="30" required />
+                    </div>
+                    <div class="col-7">
+                        <label class="form-label" for="cType">@T["Jenis"]</label>
+                        <select class="form-select" name="Type" id="cType">
+                            <option value="cash">@T["Kas"]</option>
+                            <option value="bank">Bank</option>
+                        </select>
+                    </div>
+                    <div class="col-8">
+                        <label class="form-label" for="cName">@T["Nama"]</label>
+                        <input type="text" class="form-control" name="Name" id="cName" maxlength="100" required />
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label" for="cCurrency">@T["Mata uang"]</label>
+                        <select class="form-select" name="CurrencyCode" id="cCurrency">
+                            @foreach (var cur in Model.Currencies)
+                            {
+                                <option value="@cur.Code">@cur.Code</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="cCoa">@T["Akun COA (aset)"]</label>
+                        <select class="form-select" name="CoaAccountId" id="cCoa" required>
+                            <option value="">@T["— Pilih akun —"]</option>
+                            @foreach (var a in Model.CoaOptions)
+                            {
+                                <option value="@a.Id">@a.Label</option>
+                            }
+                        </select>
+                        <div class="form-text" id="cCoaNote"></div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" for="cBank">@T["Nama Bank"]</label>
+                        <input type="text" class="form-control" name="BankName" id="cBank" maxlength="100" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" for="cNo">@T["No. Rekening"]</label>
+                        <input type="text" class="form-control" name="AccountNo" id="cNo" maxlength="50" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="cNote">@T["Catatan"]</label>
+                        <input type="text" class="form-control" name="Note" id="cNote" maxlength="255" />
+                    </div>
+                    <div class="col-12 form-check ms-2">
+                        <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="cActive" checked />
+                        <input type="hidden" name="IsActive" value="false" />
+                        <label class="form-check-label" for="cActive">@T["Aktif"]</label>
+                    </div>
+                    <div class="col-12" id="cReconcileGroup">
+                        <div class="border rounded p-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="ReconcileEnabled" value="true" id="cReconcile" />
+                                <input type="hidden" name="ReconcileEnabled" value="false" />
+                                <label class="form-check-label" for="cReconcile">@T["Rekonsiliasi bank (rekening koran)"]</label>
+                            </div>
+                            <div class="row g-2 mt-1 align-items-end">
+                                <div class="col-sm-5">
+                                    <label class="form-label small" for="cReconcileFrom">@T["Mulai tanggal"]</label>
+                                    <input type="date" class="form-control form-control-sm" name="ReconcileFrom" id="cReconcileFrom" />
+                                </div>
+                                <div class="col-sm-7 form-text small">@T["Mulai tanggal ini, pembayaran hutang & penerimaan piutang lewat rekening ini masuk akun \"Dalam Proses\" dan baru menyentuh akun bank saat dicocokkan dengan rekening koran. Mutasi sebelumnya dianggap sudah cocok."]</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const modal = new bootstrap.Modal($('cashModal'));
+            const createUrl = '@Url.Action("Create")', updateUrl = '@Url.Action("Update")';
+            const txtEdit = @Json.Serialize(T["Ubah Rekening"]), txtAdd = @Json.Serialize(T["Tambah Rekening"]);
+            const txtCoaLocked = @Json.Serialize(T["Akun COA dan mata uang tidak dapat diganti karena rekening sudah dipakai transaksi."]);
+
+            function open(c) {
+                $('cashForm').action = c ? updateUrl : createUrl;
+                $('cashTitle').textContent = c ? `${txtEdit} ${c.Name}` : txtAdd;
+                $('cUid').value = c?.Uid ?? '';
+                $('cCode').value = c?.Code ?? '';
+                $('cType').value = c?.Type ?? 'cash';
+                $('cName').value = c?.Name ?? '';
+                $('cCoa').value = c?.CoaAccountId ?? '';
+                $('cCurrency').value = c?.CurrencyCode ?? 'IDR';
+                $('cCurrency').disabled = !!(c && c.IsUsed);
+                $('cBank').value = c?.BankName ?? '';
+                $('cNo').value = c?.AccountNo ?? '';
+                $('cNote').value = c?.Note ?? '';
+                $('cActive').checked = c ? c.IsActive : true;
+                $('cCoa').disabled = !!(c && c.IsUsed);
+                $('cCoaNote').textContent = c && c.IsUsed ? txtCoaLocked : '';
+                $('cReconcile').checked = !!(c && c.ReconcileEnabled);
+                $('cReconcileFrom').value = c?.ReconcileFrom ?? '@DateTime.Today.ToString("yyyy-MM-dd")';
+                syncReconcile();
+                modal.show();
+            }
+
+            // Rekonsiliasi hanya untuk rekening bank IDR.
+            function syncReconcile() {
+                const allowed = $('cType').value === 'bank' && $('cCurrency').value === 'IDR';
+                $('cReconcileGroup').classList.toggle('d-none', !allowed);
+                if (!allowed) $('cReconcile').checked = false;
+                $('cReconcileFrom').disabled = !$('cReconcile').checked;
+            }
+            ['cType', 'cCurrency', 'cReconcile'].forEach(id => $(id).addEventListener('change', syncReconcile));
+
+            $('cashForm').addEventListener('submit', () => {
+                // Field terkunci tidak ikut terkirim; kirim nilainya lewat input tersembunyi.
+                [['cCoa', 'CoaAccountId'], ['cCurrency', 'CurrencyCode']].forEach(([id, name]) => {
+                    if (!$(id).disabled) return;
+                    const h = document.createElement('input');
+                    h.type = 'hidden'; h.name = name; h.value = $(id).value;
+                    $('cashForm').appendChild(h);
+                });
+            });
+
+            window.openCashModal = () => open(null);
+            document.querySelectorAll('.btn-edit-cash').forEach(b => b.addEventListener('click', () => open(JSON.parse(b.dataset.cash))));
+        })();
+    </script>
+}

@@ -1,0 +1,20 @@
+@model ERP.Web.Models.BalanceSheetViewModel
+@{
+    var print = ViewData["Print"] is true;
+    var head = print ? "" : "text-white";
+    var from = new DateOnly(Model.AsOf.Year, 1, 1);
+    ReportRowsModel Rows(ReportSectionViewModel s, string? label = null) => new(s, print, label, from, Model.AsOf);
+}
+<table class="@(print ? "" : "table table-hover align-middle mb-0 supplier-table first-left")">
+    <tbody>
+        <partial name="_ReportRows" model='Rows(Model.Assets, "TOTAL ASET")' />
+        <tr><td colspan="3" style="height: 10px;"></td></tr>
+        <partial name="_ReportRows" model='Rows(Model.Liabilities, "Total Liabilitas")' />
+        <partial name="_ReportRows" model='Rows(Model.Equity, "Total Ekuitas")' />
+        <tr class="@(print ? "grand" : "")">
+            <td></td>
+            <td class="fw-bold @head">@T["TOTAL LIABILITAS + EKUITAS"]</td>
+            <td class="text-end fw-bold @head num">@Acc.Money(Model.TotalLiabilitiesAndEquity)</td>
+        </tr>
+    </tbody>
+</table>

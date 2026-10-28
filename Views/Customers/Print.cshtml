@@ -10,7 +10,7 @@
 <head>
     <meta charset="utf-8" />
 
-    <title>Daftar Customers</title>
+    <title>@T["Daftar Customers"]</title>
 
     <style>
         * {
@@ -153,7 +153,7 @@
             <button type="button"
                     onclick="window.print()">
 
-                Cetak
+                @T["Cetak"]
 
             </button>
 
@@ -161,7 +161,7 @@
                     class="close-button"
                     onclick="window.close()">
 
-                Tutup
+                @T["Tutup"]
 
             </button>
 
@@ -177,7 +177,7 @@
             <div class="header-info">
 
                 <span>
-                    Daftar Customers
+                    @T["Daftar Customers"]
                 </span>
 
                 <span>
@@ -185,7 +185,7 @@
                 </span>
 
                 <span>
-                    Dicetak:
+                    @T["Dicetak"]:
                     @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
                 </span>
 
@@ -194,8 +194,7 @@
                 </span>
 
                 <span>
-                    Total:
-                    @Model.TotalData data
+                    @T["Total: {0} data", Model.TotalData]
                 </span>
 
             </div>
@@ -285,8 +284,8 @@
                         <td class="status">
 
                             @(item.IsActive
-                                ? "Aktif"
-                                : "Nonaktif")
+                                ? T["Aktif"]
+                                : T["Nonaktif"])
 
                         </td>
 
@@ -303,7 +302,7 @@
 
         <div class="footer">
 
-            Dokumen dihasilkan otomatis oleh sistem.
+            @T["Dokumen dihasilkan otomatis oleh sistem."]
 
         </div>
 

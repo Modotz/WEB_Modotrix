@@ -1,0 +1,60 @@
+@model List<ERP.Web.Models.AuditLogViewModel>
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <title>@T["Log Audit"]</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 20px; font-family: Arial, Helvetica, sans-serif; color: #111; background: #fff; font-size: 11px; }
+        .header { margin-bottom: 12px; }
+        .header h1 { margin: 0 0 4px 0; font-size: 20px; font-weight: 700; }
+        .header .meta { color: #6c757d; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
+        th { background: #0d6efd; color: #fff; }
+        tr:nth-child(even) td { background: #f8f9fa; }
+        @@media print { body { padding: 0; } }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="header">
+        <h1>@T["Log Audit"]</h1>
+        <div class="meta">@T["Dicetak"]: @DateTime.Now.ToString("dd/MM/yyyy HH:mm") · Total: @Model.Count @T["data"]</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 35px;">No</th>
+                <th style="width: 120px;">@T["Waktu"]</th>
+                <th style="width: 110px;">User</th>
+                <th style="width: 80px;">@T["Aksi"]</th>
+                <th style="width: 130px;">@T["Modul"]</th>
+                <th>@T["Deskripsi"]</th>
+                <th style="width: 100px;">IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{ var no = 1; }
+            @foreach (var log in Model)
+            {
+                <tr>
+                    <td>@(no++)</td>
+                    <td>@log.CreatedAt?.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                    <td>@(log.Username ?? "-")</td>
+                    <td>@T[AuditLogViewModel.ActionLabel(log.Action).Label]</td>
+                    <td>@(log.Module ?? "-")</td>
+                    <td>@(log.Description ?? "-")</td>
+                    <td>@(log.IpAddress ?? "-")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</body>
+</html>

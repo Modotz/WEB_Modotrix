@@ -4,10 +4,10 @@
 @{
     ViewData["Title"] =
         ViewBag.FormMode == "Create"
-            ? "Tambah Brands"
+            ? T["Tambah Brands"]
             : ViewBag.FormMode == "Edit"
-                ? "Edit Brands"
-                : "Brands";
+                ? T["Edit Brands"]
+                : T["Brands"];
 
     var formMode = ViewBag.FormMode as string;
     var formModel = ViewBag.FormModel as BrandViewModel;
@@ -33,8 +33,8 @@
         <!-- TITLE -->
         <h3 class="fw-bold mb-3">
             @(formMode == "Create"
-                ? "Tambah Brands"
-                : "Edit Brands")
+                ? T["Tambah Brands"]
+                : T["Edit Brands"])
         </h3>
 
 
@@ -46,8 +46,8 @@
 
                 <span class="fw-semibold">
                     @(formMode == "Create"
-                        ? "Tambah Brands"
-                        : "Edit Brands")
+                        ? T["Tambah Brands"]
+                        : T["Edit Brands"])
                 </span>
 
             </div>
@@ -64,8 +64,8 @@
                 {
                     <!-- ID -->
                     <input type="hidden"
-                           name="Id"
-                           value="@formModel?.Id" />
+                           name="Uid"
+                           value="@formModel?.Uid" />
                 }
 
 
@@ -80,7 +80,7 @@
 
                         <label for="Name"
                                class="form-label">
-                            Name
+                            @T["Name"]
                             <span class="text-danger">*</span>
                         </label>
 
@@ -99,7 +99,7 @@
 
                         <label for="image"
                                class="form-label">
-                            Image
+                            @T["Image"]
                         </label>
 
                         @if (!string.IsNullOrWhiteSpace(formModel?.Image))
@@ -160,7 +160,7 @@
 
                             <label class="form-check-label"
                                    for="IsActiveSwitch">
-                                Is Active
+                                @T["Is Active"]
                             </label>
 
                         </div>
@@ -194,7 +194,7 @@
                                 class="btn btn-primary">
 
                             <i class="bi bi-save"></i>
-                            Simpan
+                            @T["Simpan"]
 
                         </button>
 
@@ -204,7 +204,7 @@
                            asp-controller="Brands"
                            class="btn btn-secondary">
 
-                            Batal
+                            @T["Batal"]
 
                         </a>
 
@@ -279,7 +279,7 @@ else
              ===================================================== -->
 
         <h3 class="fw-bold mb-3">
-            Brands
+            @T["Brands"]
         </h3>
 
 
@@ -296,7 +296,7 @@ else
                     <i class="bi bi-funnel"></i>
 
                     <span class="fw-semibold">
-                        Filter
+                        @T["Filter"]
                     </span>
 
                 </div>
@@ -330,7 +330,7 @@ else
 
                             <label for="search"
                                    class="form-label">
-                                Cari
+                                @T["Cari"]
                             </label>
 
                             <input type="text"
@@ -338,7 +338,7 @@ else
                                    id="search"
                                    name="search"
                                    value="@search"
-                                   placeholder="Cari brand..." />
+                                   placeholder="@T["Cari brand..."]" />
 
                         </div>
 
@@ -348,7 +348,7 @@ else
 
                             <label for="isActive"
                                    class="form-label">
-                                Is Active
+                                @T["Is Active"]
                             </label>
 
                             <select class="form-select"
@@ -357,17 +357,17 @@ else
 
                                 <option value=""
                                         selected="@(selectedIsActive == null)">
-                                    -- Semua --
+                                    @T["-- Semua --"]
                                 </option>
 
                                 <option value="true"
                                         selected="@(selectedIsActive == true)">
-                                    Aktif
+                                    @T["Aktif"]
                                 </option>
 
                                 <option value="false"
                                         selected="@(selectedIsActive == false)">
-                                    Tidak Aktif
+                                    @T["Tidak Aktif"]
                                 </option>
 
                             </select>
@@ -380,7 +380,7 @@ else
 
                             <label for="pageSize"
                                    class="form-label">
-                                Per Halaman
+                                @T["Per Halaman"]
                             </label>
 
                             <select class="form-select"
@@ -421,7 +421,7 @@ else
                                         class="btn btn-primary">
 
                                     <i class="bi bi-search"></i>
-                                    Terapkan
+                                    @T["Terapkan"]
 
                                 </button>
 
@@ -430,7 +430,7 @@ else
                                    class="btn btn-outline-secondary">
 
                                     <i class="bi bi-arrow-counterclockwise"></i>
-                                    Reset
+                                    @T["Reset"]
 
                                 </a>
 
@@ -460,7 +460,7 @@ else
                 <div class="d-flex align-items-center gap-2">
 
                     <span class="fw-bold">
-                        Brands
+                        @T["Brands"]
                     </span>
 
                     <span class="badge bg-secondary">
@@ -468,7 +468,7 @@ else
                     </span>
 
                     <span class="menu-description small ms-1">
-                        Kelola data brands
+                        @T["Kelola data brands"]
                     </span>
 
                 </div>
@@ -544,14 +544,14 @@ else
 
 
                     <!-- TAMBAH -->
-                    <a asp-action="Create"
+                    <a data-perm="create" asp-action="Create"
                        asp-controller="Brands"
                        class="btn btn-success">
 
                         <i class="bi bi-plus-circle"></i>
 
                         <span>
-                            Tambah Brands
+                            @T["Tambah Brands"]
                         </span>
 
                     </a>
@@ -581,19 +581,19 @@ else
                                     </th>
 
                                     <th>
-                                        NAME
+                                        @T["NAME"]
                                     </th>
 
                                     <th>
-                                        IMAGE
+                                        @T["IMAGE"]
                                     </th>
 
                                     <th>
-                                        IS ACTIVE
+                                        @T["IS ACTIVE"]
                                     </th>
 
-                                    <th>
-                                        AKSI
+                                    <th class="text-center">
+                                        @T["AKSI"]
                                     </th>
 
                                 </tr>
@@ -678,13 +678,13 @@ else
                                                 @if (item.IsActive)
                                                 {
                                                     <span class="badge bg-success">
-                                                        Aktif
+                                                        @T["Aktif"]
                                                     </span>
                                                 }
                                                 else
                                                 {
                                                     <span class="badge bg-danger">
-                                                        Nonaktif
+                                                        @T["Nonaktif"]
                                                     </span>
                                                 }
 
@@ -692,38 +692,38 @@ else
 
 
                                             <!-- AKSI -->
-                                            <td>
+                                            <td class="text-center">
 
-                                                <div class="d-flex gap-1">
+                                                <div class="row-actions">
 
                                                     <!-- EDIT -->
-                                                    <a asp-action="Edit"
+                                                    <a data-perm="update" asp-action="Edit"
                                                        asp-controller="Brands"
-                                                       asp-route-id="@item.Id"
-                                                       class="btn btn-sm btn-warning"
-                                                       title="Edit">
+                                                       asp-route-uid="@item.Uid"
+                                                       class="act-btn act-edit"
+                                                       title="@T["Edit"]">
 
-                                                        <i class="bi bi-pencil-fill"></i>
+                                                        <i class="bi bi-pencil"></i>
 
                                                     </a>
 
 
                                                     <!-- DELETE -->
-                                                    <form asp-action="Delete"
+                                                    <form data-perm="delete" asp-action="Delete"
                                                           asp-controller="Brands"
                                                           method="post"
                                                           class="d-inline"
-                                                          onsubmit="return confirm('Apakah kamu yakin ingin menghapus brand ini?');">
+                                                          onsubmit='return confirm(@Json.Serialize(T["Apakah kamu yakin ingin menghapus brand ini?"]));'>
 
                                                         <input type="hidden"
-                                                               name="id"
-                                                               value="@item.Id" />
+                                                               name="uid"
+                                                               value="@item.Uid" />
 
                                                         <button type="submit"
-                                                                class="btn btn-sm btn-danger"
-                                                                title="Delete">
+                                                                class="act-btn act-delete"
+                                                                title="@T["Hapus"]">
 
-                                                            <i class="bi bi-trash-fill"></i>
+                                                            <i class="bi bi-trash"></i>
 
                                                         </button>
 
@@ -746,7 +746,7 @@ else
                                             <i class="bi bi-inbox fs-1 text-muted"></i>
 
                                             <div class="mt-2 text-muted">
-                                                Data brand tidak ditemukan.
+                                                @T["Data brand tidak ditemukan."]
                                             </div>
 
                                         </td>
@@ -787,19 +787,19 @@ else
 
                     <span class="menu-description small">
 
-                        Menampilkan
+                        @T["Menampilkan"]
 
                         <strong>
                             @startItem – @endItem
                         </strong>
 
-                        dari
+                        @T["dari"]
 
                         <strong>
                             @Model.TotalCount
                         </strong>
 
-                        data
+                        @T["data"]
 
                     </span>
 
@@ -820,7 +820,7 @@ else
                                        pageSize = Model.PageSize
                                    })">
 
-                                    Sebelumnya
+                                    @T["Sebelumnya"]
 
                                 </a>
 
@@ -861,7 +861,7 @@ else
                                        pageSize = Model.PageSize
                                    })">
 
-                                    Berikutnya
+                                    @T["Berikutnya"]
 
                                 </a>
 

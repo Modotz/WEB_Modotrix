@@ -1,0 +1,66 @@
+@model ERP.Web.Models.BookValueReportViewModel
+@{
+    var print = ViewData["Print"] as bool? == true;
+    var head = print ? "" : "text-white";
+    var muted = print ? "muted" : "text-white-50";
+    var first = print ? "" : "ps-4";
+    var last = print ? "" : "pe-4";
+}
+<table class="@(print ? "" : "table table-hover align-middle mb-0 supplier-table first-left")">
+    <thead>
+        <tr>
+            <th class="fw-bold @first" style="width: 140px;">@T["NO. ASET"]</th>
+            <th class="fw-bold">@T["NAMA ASET"]</th>
+            <th class="fw-bold" style="width: 100px;">@T["TGL PEROLEHAN"]</th>
+            <th class="fw-bold">@T["STATUS"]</th>
+            <th class="fw-bold text-end num">@T["HARGA PEROLEHAN"]</th>
+            <th class="fw-bold text-end num">@T["AKUMULASI"]</th>
+            <th class="fw-bold text-end num @last">@T["NILAI BUKU"]</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Categories.Count == 0)
+        {
+            <tr><td colspan="7" class="text-center @(print ? "muted" : "text-muted") py-4">@T["Tidak ada aset per tanggal ini."]</td></tr>
+        }
+        @foreach (var c in Model.Categories)
+        {
+            <tr class="@(print ? "group" : "")"><td colspan="7" class="fw-bold @first @head @(print ? "" : "pt-3")">@c.CategoryName</td></tr>
+            @foreach (var r in c.Rows)
+            {
+                <tr>
+                    <td class="@first">
+                        @if (print)
+                        {
+                            @r.AssetNo
+                        }
+                        else
+                        {
+                            <a asp-controller="Assets" asp-action="Details" asp-route-uid="@r.Uid" class="text-info text-decoration-none">@r.AssetNo</a>
+                        }
+                    </td>
+                    <td class="@head">@r.Name</td>
+                    <td class="@head small">@Acc.Date(r.AcquisitionDate)</td>
+                    <td class="@muted small">@T[AssetLabels.Status(r.Status)]</td>
+                    <td class="text-end num @head">@Acc.Money(r.Cost)</td>
+                    <td class="text-end num @head">@Acc.Money(r.Accumulated)</td>
+                    <td class="text-end num @head @last">@Acc.Money(r.BookValue)</td>
+                </tr>
+            }
+            <tr class="@(print ? "total" : "fw-bold")">
+                <td colspan="4" class="@first @head">@T["Subtotal {0}", c.CategoryName]</td>
+                <td class="text-end num @head">@Acc.Money(c.Cost)</td>
+                <td class="text-end num @head">@Acc.Money(c.Accumulated)</td>
+                <td class="text-end num @head @last">@Acc.Money(c.BookValue)</td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr class="@(print ? "grand" : "fw-bold")">
+            <td colspan="4" class="@first @head">@T["TOTAL"]</td>
+            <td class="text-end num @head">@Acc.Money(Model.TotalCost)</td>
+            <td class="text-end num @head">@Acc.Money(Model.TotalAccumulated)</td>
+            <td class="text-end num @head @last">@Acc.Money(Model.TotalBookValue)</td>
+        </tr>
+    </tfoot>
+</table>

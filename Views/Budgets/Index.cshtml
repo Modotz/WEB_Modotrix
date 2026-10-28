@@ -1,0 +1,233 @@
+@model ERP.Web.Models.BudgetsPageViewModel
+@{
+    ViewData["Title"] = T["Anggaran"];
+    var header = new ListHeaderModel
+    {
+        Title = T["Anggaran {0}", Model.Year],
+        Count = Model.Budgets.Count,
+        Description = T["Cost center atau project × akun beban × tahun"],
+        AddOnClick = "openBudgetModal()",
+        AddText = T["Tambah Anggaran"]
+    };
+    string Dim(ERP.Web.Models.BudgetViewModel b) => $"{b.DimensionCode} {b.DimensionName}";
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Anggaran"]</h3>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Satu anggaran = SATU dimensi (cost center ATAU project) × satu akun beban × satu tahun. Realisasi dibaca dari jurnal posted; Pending = faktur pembelian yang masih menunggu persetujuan. Penegakan bersifat lunak: faktur yang membuat proyeksi melebihi anggaran tidak ditolak, tetapi tetap draft dan diajukan ke alur persetujuan \"Faktur Pembelian — Melebihi Anggaran\" (bila alurnya ada)."]
+    </div>
+
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+        <div>
+            <label class="form-label text-white small mb-1" for="fYear">@T["Tahun"]</label>
+            <input type="number" class="form-control form-control-sm" name="year" id="fYear" value="@Model.Year" min="2000" max="2100" style="width: 110px;" />
+        </div>
+        <div>
+            <label class="form-label text-white small mb-1" for="fAgainst">@T["Dimensi"]</label>
+            <select class="form-select form-select-sm" name="against" id="fAgainst">
+                <option value="">@T["-- Semua --"]</option>
+                <option value="cost_center" selected="@(Model.Against == "cost_center")">@T["Cost Center"]</option>
+                <option value="project" selected="@(Model.Against == "project")">@T["Project"]</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>@T["Terapkan"]</button>
+        <a asp-controller="BudgetVsActual" asp-action="Index" asp-route-year="@Model.Year" class="btn btn-outline-info btn-sm ms-auto">
+            <i class="bi bi-speedometer me-1"></i>@T["Anggaran vs Realisasi"]
+        </a>
+    </form>
+
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["DIMENSI"]</th>
+                        <th>@T["AKUN"]</th>
+                        <th class="text-end">@T["ANGGARAN"]</th>
+                        <th class="text-end">@T["REALISASI"]</th>
+                        <th class="text-end">@T["PENDING"]</th>
+                        <th class="text-end">@T["SISA"]</th>
+                        <th class="text-end" style="width: 90px;">%</th>
+                        <th style="width: 110px;">@T["STATUS"]</th>
+                        <th class="text-center" style="width: 100px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Budgets.Count == 0)
+                    {
+                        <tr><td colspan="9" class="text-center text-muted py-4">@T["Belum ada anggaran untuk tahun ini."]</td></tr>
+                    }
+                    @foreach (var b in Model.Budgets)
+                    {
+                        var (sl, sc) = ERP.Web.Models.BudgetViewModel.StateBadge(b.State);
+                        <tr class="@(b.State == "over" ? "table-danger-soft" : "")">
+                            <td class="ps-4 text-white">
+                                <span class="badge @(b.BudgetAgainst == "project" ? "bg-primary" : "bg-secondary") me-1">@(b.BudgetAgainst == "project" ? T["Project"] : T["CC"])</span>
+                                @Dim(b)
+                                @if (!string.IsNullOrEmpty(b.Note))
+                                {
+                                    <div class="text-white-50 small">@b.Note</div>
+                                }
+                            </td>
+                            <td class="text-white small">@b.AccountCode @b.AccountName</td>
+                            <td class="text-end text-white">@Acc.Money(b.Amount)</td>
+                            <td class="text-end text-white">@Acc.Money(b.Actual)</td>
+                            <td class="text-end @(b.Pending > 0 ? "text-warning" : "text-white-50")">@(b.Pending == 0 ? "-" : Acc.Money(b.Pending))</td>
+                            <td class="text-end @(b.Remaining < 0 ? "text-danger fw-semibold" : "text-white")">@Acc.Money(b.Remaining)</td>
+                            <td class="text-end text-white">@b.UsedPercent.ToString("0.#", Acc.Culture)%</td>
+                            <td><span class="badge @sc">@T[sl]</span></td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                    <button type="button" class="act-btn act-edit btn-edit-budget" data-perm="update" title="@T["Ubah"]"
+                                            data-budget="@System.Text.Json.JsonSerializer.Serialize(b)"><i class="bi bi-pencil"></i></button>
+                                    <form method="post" asp-action="Delete" asp-route-uid="@b.Uid" asp-route-year="@Model.Year" data-perm="delete"
+                                          onsubmit='return confirm(@Json.Serialize(T["Hapus anggaran {0}?", b.Name]));'>
+                                        <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="budgetModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="post" asp-action="Create" class="modal-content" id="budgetForm">
+            <input type="hidden" name="Uid" id="bUid" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="budgetTitle">@T["Tambah Anggaran"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">@T["Anggaran untuk"]</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="BudgetAgainst" id="bAgainstCc" value="cost_center" checked />
+                                <label class="form-check-label" for="bAgainstCc">@T["Cost Center"]</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="BudgetAgainst" id="bAgainstPrj" value="project" />
+                                <label class="form-check-label" for="bAgainstPrj">@T["Project"]</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8" id="bCcGroup">
+                        <label class="form-label" for="bCc">@T["Cost Center"]</label>
+                        <select class="form-select" name="CostCenterId" id="bCc">
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var c in Model.CostCenters)
+                            {
+                                <option value="@c.Id">@c.Code — @c.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-8 d-none" id="bPrjGroup">
+                        <label class="form-label" for="bPrj">@T["Project"]</label>
+                        <select class="form-select" name="ProjectId" id="bPrj">
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var p in Model.Projects)
+                            {
+                                <option value="@p.Id">@p.Code — @p.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label" for="bAccount">@T["Akun beban"]</label>
+                        <select class="form-select" name="AccountId" id="bAccount" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var a in Model.ExpenseAccounts.Where(a => a.IsPostable))
+                            {
+                                <option value="@a.Id">@a.Code — @a.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="bYear">@T["Tahun"]</label>
+                        <input type="number" class="form-control" name="FiscalYear" id="bYear" min="2000" max="2100" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="bAmount">@T["Nilai anggaran"]</label>
+                        <input type="number" step="0.01" min="0.01" class="form-control text-end" name="Amount" id="bAmount" required />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label" for="bName">@T["Nama"]</label>
+                        <input type="text" class="form-control" name="Name" id="bName" maxlength="150" placeholder="@T["kosong = otomatis dari dimensi, akun & tahun"]" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="bNote">@T["Catatan"]</label>
+                        <input type="text" class="form-control" name="Note" id="bNote" maxlength="255" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const modal = new bootstrap.Modal($('budgetModal'));
+            const createUrl = '@Url.Action("Create")', updateUrl = '@Url.Action("Update")';
+            const txtAdd = @Json.Serialize(T["Tambah Anggaran"]), txtEdit = @Json.Serialize(T["Ubah Anggaran"]);
+            const year = @Model.Year;
+
+            function syncAgainst() {
+                const prj = $('bAgainstPrj').checked;
+                $('bCcGroup').classList.toggle('d-none', prj);
+                $('bPrjGroup').classList.toggle('d-none', !prj);
+                $('bCc').required = !prj;
+                $('bPrj').required = prj;
+            }
+
+            // Pilihan project/cost center yang sudah tidak aktif tetap bisa ditampilkan saat mengubah anggaran lama.
+            function ensureOption(select, id, label) {
+                if (id && !select.querySelector(`option[value="${id}"]`))
+                    select.insertAdjacentHTML('beforeend', `<option value="${id}">${label}</option>`);
+            }
+
+            function open(b) {
+                $('budgetForm').action = b ? updateUrl : createUrl;
+                $('budgetTitle').textContent = b ? `${txtEdit} ${b.Name}` : txtAdd;
+                $('bUid').value = b?.Uid ?? '';
+                (b?.BudgetAgainst === 'project' ? $('bAgainstPrj') : $('bAgainstCc')).checked = true;
+                if (b) {
+                    ensureOption($('bCc'), b.CostCenterId, `${b.DimensionCode} — ${b.DimensionName}`);
+                    ensureOption($('bPrj'), b.ProjectId, `${b.DimensionCode} — ${b.DimensionName}`);
+                }
+                $('bCc').value = b?.CostCenterId ?? '';
+                $('bPrj').value = b?.ProjectId ?? '';
+                $('bAccount').value = b?.AccountId ?? '';
+                $('bYear').value = b?.FiscalYear ?? year;
+                $('bAmount').value = b?.Amount ?? '';
+                $('bName').value = b?.Name ?? '';
+                $('bNote').value = b?.Note ?? '';
+                syncAgainst();
+                modal.show();
+            }
+
+            $('bAgainstCc').addEventListener('change', syncAgainst);
+            $('bAgainstPrj').addEventListener('change', syncAgainst);
+            window.openBudgetModal = () => open(null);
+            document.querySelectorAll('.btn-edit-budget').forEach(b => b.addEventListener('click', () => open(JSON.parse(b.dataset.budget))));
+        })();
+    </script>
+}

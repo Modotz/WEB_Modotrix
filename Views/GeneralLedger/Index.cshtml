@@ -1,0 +1,131 @@
+@model ERP.Web.Models.GeneralLedgerPageViewModel
+
+@{
+    ViewData["Title"] = T["Buku Besar"];
+    var gl = Model.Ledger;
+    var qs = $"?accountUid={Model.AccountUid}&from={Model.From:yyyy-MM-dd}&to={Model.To:yyyy-MM-dd}";
+    var header = new ListHeaderModel
+    {
+        Title = gl != null ? $"{gl.Account.Code} — {gl.Account.Name}" : T["Buku Besar"],
+        Count = gl?.Lines.Count,
+        Description = gl != null
+            ? $"{T[Acc.TypeLabel(gl.Account.Type)]} · {T["saldo normal"]} {(gl.Account.NormalBalance == "debit" ? T["debit"] : T["kredit"])} · {T["{0} s/d {1}", Acc.Date(gl.From), Acc.Date(gl.To)]}"
+            : null,
+        PdfUrl = gl != null ? Url.Action("ExportPdf") + qs : null,
+        ExcelUrl = gl != null ? Url.Action("ExportExcel") + qs : null,
+        PrintUrl = gl != null ? Url.Action("Print") + qs : null
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Buku Besar"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label" for="accountUid">@T["Akun"]</label>
+                        <select class="form-select" id="accountUid" name="accountUid" required>
+                            <option value="">@T["— Pilih akun —"]</option>
+                            @foreach (var a in Model.Accounts)
+                            {
+                                <option value="@a.Uid" selected="@(a.Uid == Model.AccountUid)">@a.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="from">@T["Dari"]</label>
+                        <input type="date" class="form-control" id="from" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="to">@T["Sampai"]</label>
+                        <input type="date" class="form-control" id="to" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 100px;">@T["TANGGAL"]</th>
+                        <th style="width: 140px;">@T["NO. JURNAL"]</th>
+                        <th style="width: 150px;">@T["REFERENSI"]</th>
+                        <th>@T["KETERANGAN"]</th>
+                        <th class="text-end" style="width: 150px;">@T["DEBIT"]</th>
+                        <th class="text-end" style="width: 150px;">@T["KREDIT"]</th>
+                        <th class="text-end" style="width: 160px;">@T["SALDO"]</th>
+                    </tr>
+                </thead>
+                @if (gl == null)
+                {
+                    <tbody>
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Pilih akun untuk menampilkan buku besarnya."]</td></tr>
+                    </tbody>
+                }
+                else
+                {
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="ps-4 text-start text-white fst-italic">@T["Saldo awal per {0}", Acc.Date(gl.From)]</td>
+                            <td class="text-end text-white fw-semibold">@Acc.Money(gl.Opening)</td>
+                        </tr>
+                        @foreach (var l in gl.Lines)
+                        {
+                            <tr>
+                                <td class="ps-4 text-white small">@Acc.Date(l.Date)</td>
+                                <td><a asp-controller="Journals" asp-action="Details" asp-route-uid="@l.JournalUid" class="text-info text-decoration-none">@l.JournalNo</a></td>
+                                <td class="text-white small">@(l.Reference ?? "-")</td>
+                                <td class="text-white">@(l.Description ?? "-")</td>
+                                <td class="text-end text-white">@Acc.MoneyOrBlank(l.Debit)</td>
+                                <td class="text-end text-white">@Acc.MoneyOrBlank(l.Credit)</td>
+                                <td class="text-end text-white">@Acc.Money(l.Balance)</td>
+                            </tr>
+                        }
+                        @if (gl.Lines.Count == 0)
+                        {
+                            <tr><td colspan="7" class="text-center text-muted py-4">@T["Tidak ada mutasi pada rentang ini."]</td></tr>
+                        }
+                    </tbody>
+                    <tbody>
+                        <tr class="fw-bold">
+                            <td colspan="4" class="ps-4 text-end text-white">@T["Total mutasi / Saldo akhir"]</td>
+                            <td class="text-end text-white">@Acc.Money(gl.TotalDebit)</td>
+                            <td class="text-end text-white">@Acc.Money(gl.TotalCredit)</td>
+                            <td class="text-end text-white">@Acc.Money(gl.Closing)</td>
+                        </tr>
+                    </tbody>
+                }
+            </table>
+        </div>
+        </div>
+    </div>
+</div>

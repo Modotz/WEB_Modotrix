@@ -1,0 +1,136 @@
+@model ERP.Web.Models.VatInvoicesViewModel
+@{
+    ViewData["Title"] = T["Rincian Faktur Pajak"] + " " + Model.Period;
+    var year = Model.Period.Length >= 4 ? Model.Period[..4] : null;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T["Rincian Faktur Pajak"] — @T["Masa"] @Model.Period</h3>
+        @if (Model.IsClosed)
+        {
+            <span class="badge bg-danger me-auto"><i class="bi bi-lock-fill me-1"></i>@T["Ditutup"]</span>
+        }
+        else
+        {
+            <span class="badge bg-secondary me-auto">@T["Belum ditutup"]</span>
+        }
+        <a asp-action="ExportInvoicesExcel" asp-route-period="@Model.Period" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+        <a asp-action="Index" asp-route-year="@year" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="card custom-card h-100"><div class="card-body px-4 py-3">
+                <div class="text-white-50 small">@T["PPN Keluaran"]</div>
+                <div class="fs-5 fw-semibold text-white">@Acc.Money(Model.OutputTax)</div>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card custom-card h-100"><div class="card-body px-4 py-3">
+                <div class="text-white-50 small">@T["PPN Masukan kreditabel"]</div>
+                <div class="fs-5 fw-semibold text-white">@Acc.Money(Model.InputCreditableTax)</div>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card custom-card h-100"><div class="card-body px-4 py-3">
+                <div class="text-white-50 small">@T["PPN Masukan tidak kreditabel"]</div>
+                <div class="fs-5 fw-semibold text-white-50">@Acc.Money(Model.InputNonCreditableTax)</div>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card custom-card h-100"><div class="card-body px-4 py-3">
+                <div class="text-white-50 small">@T["No. Faktur Pajak belum diisi"]</div>
+                <div class="fs-5 fw-semibold @(Model.MissingTaxInvoiceNo > 0 ? "text-warning" : "text-success")">@Model.MissingTaxInvoiceNo</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Daftar faktur bertarif PPN pada masa ini (bahan SPT Masa PPN / Coretax). Nilai dalam IDR; DPP Nilai Lain = dasar pengenaan PPN. Rekap memakai saldo buku besar, jadi PPN Masukan yang terlambat dicatat ikut dikreditkan di masa terbuka berikutnya."]
+    </div>
+
+    @foreach (var (title, rows, controller) in new[]
+    {
+        (T["PPN Keluaran — Faktur Penjualan"], Model.Output, "SalesInvoices"),
+        (T["PPN Masukan — Faktur Pembelian"], Model.Input, "PurchaseInvoices")
+    })
+    {
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4 d-flex align-items-center gap-2">
+                <span class="fw-semibold text-white fs-6">@title</span>
+                <span class="badge bg-secondary">@rows.Count</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table custom-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>@T["TANGGAL"]</th>
+                            <th>@T["NO. FAKTUR"]</th>
+                            <th>@T["NO. FAKTUR PAJAK"]</th>
+                            <th>@T["PIHAK / NPWP"]</th>
+                            <th>@T["TARIF"]</th>
+                            <th class="text-end">@T["DPP"]</th>
+                            <th class="text-end">@T["DPP NILAI LAIN"]</th>
+                            <th class="text-end">@T["PPN"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (rows.Count == 0)
+                        {
+                            <tr><td colspan="8" class="text-center text-white-50 py-3">@T["Tidak ada faktur."]</td></tr>
+                        }
+                        @foreach (var r in rows)
+                        {
+                            <tr class="@(r.Status == "void" ? "opacity-50" : "")">
+                                <td class="text-white small">@Acc.Date(r.InvoiceDate)</td>
+                                <td>
+                                    <a asp-controller="@controller" asp-action="Details" asp-route-uid="@r.Uid" class="text-info text-decoration-none">@r.InvoiceNo</a>
+                                    @if (Acc.IsForeign(r.CurrencyCode))
+                                    {
+                                        <span class="badge bg-info text-dark ms-1">@r.CurrencyCode</span>
+                                    }
+                                </td>
+                                <td class="small">
+                                    @if (r.TaxInvoiceNo != null)
+                                    {
+                                        <span class="font-monospace text-white">@r.TaxInvoiceNo</span>
+                                    }
+                                    else if (r.Tax > 0)
+                                    {
+                                        <span class="text-warning">@T["belum diisi"]</span>
+                                    }
+                                </td>
+                                <td class="text-white small">
+                                    @(r.PartyName ?? "-")
+                                    <div class="text-white-50">@(r.Npwp ?? T["NPWP belum diisi"])</div>
+                                </td>
+                                <td class="text-white-50 small">
+                                    @r.TaxRateName
+                                    @if (!r.Creditable)
+                                    {
+                                        <span class="badge bg-danger">@T["Tidak kreditabel"]</span>
+                                    }
+                                </td>
+                                <td class="text-end text-white">@Acc.Money(r.Dpp)</td>
+                                <td class="text-end text-white-50">@Acc.Money(r.TaxBase)</td>
+                                <td class="text-end text-white fw-semibold">@Acc.Money(r.Tax)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (rows.Count > 0)
+                    {
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td colspan="5" class="text-end text-white">@T["TOTAL"]</td>
+                                <td class="text-end text-white">@Acc.Money(rows.Sum(r => r.Dpp))</td>
+                                <td class="text-end text-white-50">@Acc.Money(rows.Sum(r => r.TaxBase))</td>
+                                <td class="text-end text-white">@Acc.Money(rows.Sum(r => r.Tax))</td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        </div>
+    }
+</div>

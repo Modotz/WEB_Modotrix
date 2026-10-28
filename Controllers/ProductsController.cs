@@ -11,10 +11,12 @@ namespace ERP.Web.Controllers;
 public class ProductsController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public ProductsController(ApiClient api)
+    public ProductsController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     [HttpGet]
@@ -66,9 +68,9 @@ public class ProductsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var product = await _api.GetProductAsync(id);
+        var product = await _api.GetProductAsync(uid);
 
         if (product is null)
             return NotFound();
@@ -133,7 +135,7 @@ public class ProductsController : Controller
         {
             ModelState.AddModelError(
                 nameof(model.Sku),
-                "SKU wajib diisi."
+                _t["SKU wajib diisi."]
             );
         }
 
@@ -141,7 +143,7 @@ public class ProductsController : Controller
         {
             ModelState.AddModelError(
                 nameof(model.Name),
-                "Nama Produk wajib diisi."
+                _t["Nama Produk wajib diisi."]
             );
         }
 
@@ -149,7 +151,7 @@ public class ProductsController : Controller
         {
             ModelState.AddModelError(
                 nameof(model.ProductType),
-                "Jenis Produk wajib dipilih."
+                _t["Jenis Produk wajib dipilih."]
             );
         }
 
@@ -157,7 +159,7 @@ public class ProductsController : Controller
         {
             ModelState.AddModelError(
                 nameof(model.UnitId),
-                "Unit wajib dipilih."
+                _t["Unit wajib dipilih."]
             );
         }
 
@@ -232,13 +234,14 @@ public class ProductsController : Controller
 
 
     [HttpGet]
-    public async Task<IActionResult> Edit(long id)
+    public async Task<IActionResult> Edit(Guid uid)
     {
-        var product = await _api.GetProductAsync(id);
+        var product = await _api.GetProductAsync(uid);
 
         if (product is null)
         {
-            return NotFound();
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
         }
 
         await LoadProductDropdowns(product);
@@ -264,11 +267,19 @@ public class ProductsController : Controller
 
         try
         { 
-            var existingProduct = await _api.GetProductAsync(model.Id);
+            // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
+            if (!Guid.TryParse(model.Uid, out var uid))
+            {
+                TempData["Error"] = "Produk tidak ditemukan.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var existingProduct = await _api.GetProductAsync(uid);
 
             if (existingProduct is null)
             {
-                return NotFound();
+                TempData["Error"] = "Produk tidak ditemukan.";
+                return RedirectToAction(nameof(Index));
             }
 
             if (model.ImageFile != null && model.ImageFile.Length > 0)
@@ -321,13 +332,14 @@ public class ProductsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Copy(long id)
+    public async Task<IActionResult> Copy(Guid uid)
     {
-        var product = await _api.GetProductAsync(id);
+        var product = await _api.GetProductAsync(uid);
 
         if (product is null)
         {
-            return NotFound();
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
         }
 
         await LoadProductDropdowns(product); 
@@ -338,8 +350,8 @@ public class ProductsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Copy(ProductViewModel model)
     {
-        // ID yang dikirim dari form adalah ID produk ASLI
-        var originalId = model.Id;
+        // UID yang dikirim dari form adalah UID produk ASLI
+        Guid.TryParse(model.Uid, out var originalUid);
 
         // Sku dan ImageFile tidak perlu divalidasi sebagai data edit
         ModelState.Remove(nameof(model.Sku));
@@ -356,12 +368,12 @@ public class ProductsController : Controller
 
         try
         { 
-            var existingProduct = await _api.GetProductAsync(originalId);
+            var existingProduct = await _api.GetProductAsync(originalUid);
 
             if (existingProduct is null)
             {
                 TempData["Error"] =
-                    $"Produk dengan ID {originalId} tidak ditemukan.";
+                    "Produk tidak ditemukan.";
 
                 await LoadProductDropdowns(model);
 
@@ -439,9 +451,9 @@ public class ProductsController : Controller
     // DELETE di MVC juga POST.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
-        var result = await _api.DeleteProductAsync(id);
+        var result = await _api.DeleteProductAsync(uid);
 
         TempData[result.Success ? "Success" : "Error"] =
             result.Success
@@ -451,47 +463,32 @@ public class ProductsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet]
-    public async Task<IActionResult> Unit(long id)
-    {
-        var product = await _api.GetProductAsync(id);
-
-        if (product is null)
-        {
-            return NotFound();
-        }
-
-        await LoadProductDropdowns(product);
-
-        return View(product);
-    }
-
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SyncVariantPrices(long id)
+    public async Task<IActionResult> SyncVariantPrices(Guid uid)
     {
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
-            TempData["Error"] = "ID produk tidak valid.";
-            return RedirectToAction(nameof(Edit), new { id });
+            TempData["Error"] = "Produk tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
         }
 
         try
         { 
-            var result = await _api.SyncPricesToVariantsAsync(id);
+            var result = await _api.SyncPricesToVariantsAsync(uid);
 
             if (!result.Success)
             {
                 TempData["Error"] =
                     result.Error ?? "Gagal menyamakan harga varian.";
 
-                return RedirectToAction(nameof(Edit), new { id });
+                return RedirectToAction(nameof(Edit), new { uid });
             }
 
             TempData["Success"] =
                 result.Error ?? "Harga varian berhasil disamakan dengan produk induk.";
 
-            return RedirectToAction(nameof(Edit), new { id });
+            return RedirectToAction(nameof(Edit), new { uid });
         }
         catch (Exception ex)
         {
@@ -500,7 +497,7 @@ public class ProductsController : Controller
             TempData["Error"] =
                 $"Terjadi kesalahan saat menyamakan harga varian: {ex.Message}";
 
-            return RedirectToAction(nameof(Edit), new { id });
+            return RedirectToAction(nameof(Edit), new { uid });
         }
     }
 
@@ -547,9 +544,9 @@ public class ProductsController : Controller
             worksheet.Cell(row, 7).Value = item.CostPrice;
             worksheet.Cell(row, 8).Value = item.SellPrice;
             worksheet.Cell(row, 9).Value = item.MinStock;
-            worksheet.Cell(row, 10).Value = item.TrackStock ? "Ya" : "Tidak";
+            worksheet.Cell(row, 10).Value = item.TrackStock ? _t["Ya"] : _t["Tidak"];
             worksheet.Cell(row, 11).Value =
-                item.IsActive ? "Aktif" : "Nonaktif";
+                item.IsActive ? _t["Aktif"] : _t["Nonaktif"];
             worksheet.Cell(row, 12).Value = item.Image;
 
             row++;
@@ -595,9 +592,9 @@ public class ProductsController : Controller
                     {
                         text.Span("Product").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span(_t["Dicetak: {0}", DateTime.Now.ToString("dd/MM/yyyy HH:mm")]).FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {listProducts.Count} data").FontColor("#6c757d");
+                        text.Span(_t["Total: {0} data", listProducts.Count]).FontColor("#6c757d");
                     });
                 });
 
@@ -664,8 +661,8 @@ public class ProductsController : Controller
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.CostPrice?.ToString("C") ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.SellPrice?.ToString("C") ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.MinStock?.ToString() ?? "");
-                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.TrackStock ? "Ya" : "Tidak");
-                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? "Aktif" : "Nonaktif");
+                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.TrackStock ? _t["Ya"] : _t["Tidak"]);
+                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? _t["Aktif"] : _t["Nonaktif"]);
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Image?.ToString() ?? "");
 
                         no++;
@@ -687,7 +684,7 @@ public class ProductsController : Controller
                 page.Footer()
                     .AlignLeft()
                     .PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f)
                     .FontColor("#888888");
             });

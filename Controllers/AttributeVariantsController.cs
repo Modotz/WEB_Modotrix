@@ -7,38 +7,45 @@ namespace ERP.Web.Controllers;
 public class AttributeVariantsController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public AttributeVariantsController(ApiClient api)
+    public AttributeVariantsController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     [HttpGet]
     public async Task<IActionResult> Index(
-    long attributeId,
+    Guid attributeUid,
     string? search = null,
     bool? isActive = null,
     int page = 1,
     int pageSize = 10)
     {
         var attribute =
-            await _api.GetProductAttributeAsync(attributeId);
+            await _api.GetProductAttributeAsync(attributeUid);
 
         if (attribute == null)
         {
-            return NotFound();
+            TempData["Error"] =
+                "Atribut tidak ditemukan.";
+
+            return RedirectToAction(
+                "Index",
+                "ProductAttributes");
         }
 
         var result =
             await _api.GetProductVariantsAsync(
-                attributeId,
+                attributeUid,
                 search,
                 isActive,
                 page,
                 pageSize
             );
 
-        ViewBag.AttributeId = attributeId;
+        ViewBag.AttributeUid = attribute.Uid ?? attributeUid.ToString();
         ViewBag.Name = attribute.Name;
         ViewBag.Code = attribute.Code;
 
@@ -50,18 +57,18 @@ public class AttributeVariantsController : Controller
 
 
     // =========================
-    // GET BY ID
+    // GET BY UID
     // =========================
 
     [HttpGet]
     public async Task<IActionResult> GetById(
-        long attributeId,
-        long id)
+        Guid attributeUid,
+        Guid uid)
     {
         var variant =
             await _api.GetProductVariantAsync(
-                attributeId,
-                id);
+                attributeUid,
+                uid);
 
         if (variant is null)
             return NotFound();
@@ -79,6 +86,16 @@ public class AttributeVariantsController : Controller
     public async Task<IActionResult> Create(
         ProductVariantViewModel model)
     {
+        if (string.IsNullOrWhiteSpace(model.AttributeUid))
+        {
+            TempData["Error"] =
+                "Atribut tidak ditemukan.";
+
+            return RedirectToAction(
+                "Index",
+                "ProductAttributes");
+        }
+
         if (!ModelState.IsValid)
         {
             var errors = ModelState
@@ -101,7 +118,7 @@ public class AttributeVariantsController : Controller
                 nameof(Index),
                 new
                 {
-                    attributeId = model.AttributeId
+                    attributeUid = model.AttributeUid
                 });
         }
 
@@ -118,7 +135,7 @@ public class AttributeVariantsController : Controller
                 nameof(Index),
                 new
                 {
-                    attributeId = model.AttributeId
+                    attributeUid = model.AttributeUid
                 });
         }
 
@@ -129,7 +146,7 @@ public class AttributeVariantsController : Controller
             nameof(Index),
             new
             {
-                attributeId = model.AttributeId
+                attributeUid = model.AttributeUid
             });
     }
 
@@ -143,16 +160,27 @@ public class AttributeVariantsController : Controller
     public async Task<IActionResult> Edit(
         ProductVariantViewModel model)
     {
-        if (!model.Id.HasValue)
+        if (string.IsNullOrWhiteSpace(model.AttributeUid))
         {
             TempData["Error"] =
-                "ID variant tidak valid.";
+                "Atribut tidak ditemukan.";
+
+            return RedirectToAction(
+                "Index",
+                "ProductAttributes");
+        }
+
+        // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
+        {
+            TempData["Error"] =
+                "Variant tidak ditemukan.";
 
             return RedirectToAction(
                 nameof(Index),
                 new
                 {
-                    attributeId = model.AttributeId
+                    attributeUid = model.AttributeUid
                 });
         }
 
@@ -178,7 +206,7 @@ public class AttributeVariantsController : Controller
                 nameof(Index),
                 new
                 {
-                    attributeId = model.AttributeId
+                    attributeUid = model.AttributeUid
                 });
         }
 
@@ -195,7 +223,7 @@ public class AttributeVariantsController : Controller
                 nameof(Index),
                 new
                 {
-                    attributeId = model.AttributeId
+                    attributeUid = model.AttributeUid
                 });
         }
 
@@ -206,7 +234,7 @@ public class AttributeVariantsController : Controller
             nameof(Index),
             new
             {
-                attributeId = model.AttributeId
+                attributeUid = model.AttributeUid
             });
     }
 
@@ -217,20 +245,21 @@ public class AttributeVariantsController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reorder(
-    long attributeId,
+    Guid attributeUid,
     [FromBody] List<object> items)
     {
+        // items: [{ uid, sortOrder }] (uid varian, bukan id angka)
         var result =
             await _api.ReorderProductVariantsAsync(
-                attributeId,
+                attributeUid,
                 items);
 
         return Json(new
         {
             success = result.Success,
             message = result.Success
-                ? "Urutan disimpan."
-                : result.Error
+                ? _t["Urutan disimpan."]
+                : (result.Error is null ? null : _t[result.Error])
         });
     }
 
@@ -242,13 +271,13 @@ public class AttributeVariantsController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(
-        long attributeId,
-        long id)
+        Guid attributeUid,
+        Guid uid)
     {
         var result =
             await _api.DeleteProductVariantAsync(
-                attributeId,
-                id);
+                attributeUid,
+                uid);
 
         TempData[result.Success
             ? "Success"
@@ -262,7 +291,7 @@ public class AttributeVariantsController : Controller
             nameof(Index),
             new
             {
-                attributeId
+                attributeUid
             });
     }
 }

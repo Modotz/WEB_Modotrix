@@ -1,0 +1,50 @@
+@model ERP.Web.Models.ReportRowsModel
+
+@* Satu kelompok laporan keuangan: judul, baris per akun (akun kontra sebagai pengurang), total. *@
+@{
+    var s = Model.Section;
+    var head = Model.Print ? "" : "text-white";
+    var muted = Model.Print ? "muted" : "text-white-50";
+    var ps = Model.Print ? "" : "ps-4 text-start";
+}
+
+<tr class="@(Model.Print ? "group" : "")">
+    <td colspan="3" class="fw-bold @head @ps @(Model.Print ? "" : "pt-3")">@T[s.Title]</td>
+</tr>
+
+@if (s.Lines.Count == 0)
+{
+    <tr><td class="@ps"></td><td class="@muted fst-italic">@T["Tidak ada saldo"]</td><td></td></tr>
+}
+
+@foreach (var l in s.Lines)
+{
+    <tr>
+        <td class="@muted @ps" style="width: 110px;">@l.Code</td>
+        <td class="@head">
+            <span style="padding-left: 14px;">
+                @if (l.IsContra)
+                {
+                    <span class="@muted">@T["Dikurangi:"]</span>
+                }
+                @if (!Model.Print && l.Uid != null && Model.LedgerTo != null)
+                {
+                    <a asp-controller="GeneralLedger" asp-action="Index" asp-route-accountUid="@l.Uid"
+                       asp-route-from="@Model.LedgerFrom?.ToString("yyyy-MM-dd")" asp-route-to="@Model.LedgerTo?.ToString("yyyy-MM-dd")"
+                       class="text-white text-decoration-none">@l.Name</a>
+                }
+                else
+                {
+                    @(l.Uid == null ? T[l.Name] : l.Name)
+                }
+            </span>
+        </td>
+        <td class="text-end @head num" style="width: 190px;">@Acc.Money(l.Amount)</td>
+    </tr>
+}
+
+<tr class="@(Model.Print ? "total" : "")">
+    <td></td>
+    <td class="fw-semibold @head">@(Model.TotalLabel != null ? T[Model.TotalLabel] : T["Total {0}", T[s.Title]])</td>
+    <td class="text-end fw-semibold @head num" style="border-top: 1px solid currentColor;">@Acc.Money(s.Total)</td>
+</tr>

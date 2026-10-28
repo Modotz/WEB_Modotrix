@@ -1,0 +1,148 @@
+@model ERP.Web.Models.OpeningBalanceViewModel
+
+@{
+    ViewData["Title"] = T["Saldo Awal"];
+    var date = Model.Date ?? DateOnly.FromDateTime(DateTime.Today);
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> journalLink =
+        @<a href="@Url.Action("Details", "Journals", new { uid = Model.JournalUid })" class="btn btn-light btn-custom-square text-info" title="@T["Jurnal {0}", Model.JournalNo]">
+            <i class="bi bi-journal-text"></i>
+        </a>;
+
+    var header = new ListHeaderModel
+    {
+        Title = T["Daftar Akun"],
+        Count = Model.Lines.Count,
+        Description = Model.JournalNo == null ? T["Belum ada jurnal saldo awal"] : T["Jurnal {0}", Model.JournalNo],
+        PdfUrl = Url.Action("ExportPdf"),
+        ExcelUrl = Url.Action("ExportExcel"),
+        PrintUrl = Url.Action("PrintList"),
+        Extra = Model.JournalUid != null ? journalLink(null) : null
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Saldo Awal"]</h3>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Saldo awal dicatat sebagai satu jurnal. Menyimpan ulang tidak menghapus jurnal lama: jurnal lama dibalik lalu jurnal baru dibuat. Tanggal saldo awal dan tanggal jurnal lama harus berada di periode yang masih open. Total debit harus sama dengan total kredit."]
+    </div>
+
+    <form method="post" asp-action="Save" id="obForm">
+        <!-- TANGGAL & TOTAL -->
+        <div class="card supplier-card supplier-filter">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-calendar-check"></i>
+                    <span class="fw-semibold">@T["Tanggal saldo awal"]</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="date">@T["Tanggal saldo awal"]</label>
+                        <input type="date" class="form-control" name="date" id="date" value="@date.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md text-md-end small">
+                        <div>@T["Total Debit:"] <strong id="tDebit">0,00</strong></div>
+                        <div>@T["Total Kredit:"] <strong id="tCredit">0,00</strong></div>
+                        <div id="tInfo"></div>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2" data-perm="update"
+                                onclick='return confirm(@Json.Serialize(T["Simpan saldo awal?"]));'>
+                            <i class="bi bi-save"></i>
+                            @T["Simpan Saldo Awal"]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATA TABLE CARD -->
+        <div class="card supplier-card supplier-table-card">
+            <partial name="_ListHeader" model="header" />
+
+            <div class="collapse show" id="listBody">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 120px;">@T["KODE"]</th>
+                            <th>@T["NAMA AKUN"]</th>
+                            <th style="width: 110px;">@T["TIPE"]</th>
+                            <th class="text-end" style="width: 190px;">@T["DEBIT"]</th>
+                            <th class="text-end" style="width: 190px;">@T["KREDIT"]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="obBody">
+                        @if (Model.Lines.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-center text-muted py-4">@T["Tidak ada akun."]</td></tr>
+                        }
+                        @for (var i = 0; i < Model.Lines.Count; i++)
+                        {
+                            var l = Model.Lines[i];
+                            <tr>
+                                <td class="ps-4 text-white">@l.Code</td>
+                                <td class="text-white">
+                                    @l.Name
+                                    @if (l.IsControl)
+                                    {
+                                        <span class="badge bg-info text-dark ms-1" title="@T["Pastikan saldo ini sama dengan total rincian sub-ledgernya (faktur/stok)"]">@T["Kontrol"]</span>
+                                    }
+                                </td>
+                                <td class="text-white-50 small">@T[Acc.TypeLabel(l.Type)]</td>
+                                <td>
+                                    <input type="hidden" name="lines[@i].AccountId" value="@l.AccountId" />
+                                    <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end ob-debit"
+                                           name="lines[@i].Debit" value="@(l.Debit == 0 ? "" : l.Debit.ToString(inv))" />
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end ob-credit"
+                                           name="lines[@i].Credit" value="@(l.Credit == 0 ? "" : l.Credit.ToString(inv))" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const body = document.getElementById('obBody');
+            const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const txtBalanced = @Json.Serialize(T["Seimbang"]), txtDiff = @Json.Serialize(T["Selisih {0}"]);
+            const num = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+
+            function recalc() {
+                let d = 0, c = 0;
+                body.querySelectorAll('.ob-debit').forEach(i => d += num(i.value));
+                body.querySelectorAll('.ob-credit').forEach(i => c += num(i.value));
+                document.getElementById('tDebit').textContent = fmt.format(d);
+                document.getElementById('tCredit').textContent = fmt.format(c);
+                const diff = Math.round((d - c) * 100) / 100;
+                document.getElementById('tInfo').innerHTML = diff === 0
+                    ? `<span class="text-success">${txtBalanced}</span>`
+                    : `<span class="text-warning">${txtDiff.replace('{0}', fmt.format(Math.abs(diff)))}</span>`;
+            }
+
+            body.addEventListener('input', (e) => {
+                const tr = e.target.closest('tr');
+                if (e.target.classList.contains('ob-debit') && num(e.target.value) > 0) tr.querySelector('.ob-credit').value = '';
+                if (e.target.classList.contains('ob-credit') && num(e.target.value) > 0) tr.querySelector('.ob-debit').value = '';
+                recalc();
+            });
+
+            recalc();
+        })();
+    </script>
+}

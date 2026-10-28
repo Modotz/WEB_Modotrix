@@ -3,7 +3,11 @@
 @model GoodsReceiptViewModel
 
 @{
-    ViewData["Title"] = "Tambah Penerimaan Barang";
+    // View ini dipakai untuk Tambah dan Ubah (draft) Penerimaan Barang.
+    var isEdit = !string.IsNullOrWhiteSpace(Model?.Uid);
+    var pageTitle = isEdit ? T["Ubah Penerimaan {0}", Model!.ReceiptNo] : T["Tambah Penerimaan"];
+
+    ViewData["Title"] = isEdit ? T["Ubah Penerimaan {0}", Model!.ReceiptNo] : T["Tambah Penerimaan Barang"];
 
     var suppliers = ViewBag.Suppliers as IEnumerable<SupplierViewModel> ?? Enumerable.Empty<SupplierViewModel>(); 
     var warehouses = ViewBag.Warehouses as IEnumerable<WarehouseViewModel> ?? Enumerable.Empty<WarehouseViewModel>(); 
@@ -66,6 +70,18 @@
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    // Item tersimpan (mode ubah) untuk mengisi tabel saat halaman dibuka.
+    var existingDetails = isEdit
+        ? (Model!.Details ?? new List<GoodsReceiptItemViewModel>()).Select(d => new
+        {
+            productId = d.ProductId,
+            qty = d.Qty,
+            unitId = d.UnitId,
+            unitPrice = d.UnitCost
+        }).ToList<object>()
+        : new List<object>();
+
+    var existingDetailsJson = JsonSerializer.Serialize(existingDetails, jsonOptions);
     var productsJson = JsonSerializer.Serialize(productOptions, jsonOptions);
     var unitsJson = JsonSerializer.Serialize(unitOptions, jsonOptions);
     var purchaseOrdersJson = JsonSerializer.Serialize(poOptions, jsonOptions);
@@ -74,7 +90,7 @@
 <div class="po-create-page">
      
     <div class="product-page-title">
-        Tambah Penerimaan
+        @pageTitle
     </div>
      
     <div class="product-info-card">
@@ -88,7 +104,7 @@
 
             <div>
                 <i class="bi bi-info-circle-fill me-2"></i>
-                <strong>Panduan Pengisian — Penerimaan Barang</strong>
+                <strong>@T["Panduan Pengisian — Penerimaan Barang"]</strong>
             </div>
 
             <i class="bi bi-chevron-down"></i>
@@ -99,40 +115,31 @@
 
                 <ol>
                     <li>
-                        <strong>Dari PO?</strong>
-                        Bila barang berasal dari Purchase Order, pilih PO pada kotak biru di bawah —
-                        item, gudang, dan supplier akan terisi otomatis dan status PO ikut ter-update saat diposting.
+                        <strong>@T["Dari PO?"]</strong>
+                        @T["Bila barang berasal dari Purchase Order, pilih PO pada kotak biru di bawah — item, gudang, dan supplier akan terisi otomatis dan status PO ikut ter-update saat diposting."]
                     </li>
 
                     <li>
-                        Isi <strong>Tanggal</strong> dan
-                        <strong>Gudang Tujuan</strong> (wajib).
-                        <i>Supplier</i> dan <i>No. Referensi (PO/Faktur)</i> boleh dikosongkan.
+                        @Html.Raw(T["Isi <strong>Tanggal</strong> dan <strong>Gudang Tujuan</strong> (wajib). <i>Supplier</i> dan <i>No. Referensi (PO/Faktur)</i> boleh dikosongkan."])
                     </li>
 
                     <li>
-                        Klik <strong>Tambah Baris</strong>, lalu pada kolom
-                        <strong>Produk</strong> ketik nama/kode untuk mencari.
-                        Isi <strong>Qty</strong>, pilih <strong>Satuan</strong>, dan isi
-                        <strong>Harga Beli</strong>.
+                        @Html.Raw(T["Klik <strong>Tambah Baris</strong>, lalu pada kolom <strong>Produk</strong> ketik nama/kode untuk mencari. Isi <strong>Qty</strong>, pilih <strong>Satuan</strong>, dan isi <strong>Harga Beli</strong>."])
                     </li>
 
                     <li>
-                        Produk ber-serial dapat memerlukan nomor serial.
-                        Jika fitur serial aktif pada produk, masukkan serial sesuai prosedur yang digunakan sistem.
+                        @T["Produk ber-serial dapat memerlukan nomor serial. Jika fitur serial aktif pada produk, masukkan serial sesuai prosedur yang digunakan sistem."]
                     </li>
 
                     <li>
-                        Selesai? Klik <strong>Simpan &amp; Posting</strong>
-                        untuk langsung menambah stok, atau <strong>Simpan Draft</strong>
-                        bila belum final (stok belum berubah dan dokumen masih bisa diedit).
+                        @Html.Raw(T["Selesai? Klik <strong>Simpan &amp; Posting</strong> untuk langsung menambah stok, atau <strong>Simpan Draft</strong> bila belum final (stok belum berubah dan dokumen masih bisa diedit)."])
                     </li>
                 </ol>
 
                 <div class="product-info-tip">
                     <i class="bi bi-lightbulb"></i>
-                    Tips: gunakan tombol <span class="required-mark">×</span>
-                    untuk menghapus baris. Panel ini bisa ditutup dengan mengeklik judulnya.
+                    @T["Tips: gunakan tombol"] <span class="required-mark">×</span>
+                    @T["untuk menghapus baris. Panel ini bisa ditutup dengan mengeklik judulnya."]
                 </div>
 
             </div>
@@ -140,17 +147,17 @@
     </div>
 
     <!-- PILIH PO -->
-    <div class="receipt-po-picker" id="receiptPoPicker">
+    <div class="receipt-po-picker" id="receiptPoPicker" style="@(isEdit ? "display:none" : "")">
 
         <div id="poPickerDefault">
 
             <div class="receipt-po-picker-label">
                 <i class="bi bi-clipboard-check me-2"></i>
-                Menerima barang dari Purchase Order? Pilih PO-nya agar item terisi otomatis &amp; status PO ikut ter-update:
+                @T["Menerima barang dari Purchase Order? Pilih PO-nya agar item terisi otomatis & status PO ikut ter-update:"]
             </div>
 
              <select class="form-select form-select-sm" id="POId">
-                <option value="">-- Dari PO (opsional) --</option>
+                <option value="">@T["-- Dari PO (opsional) --"]</option>
 
                 @foreach (var po in purchaseOrders.Where(po =>
                     string.Equals(
@@ -190,10 +197,15 @@
     <!-- FORM PENERIMAAN -->
     <form method="post"
           asp-controller="GoodsReceipts"
-          asp-action="Create"
+          asp-action="@(isEdit ? "Update" : "Create")"
           id="receiptForm">
 
         @Html.AntiForgeryToken()
+
+        @if (isEdit)
+        {
+            <input type="hidden" name="Uid" value="@Model!.Uid" />
+        }
 
         <input type="hidden"
                id="ReceiptPOId"
@@ -203,7 +215,7 @@
         <div class="card po-detail-card">
 
             <div class="card-header">
-                <strong>Tambah Penerimaan</strong>
+                <strong>@pageTitle</strong>
             </div>
 
             <div class="card-body">
@@ -211,7 +223,7 @@
                 @if (!ViewData.ModelState.IsValid)
                 {
                     <div class="alert alert-danger">
-                        <strong>Data belum dapat disimpan.</strong>
+                        <strong>@T["Data belum dapat disimpan."]</strong>
 
                         <ul class="mb-0 mt-2">
                             @foreach (var item in ViewData.ModelState)
@@ -221,8 +233,8 @@
                                     <li>
                                         @(string.IsNullOrWhiteSpace(error.ErrorMessage)
                                             ? error.Exception?.GetBaseException().Message
-                                                ?? "Nilai tidak valid."
-                                            : error.ErrorMessage)
+                                                ?? T["Nilai tidak valid."]
+                                            : T[error.ErrorMessage])
                                     </li>
                                 }
                             }
@@ -233,7 +245,7 @@
                 @if (TempData["Error"] != null)
                 {
                     <div class="alert alert-danger">
-                        @TempData["Error"]
+                        @T[TempData["Error"]?.ToString()]
                     </div>
                 }
 
@@ -242,7 +254,7 @@
                     <!-- NOMOR PENERIMAAN -->
                     <div class="col-md-4">
                         <label class="form-label" for="ReceiptNo">
-                            No. Penerimaan
+                            @T["No. Penerimaan"]
                         </label>
 
                         <input type="text"
@@ -256,7 +268,7 @@
                     <!-- TANGGAL -->
                     <div class="col-md-4">
                         <label class="form-label" for="ReceiptDate">
-                            Tanggal <span class="text-danger">*</span>
+                            @T["Tanggal"] <span class="text-danger">*</span>
                         </label>
 
                         <input type="date"
@@ -270,7 +282,7 @@
                     <!-- GUDANG -->
                     <div class="col-md-4">
                         <label class="form-label" for="WarehouseId">
-                            Gudang Tujuan <span class="text-danger">*</span>
+                            @T["Gudang Tujuan"] <span class="text-danger">*</span>
                         </label>
 
                         <select class="form-select"
@@ -278,7 +290,7 @@
                                 name="WarehouseId"
                                 required>
 
-                            <option value="">-- Pilih --</option>
+                            <option value="">@T["-- Pilih --"]</option>
 
                             @foreach (var warehouse in warehouses)
                             {
@@ -293,14 +305,14 @@
                     <!-- SUPPLIER -->
                     <div class="col-md-4">
                         <label class="form-label" for="SupplierId">
-                            Supplier
+                            @T["Supplier"]
                         </label>
 
                         <select class="form-select"
                                 id="SupplierId"
                                 name="SupplierId">
 
-                            <option value="">-- Tanpa Supplier --</option>
+                            <option value="">@T["-- Tanpa Supplier --"]</option>
 
                             @foreach (var supplier in suppliers)
                             {
@@ -315,7 +327,7 @@
                     <!-- REFERENSI -->
                     <div class="col-md-4">
                         <label class="form-label small mb-1" for="RefNo">
-                            No. Referensi (PO/Faktur)
+                            @T["No. Referensi (PO/Faktur)"]
                         </label>
 
                         <!-- Tambahkan kelas input-group-sm di sini -->
@@ -325,12 +337,12 @@
                                    id="RefNo"
                                    name="RefNo"
                                    value="@Model?.RefNo"
-                                   placeholder="Ketik No. PO lalu Cek" />
+                                   placeholder="@T["Ketik No. PO lalu Cek"]" />
 
                             <button type="button"
                                     class="btn btn-outline-primary"
                                     id="btnCekPO">
-                                <i class="bi bi-search"></i> Cek
+                                <i class="bi bi-search"></i> @T["Cek"]
                             </button>
                         </div>
                     </div>
@@ -338,7 +350,7 @@
                     <!-- CATATAN -->
                     <div class="col-md-4">
                         <label class="form-label" for="Note">
-                            Catatan
+                            @T["Catatan"]
                         </label>
 
                         <input type="text"
@@ -356,13 +368,13 @@
         <div class="card receipt-items-card mt-2">
 
             <div class="card-header">
-                <strong>Detail Item</strong>
+                <strong>@T["Detail Item"]</strong>
 
                 <button type="button"
                         class="btn btn-sm btn-add-row"
                         id="btnTambahBaris">
                     <i class="bi bi-plus-lg"></i>
-                    Tambah Baris
+                    @T["Tambah Baris"]
                 </button>
             </div>
 
@@ -375,10 +387,10 @@
                     <input type="text"
                            id="scanSku"
                            class="form-control form-control-sm"
-                           placeholder="Scan / ketik SKU atau barcode, lalu Enter..." />
+                           placeholder="@T["Scan / ketik SKU atau barcode, lalu Enter..."]" />
 
                     <label for="scanQty" class="form-label mb-0">
-                        Qty
+                        @T["Qty"]
                     </label>
 
                     <input type="number"
@@ -391,9 +403,7 @@
 
                 <div class="receipt-scan-help">
                     <i class="bi bi-lightbulb"></i>
-                    Input cepat: scan barcode/SKU untuk menambahkan barang.
-                    Produk yang sama discan lagi akan menambah Qty.
-                    Stok baru masuk saat Simpan &amp; Posting.
+                    @T["Input cepat: scan barcode/SKU untuk menambahkan barang. Produk yang sama discan lagi akan menambah Qty. Stok baru masuk saat Simpan & Posting."]
                 </div>
 
             </div>
@@ -407,13 +417,13 @@
                     <thead>
                         <tr>
                             <th style="width:32px">#</th>
-                            <th>PRODUK</th>
-                            <th style="width:80px">QTY PESAN</th>
-                            <th style="width:80px">QTY SISA</th>
-                            <th style="width:85px">QTY</th>
-                            <th style="width:90px">SATUAN</th>
-                            <th style="width:125px">HARGA BELI</th>
-                            <th style="width:120px">SUBTOTAL</th>
+                            <th>@T["PRODUK"]</th>
+                            <th style="width:80px">@T["QTY PESAN"]</th>
+                            <th style="width:80px">@T["QTY SISA"]</th>
+                            <th style="width:85px">@T["QTY"]</th>
+                            <th style="width:90px">@T["SATUAN"]</th>
+                            <th style="width:125px">@T["HARGA BELI"]</th>
+                            <th style="width:120px">@T["SUBTOTAL"]</th>
                             <th style="width:35px"></th>
                         </tr>
                     </thead>
@@ -429,7 +439,7 @@
 
                 <div class="po-summary-row">
                     <label class="form-label" for="TotalAmount">
-                        Total
+                        @T["Total"]
                     </label>
 
                     <input type="number"
@@ -447,7 +457,7 @@
                             value="post"
                             class="btn po-btn-save">
                         <i class="bi bi-save"></i>
-                        Simpan &amp; Posting
+                        @T["Simpan & Posting"]
                     </button>
 
                     <button type="submit"
@@ -455,14 +465,26 @@
                             value="draft"
                             class="btn btn-outline-secondary po-btn-cancel">
                         <i class="bi bi-file-earmark"></i>
-                        Simpan Draft
+                        @T["Simpan Draft"]
                     </button>
 
-                    <a asp-controller="GoodsReceipts"
-                       asp-action="Index"
-                       class="btn btn-secondary">
-                        Batal
-                    </a>
+                    @if (isEdit)
+                    {
+                        <a asp-controller="GoodsReceipts"
+                           asp-action="Details"
+                           asp-route-uid="@Model!.Uid"
+                           class="btn btn-secondary">
+                            @T["Batal"]
+                        </a>
+                    }
+                    else
+                    {
+                        <a asp-controller="GoodsReceipts"
+                           asp-action="Index"
+                           class="btn btn-secondary">
+                            @T["Batal"]
+                        </a>
+                    }
 
                 </div>
 
@@ -479,6 +501,8 @@
     const products = @Html.Raw(productsJson);
     const units = @Html.Raw(unitsJson);
     const purchaseOrders = @Html.Raw(purchaseOrdersJson);
+    const isEditMode = @(isEdit ? "true" : "false");
+    const existingDetails = @Html.Raw(existingDetailsJson);
 
     const tbody = document.getElementById('detailBody');
 
@@ -527,7 +551,7 @@
         const groups = {};
 
         sorted.forEach(p => {
-            const category = p.categoryName?.trim() || 'Tanpa Kategori';
+            const category = p.categoryName?.trim() || @Json.Serialize(T["Tanpa Kategori"]);
 
             if (!groups[category]) {
                 groups[category] = [];
@@ -590,9 +614,8 @@
         poPickerSelected.style.display = 'flex';
 
         poSelectedMessage.innerHTML =
-            `Penerimaan untuk <strong>${escapeHtml(po.poNo)}</strong>. ` +
-            `Item outstanding sudah diisi otomatis — scan serial bila perlu, ` +
-            `lalu Simpan &amp; Posting untuk memperbarui status PO.`;
+            @Json.Serialize(T["Penerimaan untuk <strong>{0}</strong>. Item outstanding sudah diisi otomatis — scan serial bila perlu, lalu Simpan &amp; Posting untuk memperbarui status PO.", "{0}"])
+                .replace('{0}', escapeHtml(po.poNo));
     }
 
     function perbaruiNomor() {
@@ -676,7 +699,7 @@
                 <select class="form-select form-select-sm product-select"
                         name="Details[0].ProductId"
                         required>
-                    <option value="">-- Cari produk --</option>
+                    <option value="">@T["-- Cari produk --"]</option>
                     ${buildProductOptionsHtml(data.productId ?? '')}
                 </select>
             </td>
@@ -716,7 +739,7 @@
             <td>
                 <input type="number"
                        class="form-control form-control-sm price"
-                       name="Details[0].UnitPrice"
+                       name="Details[0].UnitCost"
                        min="0"
                        step="0.01"
                        value="${Number(data.unitPrice ?? 0)}"
@@ -734,7 +757,7 @@
             <td>
                 <button type="button"
                         class="btn btn-sm btn-danger btn-hapus"
-                        title="Hapus baris">
+                        title="@T["Hapus baris"]">
                     ×
                 </button>
             </td>
@@ -811,12 +834,13 @@
 
         if (count === 0) {
             tampilkanPesan(
-                'Semua item pada PO ini sudah diterima atau tidak ada item tersisa.',
+                @Json.Serialize(T["Semua item pada PO ini sudah diterima atau tidak ada item tersisa."]),
                 false
             );
         } else {
             tampilkanPesan(
-                `PO ${po.poNo} ditemukan — ${count} item outstanding dimuat otomatis.`,
+                @Json.Serialize(T["PO {0} ditemukan — {1} item outstanding dimuat otomatis.", "{0}", "{1}"])
+                    .replace('{0}', po.poNo).replace('{1}', count),
                 true
             );
         }
@@ -837,7 +861,7 @@
 
         if (!po) {
             tampilkanPesan(
-                'Data PO tidak tersedia. Pastikan controller memuat daftar PO beserta detailnya.',
+                @Json.Serialize(T["Data PO tidak tersedia. Pastikan controller memuat daftar PO beserta detailnya."]),
                 false
             );
             return;
@@ -852,7 +876,7 @@
 
         if (!number) {
             tampilkanPesan(
-                'Masukkan nomor PO terlebih dahulu.',
+                @Json.Serialize(T["Masukkan nomor PO terlebih dahulu."]),
                 false
             );
             return;
@@ -864,7 +888,7 @@
 
         if (!po) {
             tampilkanPesan(
-                'Nomor PO tidak ditemukan pada daftar PO yang dimuat.',
+                @Json.Serialize(T["Nomor PO tidak ditemukan pada daftar PO yang dimuat."]),
                 false
             );
             return;
@@ -959,7 +983,7 @@
         );
 
         if (!product) {
-            alert('Produk dengan SKU tersebut tidak ditemukan.');
+            alert(@Json.Serialize(T["Produk dengan SKU tersebut tidak ditemukan."]));
             return;
         }
 
@@ -967,7 +991,7 @@
         const scanQty = Number(scanQtyInput.value);
 
         if (!Number.isFinite(scanQty) || scanQty <= 0) {
-            alert('Qty scan harus lebih besar dari 0.');
+            alert(@Json.Serialize(T["Qty scan harus lebih besar dari 0."]));
             scanQtyInput.focus();
             return;
         }
@@ -993,7 +1017,7 @@
 
                 if (newQty > maxQty) {
                     alert(
-                        `Qty penerimaan melebihi sisa PO. Maksimal yang dapat diterima: ${maxQty}.`
+                        @(Json.Serialize(T["Qty penerimaan melebihi sisa PO. Maksimal yang dapat diterima: {0}.", "{0}"])).replace('{0}', maxQty)
                     );
                     return;
                 }
@@ -1019,11 +1043,14 @@
 
     // Pastikan POId dikirim melalui form.
     receiptForm.addEventListener('submit', function (event) {
-        receiptPOId.value = poSelect.value || '';
+        // Mode ubah: PO asal tetap (picker PO disembunyikan).
+        if (!isEditMode) {
+            receiptPOId.value = poSelect.value || '';
+        }
 
         if (tbody.querySelectorAll('tr').length === 0) {
             event.preventDefault();
-            alert('Tambahkan minimal satu item penerimaan.');
+            alert(@Json.Serialize(T["Tambahkan minimal satu item penerimaan."]));
             return;
         }
 
@@ -1054,13 +1081,33 @@
         if (invalidQty) {
             event.preventDefault();
             alert(
-                'Periksa kembali Qty. Jumlah penerimaan harus lebih dari 0 dan tidak boleh melebihi sisa PO.'
+                @Json.Serialize(T["Periksa kembali Qty. Jumlah penerimaan harus lebih dari 0 dan tidak boleh melebihi sisa PO."])
             );
         }
     });
 
     // Inisialisasi halaman.
     (function init() {
+        if (isEditMode) {
+            tampilkanPanelPO(null);
+            existingDetails.forEach(item => tambahBaris({
+                fromPO: false,
+                productId: item.productId,
+                orderedQty: 0,
+                remainingQty: 0,
+                qty: item.qty,
+                unitId: item.unitId,
+                unitPrice: item.unitPrice
+            }));
+
+            if (existingDetails.length === 0) {
+                tambahBaris({ fromPO: false, orderedQty: 0, remainingQty: 0, qty: 1, unitPrice: 0 });
+            }
+
+            hitungTotal();
+            return;
+        }
+
         const initialPOId =
             poSelect.value ||
             receiptPOId.value ||

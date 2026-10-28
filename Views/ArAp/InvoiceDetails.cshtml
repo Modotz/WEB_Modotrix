@@ -1,0 +1,455 @@
+@model ERP.Web.Models.InvoiceViewModel
+@{
+    var c = (ArApPageConfig)ViewData["Config"]!;
+    ViewData["Title"] = $"{T["Faktur"]} {Model.InvoiceNo}";
+    var (label, css) = ArApPages.StatusBadge(Model.Status, Model.PayStatus);
+    var paymentController = c.IsPayable ? "SupplierPayments" : "CustomerPayments";
+    var cur = Model.CurrencyCode;
+    var approval = ViewData["Approval"] as ApprovalDocumentViewModel;
+    var budgetApproval = ViewData["BudgetApproval"] as ApprovalDocumentViewModel;
+    var pending = Model.Status == "draft" && Model.ApprovalStatus == "pending";
+    // Level 13: write-off piutang (faktur penjualan IDR posted yang masih bersisa).
+    var canWriteOff = !c.IsPayable && Model.Status == "posted" && Model.Outstanding > 0 && !Model.IsForeign;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T[c.Title] @Model.InvoiceNo</h3>
+        <span class="badge @css">@T[label]</span>
+        @if (Model.ApprovalStatus != null)
+        {
+            var (al, ac, ai) = Appr.RequestBadge(Model.ApprovalStatus);
+            <span class="badge @ac" title="@T["Status persetujuan"]"><i class="bi @ai me-1"></i>@T[al]</span>
+        }
+        <span class="me-auto"></span>
+
+        @if (Model.Status == "draft" && !pending)
+        {
+            <a asp-controller="@c.Controller" asp-action="Edit" asp-route-uid="@Model.Uid" class="btn btn-warning btn-sm" data-perm="update"><i class="bi bi-pencil me-1"></i>@T["Ubah"]</a>
+            <form method="post" asp-controller="@c.Controller" asp-action="Post" asp-route-uid="@Model.Uid" class="d-inline" data-perm="update"
+                  onsubmit='return confirm(@Json.Serialize(T["Posting faktur {0}?", Model.InvoiceNo]));'>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i>@T["Posting"]</button>
+            </form>
+            <form method="post" asp-controller="@c.Controller" asp-action="Delete" asp-route-uid="@Model.Uid" class="d-inline" data-perm="delete"
+                  onsubmit='return confirm(@Json.Serialize(T["Hapus draft {0}?", Model.InvoiceNo]));'>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>@T["Hapus Draft"]</button>
+            </form>
+        }
+        @if (Model.Status == "posted" && Model.Outstanding > 0)
+        {
+            <a asp-controller="@paymentController" asp-action="Create" asp-route-partyUid="@Model.PartyUid" class="btn btn-success btn-sm" data-perm="@(c.IsPayable ? "supplier-payments" : "customer-payments"):create">
+                <i class="bi bi-cash-coin me-1"></i>@(c.IsPayable ? T["Bayar"] : T["Terima Pembayaran"])
+            </a>
+        }
+        @if (canWriteOff)
+        {
+            <button type="button" class="btn btn-outline-warning btn-sm" data-perm="doubtful-receivables:create" data-bs-toggle="modal" data-bs-target="#writeOffModal">
+                <i class="bi bi-shield-x me-1"></i>@T["Write-off"]
+            </button>
+        }
+        @if (Model.Status == "posted" && Model.PaidAmount == 0 && Model.WrittenOffAmount == 0)
+        {
+            <button type="button" class="btn btn-outline-danger btn-sm" data-perm="update" data-bs-toggle="modal" data-bs-target="#voidModal">
+                <i class="bi bi-x-circle me-1"></i>@T["Batalkan"]
+            </button>
+        }
+        <a asp-controller="@c.Controller" asp-action="Print" asp-route-uid="@Model.Uid" target="_blank" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i>@T["Cetak"]</a>
+        <a asp-controller="@c.Controller" asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    @if (Model.Status == "void")
+    {
+        <div class="alert alert-danger small"><i class="bi bi-x-octagon me-1"></i>@T["Faktur dibatalkan. Alasan: {0}", Model.VoidReason ?? "-"]</div>
+    }
+
+    @if (pending)
+    {
+        <div class="alert alert-warning small"><i class="bi bi-hourglass-split me-1"></i>@T["Faktur ini menunggu persetujuan: tetap draft (belum berjurnal, belum menjadi hutang) dan tidak dapat diubah atau dihapus sampai diputuskan atau pengajuannya ditarik."]</div>
+    }
+    @if (approval != null)
+    {
+        approval.ReturnUrl = Url.Action("Details", c.Controller, new { uid = Model.Uid });
+        <partial name="_ApprovalPanel" model="approval" />
+    }
+    @if (budgetApproval != null)
+    {
+        budgetApproval.ReturnUrl = Url.Action("Details", c.Controller, new { uid = Model.Uid });
+        <partial name="_ApprovalPanel" model="budgetApproval" />
+    }
+    @if (Model.IsOverdue)
+    {
+        <div class="alert alert-warning small"><i class="bi bi-alarm me-1"></i>@T["Lewat jatuh tempo {0}.", Acc.Date(Model.DueDate)]</div>
+    }
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card custom-card h-100">
+                <div class="card-body px-4 py-3">
+                    <div class="row g-3 text-white small">
+                        <div class="col-md-4"><div class="text-white-50">@T[c.PartyLabel]</div>@(Model.PartyName ?? "-")</div>
+                        <div class="col-md-4"><div class="text-white-50">@T[c.NumberLabel]</div>@(Model.PartyRef ?? "-")</div>
+                        <div class="col-md-4">
+                            <div class="text-white-50">@T["Sumber"]</div>
+                            @if (Model.ReceiptUid != null)
+                            {
+                                <a asp-controller="GoodsReceipts" asp-action="Details" asp-route-uid="@Model.ReceiptUid" class="text-info">@T[Model.SourceLabel]</a>
+                            }
+                            else if (Model.ApoUid != null)
+                            {
+                                <a asp-controller="AssetPurchaseOrders" asp-action="Details" asp-route-uid="@Model.ApoUid" class="text-info">@T[Model.SourceLabel]</a>
+                            }
+                            else
+                            {
+                                @T[Model.SourceLabel ?? "Manual"]
+                            }
+                        </div>
+                        <div class="col-md-4"><div class="text-white-50">@T["Tanggal"]</div>@Acc.Date(Model.InvoiceDate)</div>
+                        <div class="col-md-4"><div class="text-white-50">@T["Jatuh tempo"]</div>@Acc.Date(Model.DueDate)</div>
+                        <div class="col-md-4"><div class="text-white-50">@T["Akun"]</div>@Model.AccountCode @Model.AccountName</div>
+                        @if (Model.CostCenterId != null || Model.ProjectId != null)
+                        {
+                            <div class="col-md-4"><div class="text-white-50">@T["Cost center"]</div>@(Model.CostCenterCode == null ? "-" : $"{Model.CostCenterCode} {Model.CostCenterName}")</div>
+                            <div class="col-md-4">
+                                <div class="text-white-50">@T["Project"]</div>
+                                @if (Model.ProjectUid != null)
+                                {
+                                    <a asp-controller="ProjectProfitability" asp-action="Details" asp-route-uid="@Model.ProjectUid" class="text-info">@Model.ProjectCode</a> @Model.ProjectName
+                                }
+                                else
+                                {
+                                    @:-
+                                }
+                            </div>
+                        }
+                        <div class="col-md-4">
+                            <div class="text-white-50">@T["Tarif PPN"]</div>
+                            @(Model.TaxRateName ?? T["Tanpa PPN"])
+                            @if (Model.TaxRateId != null && c.IsPayable && !Model.TaxCreditable)
+                            {
+                                <span class="badge bg-danger ms-1">@T["Tidak kreditabel"]</span>
+                            }
+                        </div>
+                        @if (Model.TaxRateId != null)
+                        {
+                            <div class="col-md-4">
+                                <div class="text-white-50">@T["No. Faktur Pajak"]</div>
+                                @if (Model.TaxInvoiceNo != null)
+                                {
+                                    <span class="font-monospace">@Model.TaxInvoiceNo</span>
+                                }
+                                else
+                                {
+                                    <span class="text-warning">@T["belum diisi"]</span>
+                                }
+                                @if (Model.Status != "void")
+                                {
+                                    <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-info" data-perm="update" data-bs-toggle="modal" data-bs-target="#nsfpModal"
+                                            title="@T["Isi / ubah No. Faktur Pajak"]"><i class="bi bi-pencil"></i></button>
+                                }
+                            </div>
+                        }
+                        @if (Model.Pph23RateId != null)
+                        {
+                            <div class="col-md-4">
+                                <div class="text-white-50">@T["PPh 23"]</div>
+                                @Model.Pph23RateName
+                                @if (!Model.Pph23HasNpwp)
+                                {
+                                    <span class="badge bg-warning text-dark ms-1">@T["Tanpa NPWP"]</span>
+                                }
+                                <div class="small">
+                                    @T["Bukti Potong"]:
+                                    @if (Model.Pph23CertNo != null)
+                                    {
+                                        <span class="font-monospace">@Model.Pph23CertNo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-warning">@T["belum diisi"]</span>
+                                    }
+                                    · @T["Setoran"]: @(Model.Pph23DepositNo ?? T["belum disetor"])
+                                </div>
+                                <a asp-controller="Pph23" asp-action="Period" asp-route-period="@Model.InvoiceDate.ToString("yyyy-MM")" class="small text-info">@T["Lihat masa PPh 23"]</a>
+                            </div>
+                        }
+                        @if (Model.IsForeign)
+                        {
+                            <div class="col-md-4">
+                                <div class="text-white-50">@T["Mata uang / kurs faktur"]</div>
+                                <span class="badge bg-info text-dark">@cur</span> @Acc.Rate(Model.FxRate) IDR
+                            </div>
+                        }
+                        @if (Model.IsDeferred)
+                        {
+                            <div class="col-md-4">
+                                <div class="text-white-50">@(c.IsPayable ? T["Prepaid"] : T["Diterima di muka"])</div>
+                                <span class="badge @(c.IsPayable ? "bg-primary" : "bg-info text-dark")"><i class="bi bi-calendar-range me-1"></i>@T["{0} bulan mulai {1}", Model.DeferralMonths!, Model.DeferralStart?.ToString("yyyy-MM") ?? "-"]</span>
+                            </div>
+                        }
+                        <div class="col-md-8"><div class="text-white-50">@T["Keterangan"]</div>@(Model.Description ?? "-")</div>
+                        <div class="col-md-4">
+                            <div class="text-white-50">@T["Jurnal"]</div>
+                            @if (Model.JournalUid != null)
+                            {
+                                <a asp-controller="Journals" asp-action="Details" asp-route-uid="@Model.JournalUid" class="text-info">@Model.JournalNo</a>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card custom-card h-100">
+                <div class="card-body px-4 py-3">
+                    <table class="table table-sm custom-table mb-0">
+                        <tr><td class="text-white-50">@T["DPP"]</td><td class="text-end text-white">@Acc.Fx(Model.Amount, cur)</td></tr>
+                        @if (Model.TaxRateId != null && Model.TaxBase != Model.Amount)
+                        {
+                            <tr><td class="text-white-50">@T["DPP Nilai Lain"]</td><td class="text-end text-white-50">@Acc.Fx(Model.TaxBase, cur)</td></tr>
+                        }
+                        <tr><td class="text-white-50">@T["PPN"] @Model.TaxPercent.ToString("0.##")%</td><td class="text-end text-white">@Acc.Fx(Model.TaxAmount, cur)</td></tr>
+                        @if (Model.Pph23RateId != null)
+                        {
+                            <tr><td class="text-white-50">@T["Total tagihan (DPP + PPN)"]</td><td class="text-end text-white">@Acc.Fx(Model.GrossTotal, cur)</td></tr>
+                            <tr>
+                                <td class="text-white-50">@T["PPh 23"] @Model.Pph23Percent.ToString("0.##")% <span class="small">(@T["DPP"] @Acc.Fx(Model.Pph23Base, cur))</span></td>
+                                <td class="text-end text-warning">(@Acc.Fx(Model.Pph23Amount, cur))</td>
+                            </tr>
+                            <tr><td class="text-white fw-bold">@T["Hutang ke vendor"]</td><td class="text-end text-white fw-bold">@Acc.Fx(Model.Total, cur)</td></tr>
+                        }
+                        else
+                        {
+                            <tr><td class="text-white fw-bold">@T["Total"]</td><td class="text-end text-white fw-bold">@Acc.Fx(Model.Total, cur)</td></tr>
+                        }
+                        <tr><td class="text-white-50">@T["Dibayar"]</td><td class="text-end text-white">@Acc.Fx(Model.PaidAmount, cur)</td></tr>
+                        @if (Model.WrittenOffAmount > 0)
+                        {
+                            <tr><td class="text-white-50">@T["Di-write-off"]</td><td class="text-end text-warning">@Acc.Fx(Model.WrittenOffAmount, cur)</td></tr>
+                        }
+                        <tr><td class="text-warning fw-semibold">@T["Sisa"]</td><td class="text-end text-warning fw-semibold">@Acc.Fx(Model.Outstanding, cur)</td></tr>
+                    </table>
+                    @if (Model.IsForeign)
+                    {
+                        <div class="text-white-50 small mt-3 mb-1">@T["Nilai IDR (kurs faktur, dasar jurnal)"]</div>
+                        <table class="table table-sm custom-table mb-0">
+                            <tr><td class="text-white-50">@T["DPP"]</td><td class="text-end text-white">@Acc.Money(Model.FunctionalAmount)</td></tr>
+                            <tr><td class="text-white-50">@T["PPN"]</td><td class="text-end text-white">@Acc.Money(Model.FunctionalTax)</td></tr>
+                            <tr><td class="text-white fw-bold">@T["Total"]</td><td class="text-end text-white fw-bold">@Acc.Money(Model.FunctionalTotal)</td></tr>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card custom-card mt-3">
+        <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white fs-6">@(c.IsPayable ? T["Riwayat Pembayaran"] : T["Riwayat Penerimaan"])</span></div>
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>@T["NO."]</th><th>@T["TANGGAL"]</th><th>@T["STATUS"]</th><th class="text-end">@T["ALOKASI"]</th>
+                        @if (Model.IsForeign)
+                        {
+                            <th class="text-end">@T["KURS BAYAR"]</th><th class="text-end">@T["PENGURANG (IDR)"]</th><th class="text-end">@T["SELISIH KURS"]</th>
+                        }
+                        <th class="text-center" style="width: 70px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Payments.Count == 0)
+                    {
+                        <tr><td colspan="@(Model.IsForeign ? 8 : 5)" class="text-center text-white-50 py-3">@T["Belum ada pembayaran."]</td></tr>
+                    }
+                    @foreach (var p in Model.Payments)
+                    {
+                        var (pl, pc) = ArApPages.StatusBadge(p.Status);
+                        <tr>
+                            <td><a asp-controller="@paymentController" asp-action="Details" asp-route-uid="@p.PaymentUid" class="text-info text-decoration-none">@p.PaymentNo</a></td>
+                            <td class="text-white small">@Acc.Date(p.PaymentDate)</td>
+                            <td><span class="badge @pc">@T[pl]</span></td>
+                            <td class="text-end text-white">@Acc.Fx(p.Amount, cur)</td>
+                            @if (Model.IsForeign)
+                            {
+                                <td class="text-end text-white-50 small">@Acc.Rate(p.PaymentFxRate)</td>
+                                <td class="text-end text-white">@(p.Status == "draft" ? "-" : Acc.Money(p.FunctionalAmount))</td>
+                                <td class="text-end @(p.FxGainLoss >= 0 ? "text-success" : "text-danger")">@(p.Status == "draft" ? "-" : Acc.Money(p.FxGainLoss))</td>
+                            }
+                            <td class="text-center">
+                                <div class="row-actions">
+                                    <a asp-controller="@paymentController" asp-action="Details" asp-route-uid="@p.PaymentUid" class="act-btn act-view" title="@T["Lihat"]"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (Model.DeferralSchedule is { } ds)
+    {
+        var (dl, dc) = DeferralScheduleViewModel.Badge(ds.Status);
+        <div class="card custom-card mt-3">
+            <div class="card-header custom-card-header d-flex flex-wrap align-items-center gap-2 py-3 px-4">
+                <span class="fw-semibold text-white fs-6">@(c.IsPayable ? T["Jadwal Prepaid"] : T["Jadwal Pendapatan Diterima di Muka"])</span>
+                <span class="badge @dc">@T[dl]</span>
+                <span class="small text-white-50 ms-auto">@T["Diakui {0} dari {1} · sisa {2}", Acc.Money(ds.RecognizedAmount), Acc.Money(ds.TotalAmount), Acc.Money(ds.RemainingAmount)]</span>
+                <a asp-controller="DeferralSchedules" asp-action="Details" asp-route-uid="@ds.Uid" class="btn btn-outline-info btn-sm"><i class="bi bi-box-arrow-up-right me-1"></i>@T["Buka jadwal"]</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table custom-table align-middle mb-0">
+                    <thead><tr><th>@T["BULAN"]</th><th class="text-end">@T["NOMINAL"]</th><th>@T["STATUS"]</th><th>@T["JURNAL"]</th></tr></thead>
+                    <tbody>
+                        @foreach (var l in ds.Lines)
+                        {
+                            <tr>
+                                <td class="text-white">@l.Period</td>
+                                <td class="text-end text-white">@Acc.Money(l.Amount)</td>
+                                <td><span class="badge @(l.IsRecognized ? "bg-success" : "bg-secondary")">@T[l.IsRecognized ? "Diakui" : "Rencana"]</span></td>
+                                <td class="small">
+                                    @if (l.JournalUid != null)
+                                    {
+                                        <a asp-controller="Journals" asp-action="Details" asp-route-uid="@l.JournalUid" class="text-info">@l.JournalNo</a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (Model.WriteOffs.Count > 0)
+    {
+        <div class="card custom-card mt-3">
+            <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white fs-6">@T["Write-off Piutang"]</span></div>
+            <div class="table-responsive">
+                <table class="table custom-table align-middle mb-0">
+                    <thead><tr><th>@T["NO."]</th><th>@T["TANGGAL"]</th><th>@T["METODE"]</th><th>@T["ALASAN"]</th><th class="text-end">@T["NOMINAL"]</th><th class="text-center" style="width: 70px;">@T["AKSI"]</th></tr></thead>
+                    <tbody>
+                        @foreach (var w in Model.WriteOffs)
+                        {
+                            <tr>
+                                <td><a asp-controller="Journals" asp-action="Details" asp-route-uid="@w.JournalUid" class="text-info text-decoration-none">@w.WriteOffNo</a></td>
+                                <td class="text-white small">@Acc.Date(w.WriteOffDate)</td>
+                                <td>
+                                    <span class="badge @(w.Method == "allowance" ? "bg-warning text-dark" : "bg-secondary")">@T[WriteOffViewModel.MethodLabel(w.Method)]</span>
+                                    @if (w.Status == "void")
+                                    {
+                                        <span class="badge bg-danger" title="@w.VoidReason">@T["Dibatalkan"]</span>
+                                    }
+                                </td>
+                                <td class="text-white small">@w.Reason</td>
+                                <td class="text-end @(w.Status == "void" ? "text-white-50 text-decoration-line-through" : "text-white")">@Acc.Money(w.Amount)</td>
+                                <td class="text-center">
+                                    @if (w.Status == "posted")
+                                    {
+                                        <form method="post" asp-controller="DoubtfulReceivables" asp-action="VoidWriteOff" class="d-inline" data-perm="doubtful-receivables:delete"
+                                              onsubmit='const r = prompt(@Json.Serialize(T["Alasan pembatalan write-off {0}:", w.WriteOffNo])); if (!r) return false; this.reason.value = r; return true;'>
+                                            <input type="hidden" name="uid" value="@w.Uid" />
+                                            <input type="hidden" name="invoiceUid" value="@Model.Uid" />
+                                            <input type="hidden" name="reason" />
+                                            <button type="submit" class="btn btn-link btn-sm p-0 text-danger" title="@T["Batalkan"]"><i class="bi bi-x-circle"></i></button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@if (canWriteOff)
+{
+    <div class="modal fade" id="writeOffModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-controller="DoubtfulReceivables" asp-action="WriteOff" class="modal-content">
+                <input type="hidden" name="invoiceUid" value="@Model.Uid" />
+                <input type="hidden" name="returnToInvoice" value="true" />
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Write-off Piutang {0}", Model.InvoiceNo]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Hapus piutang yang terbukti tidak tertagih. Via cadangan: D 1-1210 / K 1-1200 (beban sudah diakui saat estimasi). Langsung: D 5-8000 / K 1-1200 (beban diakui sekarang)."]</p>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label" for="woDate">@T["Tanggal"]</label>
+                            <input type="date" class="form-control" name="date" id="woDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@Model.InvoiceDate.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" for="woAmount">@T["Nominal (sisa {0})", Acc.Money(Model.Outstanding)]</label>
+                            <input type="number" step="0.01" min="0.01" max="@Model.Outstanding.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control text-end" name="amount" id="woAmount"
+                                   value="@Model.Outstanding.ToString(System.Globalization.CultureInfo.InvariantCulture)" required />
+                        </div>
+                    </div>
+                    <label class="form-label mt-2" for="woReason">@T["Alasan (wajib)"]</label>
+                    <input type="text" class="form-control" name="reason" id="woReason" maxlength="255" placeholder="@T["mis. customer pailit"]" required />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                    <button type="submit" name="method" value="allowance" class="btn btn-warning">@T["Write-off via Cadangan"]</button>
+                    <button type="submit" name="method" value="direct" class="btn btn-outline-warning">@T["Write-off Langsung"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.TaxRateId != null && Model.Status != "void")
+{
+    <div class="modal fade" id="nsfpModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-controller="@c.Controller" asp-action="UpdateTaxInvoiceNo" asp-route-uid="@Model.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["No. Faktur Pajak"] — @Model.InvoiceNo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Nomor seri Faktur Pajak (NSFP) dibuat Coretax saat faktur pajak diunggah dan disetujui. Isi di sini setelahnya; tidak mengubah jurnal. Kosongkan untuk menghapus."]</p>
+                    <label class="form-label" for="nsfp">@T["No. Faktur Pajak (17 digit)"]</label>
+                    <input type="text" class="form-control font-monospace" name="taxInvoiceNo" id="nsfp" value="@Model.TaxInvoiceNo" maxlength="25" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.Status == "posted" && Model.PaidAmount == 0 && Model.WrittenOffAmount == 0)
+{
+    <div class="modal fade" id="voidModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-controller="@c.Controller" asp-action="Void" asp-route-uid="@Model.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batalkan Faktur {0}", Model.InvoiceNo]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Jurnal faktur dibalik dengan jurnal pembalik; faktur berstatus Dibatalkan dan tetap tercatat."]</p>
+                    <div class="mb-3">
+                        <label class="form-label" for="voidDate">@T["Tanggal pembatalan"]</label>
+                        <input type="date" class="form-control" name="date" id="voidDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@Model.InvoiceDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <label class="form-label" for="voidReason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="voidReason" rows="3" maxlength="200" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Batalkan Faktur"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

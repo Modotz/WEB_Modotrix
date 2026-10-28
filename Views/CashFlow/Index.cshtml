@@ -1,0 +1,73 @@
+@model ERP.Web.Models.CashFlowViewModel
+@{
+    ViewData["Title"] = T["Arus Kas"];
+    var qs = $"?from={Model.From:yyyy-MM-dd}&to={Model.To:yyyy-MM-dd}";
+    var header = new ListHeaderModel
+    {
+        Title = T["Periode {0} s/d {1}", Acc.Date(Model.From), Acc.Date(Model.To)],
+        Description = T["Akun kas:"] + " " + string.Join(", ", Model.CashAccounts),
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("Print") + qs
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Arus Kas"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md">
+                        <label class="form-label" for="from">@T["Dari"]</label>
+                        <input type="date" class="form-control" id="from" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="to">@T["Sampai"]</label>
+                        <input type="date" class="form-control" id="to" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+                <div class="menu-description small mt-2">@T["Metode langsung. Klasifikasi dari Kategori Arus Kas akun lawan di Bagan Akun."]</div>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.IsReconciled)
+    {
+        <div class="alert alert-danger small py-2">
+            <i class="bi bi-exclamation-octagon me-1"></i>@T["Saldo akhir laporan ({0}) berbeda dengan saldo kas buku besar ({1}).", Acc.Money(Model.ClosingCash), Acc.Money(Model.ClosingCashLedger)]
+        </div>
+    }
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+            <div class="table-responsive">
+                <partial name="_Body" model="Model" />
+            </div>
+        </div>
+    </div>
+</div>

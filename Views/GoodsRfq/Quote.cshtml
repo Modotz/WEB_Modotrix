@@ -3,7 +3,7 @@
 @using System.Globalization
 
 @{
-    ViewData["Title"] = "Input Penawaran — RFQ " + Model.RfqNo;
+    ViewData["Title"] = T["Input Penawaran — RFQ {0}", Model.RfqNo];
 
     var culture = new CultureInfo("id-ID");
     var inv = CultureInfo.InvariantCulture;
@@ -21,39 +21,37 @@
 <div class="po-create-page">
 
     <div class="product-page-title">
-        Input Penawaran — RFQ @Model.RfqNo
+        @T["Input Penawaran — RFQ {0}", Model.RfqNo]
     </div>
 
     <div class="card po-detail-card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Input Penawaran — RFQ @Model.RfqNo</strong>
+            <strong>@T["Input Penawaran — RFQ {0}", Model.RfqNo]</strong>
 
-            <a asp-action="Details" asp-route-id="@Model.Id"
-               class="btn btn-sm btn-secondary" title="Kembali">
+            <a asp-action="Details" asp-route-uid="@Model.Uid"
+               class="btn btn-sm btn-secondary" title="@T["Kembali"]">
                 <i class="bi bi-arrow-left"></i>
             </a>
         </div>
 
         <div class="card-body">
             <p class="mb-3">
-                Masukkan <strong>harga penawaran dari supplier</strong> untuk tiap item
-                (per satuan). Subtotal &amp; total dihitung otomatis. Setelah disimpan,
-                RFQ siap dijadikan PO.
+                @Html.Raw(T["Masukkan <strong>harga penawaran dari supplier</strong> untuk tiap item (per satuan). Subtotal &amp; total dihitung otomatis. Setelah disimpan, RFQ siap dijadikan PO."])
             </p>
 
-            <form asp-action="Quote" asp-route-id="@Model.Id" method="post" id="quoteForm">
+            <form asp-action="Quote" asp-route-uid="@Model.Uid" method="post" id="quoteForm">
 
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
                                 <th style="width:32px">#</th>
-                                <th>PRODUK</th>
-                                <th class="text-end" style="width:90px">QTY</th>
-                                <th style="width:100px">SATUAN</th>
-                                <th class="text-end" style="width:140px">EST. HARGA</th>
-                                <th style="width:170px">HARGA PENAWARAN</th>
-                                <th style="width:150px">SUBTOTAL</th>
+                                <th>@T["PRODUK"]</th>
+                                <th class="text-end" style="width:90px">@T["QTY"]</th>
+                                <th style="width:100px">@T["SATUAN"]</th>
+                                <th class="text-end" style="width:140px">@T["EST. HARGA"]</th>
+                                <th style="width:170px">@T["HARGA PENAWARAN"]</th>
+                                <th style="width:150px">@T["SUBTOTAL"]</th>
                             </tr>
                         </thead>
 
@@ -92,7 +90,7 @@
                         <tfoot>
                             <tr>
                                 <td colspan="6" class="text-end border-0">
-                                    <strong>Total Penawaran</strong>
+                                    <strong>@T["Total Penawaran"]</strong>
                                 </td>
                                 <td class="border-0">
                                     <input type="text"
@@ -109,12 +107,12 @@
                 <div class="po-summary-wrap">
                     <div class="po-form-actions">
                         <button type="submit" class="btn po-btn-save">
-                            <i class="bi bi-save"></i> Simpan Penawaran
+                            <i class="bi bi-save"></i> @T["Simpan Penawaran"]
                         </button>
 
-                        <a asp-action="Details" asp-route-id="@Model.Id"
+                        <a asp-action="Details" asp-route-uid="@Model.Uid"
                            class="btn po-btn-cancel">
-                            Batal
+                            @T["Batal"]
                         </a>
                     </div>
                 </div>

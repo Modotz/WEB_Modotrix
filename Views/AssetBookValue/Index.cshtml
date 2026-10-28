@@ -1,0 +1,94 @@
+@model ERP.Web.Models.BookValueReportViewModel
+@{
+    ViewData["Title"] = T["Nilai Buku Aset"];
+    var qs = $"?asOf={Model.AsOf:yyyy-MM-dd}" + (Model.CategoryUid != null ? $"&categoryUid={Model.CategoryUid}" : "");
+    var header = new ListHeaderModel
+    {
+        Title = T["Nilai Buku Aset"],
+        Count = Model.Categories.Sum(c => c.Rows.Count),
+        Description = Model.CategoryName == null
+            ? T["Per {0}", Acc.Date(Model.AsOf)]
+            : T["Per {0}", Acc.Date(Model.AsOf)] + " · " + T["Kategori"] + " " + Model.CategoryName,
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Nilai Buku Aset"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="asOf">@T["Per tanggal"]</label>
+                        <input type="date" class="form-control" id="asOf" name="asOf" value="@Model.AsOf.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="categoryUid">@T["Kategori"]</label>
+                        <select class="form-select" id="categoryUid" name="categoryUid">
+                            <option value="">@T["Semua"]</option>
+                            @foreach (var c in Model.CategoryOptions)
+                            {
+                                <option value="@c.Uid" selected="@(c.Uid == Model.CategoryUid)">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.IsReconciled)
+    {
+        <div class="alert alert-success small py-2"><i class="bi bi-check-circle me-1"></i>@T["Subledger aset sama dengan saldo buku besar."]</div>
+    }
+    else
+    {
+        <div class="alert alert-danger small py-2"><i class="bi bi-exclamation-octagon me-1"></i>@T["Subledger aset berbeda dengan saldo buku besar — periksa jurnal pada akun aset tetap."]</div>
+    }
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card mb-3">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+            <div class="table-responsive">
+                <partial name="_Body" model="Model" />
+            </div>
+        </div>
+    </div>
+
+    <!-- GL CROSS-CHECK -->
+    <div class="card supplier-card supplier-table-card">
+        <div class="card-header bg-transparent d-flex flex-wrap align-items-center gap-2 py-3">
+            <span class="fw-bold fs-5">@T["Cek silang buku besar"]</span>
+            <span class="menu-description small ms-1">@T["seluruh aset, per {0}", Acc.Date(Model.AsOf)]</span>
+        </div>
+        <div class="table-responsive">
+            <partial name="_GlCheck" model="Model" />
+        </div>
+    </div>
+</div>

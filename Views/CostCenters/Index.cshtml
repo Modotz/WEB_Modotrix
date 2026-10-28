@@ -1,0 +1,146 @@
+@model List<ERP.Web.Models.CostCenterViewModel>
+@{
+    ViewData["Title"] = T["Cost Center"];
+    var header = new ListHeaderModel
+    {
+        Title = T["Cost Center"],
+        Count = Model.Count,
+        Description = T["Unit akuntabilitas biaya — dimensi di baris jurnal"],
+        AddOnClick = "openCcModal()",
+        AddText = T["Tambah Cost Center"]
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Cost Center"]</h3>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Cost center menjawab \"divisi mana yang bertanggung jawab atas biaya ini?\". Ia bukan akun baru: tag cost center ditempel ke baris beban di faktur, transaksi kas, dan jurnal umum, sehingga satu akun beban bisa diiris per divisi. Laporan per cost center hanya menghitung biaya (cost-only). Cost center yang sudah dipakai tidak bisa dihapus atau diganti kodenya — nonaktifkan saja."]
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 160px;">@T["KODE"]</th>
+                        <th>@T["NAMA"]</th>
+                        <th class="text-end" style="width: 130px;">@T["BARIS JURNAL"]</th>
+                        <th class="text-center" style="width: 100px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr><td colspan="4" class="text-center text-muted py-4">@T["Belum ada cost center."]</td></tr>
+                    }
+                    @foreach (var c in Model)
+                    {
+                        <tr class="@(c.IsActive ? "" : "opacity-50")">
+                            <td class="ps-4 text-white fw-semibold">@c.Code</td>
+                            <td class="text-white">
+                                @c.Name
+                                @if (!c.IsActive)
+                                {
+                                    <span class="badge bg-dark ms-1">@T["Nonaktif"]</span>
+                                }
+                                @if (!string.IsNullOrEmpty(c.Description))
+                                {
+                                    <div class="text-white-50 small">@c.Description</div>
+                                }
+                            </td>
+                            <td class="text-end text-white-50 small">@(c.UsageCount == 0 ? "-" : c.UsageCount.ToString("N0", Acc.Culture))</td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                    <button type="button" class="act-btn act-edit btn-edit-cc" data-perm="update" title="@T["Ubah"]"
+                                            data-cc="@System.Text.Json.JsonSerializer.Serialize(c)"><i class="bi bi-pencil"></i></button>
+                                    @if (c.UsageCount == 0)
+                                    {
+                                        <form method="post" asp-action="Delete" asp-route-uid="@c.Uid" data-perm="delete"
+                                              onsubmit='return confirm(@Json.Serialize(T["Hapus cost center {0}?", c.Code]));'>
+                                            <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="ccModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Create" class="modal-content" id="ccForm">
+            <input type="hidden" name="Uid" id="cUid" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="ccTitle">@T["Tambah Cost Center"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small d-none" id="cLockedNote">@T["Cost center sudah dipakai jurnal: kode terkunci."]</div>
+                <div class="row g-3">
+                    <div class="col-5">
+                        <label class="form-label" for="cCode">@T["Kode"]</label>
+                        <input type="text" class="form-control text-uppercase" name="Code" id="cCode" maxlength="20" required placeholder="CC-IT" />
+                    </div>
+                    <div class="col-7">
+                        <label class="form-label" for="cName">@T["Nama"]</label>
+                        <input type="text" class="form-control" name="Name" id="cName" maxlength="100" required />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="cDesc">@T["Keterangan"]</label>
+                        <input type="text" class="form-control" name="Description" id="cDesc" maxlength="255" />
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="cActive" checked />
+                            <input type="hidden" name="IsActive" value="false" />
+                            <label class="form-check-label" for="cActive">@T["Aktif (tampil di pilihan form)"]</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const modal = new bootstrap.Modal($('ccModal'));
+            const createUrl = '@Url.Action("Create")', updateUrl = '@Url.Action("Update")';
+            const txtAdd = @Json.Serialize(T["Tambah Cost Center"]), txtEdit = @Json.Serialize(T["Ubah Cost Center"]);
+
+            function open(c) {
+                $('ccForm').action = c ? updateUrl : createUrl;
+                $('ccTitle').textContent = c ? `${txtEdit} ${c.Code}` : txtAdd;
+                $('cUid').value = c?.Uid ?? '';
+                $('cCode').value = c?.Code ?? '';
+                $('cName').value = c?.Name ?? '';
+                $('cDesc').value = c?.Description ?? '';
+                $('cActive').checked = c ? c.IsActive : true;
+                const locked = !!(c && c.UsageCount > 0);
+                $('cCode').readOnly = locked;
+                $('cLockedNote').classList.toggle('d-none', !locked);
+                modal.show();
+            }
+
+            window.openCcModal = () => open(null);
+            document.querySelectorAll('.btn-edit-cc').forEach(b => b.addEventListener('click', () => open(JSON.parse(b.dataset.cc))));
+        })();
+    </script>
+}

@@ -1,0 +1,185 @@
+@model ERP.Web.Models.BankReconciliationsIndexViewModel
+@{
+    ViewData["Title"] = T["Rekonsiliasi Bank"];
+    var header = new ListHeaderModel
+    {
+        Title = Model.Status == "completed" ? T["Riwayat Rekonsiliasi"] : T["Rekening Koran"],
+        Count = Model.Statements.Count,
+        Description = T["Rekening koran = staging; mengisinya tidak membuat jurnal"],
+        AddOnClick = Model.Accounts.Count > 0 ? "openStatementModal()" : null,
+        AddText = T["Rekening Koran Baru"]
+    };
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Rekonsiliasi Bank"]</h3>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Untuk rekening bank yang rekonsiliasinya aktif, pembayaran hutang dicatat ke \"Pembayaran Dalam Proses\" dan penerimaan piutang ke \"Penerimaan Dalam Proses\" — belum ke akun bank. Saat transaksi itu muncul di rekening koran dan dicocokkan, sistem membuat jurnal clearing BARU (akun transisi ↔ bank) bertanggal rekening koran; jurnal pelunasan aslinya tidak diubah. Mutasi yang langsung ke bank (Transaksi Kas & Bank, setoran pajak) cukup ditandai cocok. Item baru dari rekening koran (biaya adm, bunga) dicatat lewat Transaksi Kas & Bank, lalu dicocokkan."]
+    </div>
+
+    @if (Model.Accounts.Count == 0)
+    {
+        <div class="alert alert-warning small">
+            <i class="bi bi-exclamation-triangle me-1"></i>@T["Belum ada rekening bank yang rekonsiliasinya aktif. Aktifkan di menu Kas & Bank (ubah rekening → \"Rekonsiliasi bank\")."]
+            <a asp-controller="CashAccounts" asp-action="Index" class="alert-link ms-1">@T["Kas & Bank"]</a>
+        </div>
+    }
+
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+        <div>
+            <label class="form-label text-white small mb-1" for="fAccount">@T["Rekening"]</label>
+            <select class="form-select form-select-sm" name="cashAccountId" id="fAccount" onchange="this.form.submit()">
+                <option value="">@T["-- Semua --"]</option>
+                @foreach (var a in Model.Accounts)
+                {
+                    <option value="@a.Id" selected="@(a.Id == Model.CashAccountId)">@a.Name</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="form-label text-white small mb-1" for="fStatus">@T["Status"]</label>
+            <select class="form-select form-select-sm" name="status" id="fStatus" onchange="this.form.submit()">
+                <option value="">@T["-- Semua --"]</option>
+                <option value="draft" selected="@(Model.Status == "draft")">@T["Draft"]</option>
+                <option value="completed" selected="@(Model.Status == "completed")">@T["Selesai (riwayat)"]</option>
+            </select>
+        </div>
+        <a asp-controller="BankOutstanding" asp-action="Index" class="btn btn-outline-info btn-sm ms-auto"><i class="bi bi-hourglass-split me-1"></i>@T["Item Belum Terkonfirmasi"]</a>
+    </form>
+
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["NO."]</th>
+                        <th>@T["REKENING"]</th>
+                        <th>@T["PERIODE"]</th>
+                        <th class="text-end">@T["SALDO AWAL"]</th>
+                        <th class="text-end">@T["SALDO AKHIR"]</th>
+                        <th class="text-end">@T["SELISIH"]</th>
+                        <th class="text-center">@T["COCOK"]</th>
+                        <th>@T["STATUS"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Statements.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada rekening koran."]</td></tr>
+                    }
+                    @foreach (var s in Model.Statements)
+                    {
+                        var (sl, sc) = ERP.Web.Models.BankStatementListViewModel.StatusBadge(s.Status);
+                        <tr>
+                            <td class="ps-4">
+                                <a asp-action="Details" asp-route-uid="@s.Uid" class="text-info text-decoration-none">@s.StatementNo</a>
+                                @if (!string.IsNullOrEmpty(s.Reference))
+                                {
+                                    <div class="text-white-50 small">@s.Reference</div>
+                                }
+                            </td>
+                            <td class="text-white">@s.CashAccountName</td>
+                            <td class="text-white small">@Acc.Date(s.PeriodFrom) – @Acc.Date(s.StatementDate)</td>
+                            <td class="text-end text-white">@Acc.Money(s.OpeningBalance)</td>
+                            <td class="text-end text-white">@Acc.Money(s.ClosingBalance)</td>
+                            <td class="text-end @(s.Difference == 0 ? "text-success" : "text-warning fw-semibold")">@(s.Difference == 0 ? T["Cocok"] : Acc.Money(s.Difference))</td>
+                            <td class="text-center text-white small">@s.MatchedCount / @s.LineCount</td>
+                            <td>
+                                <span class="badge @sc">@T[sl]</span>
+                                @if (s.Status == "completed" && (s.Difference != 0 || s.MatchedCount < s.LineCount))
+                                {
+                                    <span class="badge bg-warning text-dark">@T["Ada selisih"]</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="statementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="post" asp-action="Create" class="modal-content" id="statementForm">
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Rekening Koran Baru"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="sAccount">@T["Rekening bank"]</label>
+                        <select class="form-select" name="CashAccountId" id="sAccount" required>
+                            @foreach (var a in Model.Accounts)
+                            {
+                                <option value="@a.Id" selected="@(a.Id == Model.CashAccountId)">@a.Name @(a.AccountNo != null ? $"({a.AccountNo})" : "")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="sRef">@T["Referensi rekening koran"]</label>
+                        <input type="text" class="form-control" name="Reference" id="sRef" maxlength="100" placeholder="@T["mis. RK BCA Oktober 2026"]" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="sFrom">@T["Periode dari"]</label>
+                        <input type="date" class="form-control" name="PeriodFrom" id="sFrom" value="@today" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="sTo">@T["Tanggal saldo akhir"]</label>
+                        <input type="date" class="form-control" name="StatementDate" id="sTo" value="@today" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="sOpen">@T["Saldo awal"]</label>
+                        <input type="number" step="0.01" class="form-control text-end" name="OpeningBalance" id="sOpen" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="sClose">@T["Saldo akhir"]</label>
+                        <input type="number" step="0.01" class="form-control text-end" name="ClosingBalance" id="sClose" required />
+                    </div>
+                    <div class="col-12 form-text" id="sHint">@T["Saldo awal diusulkan dari saldo akhir rekening koran sebelumnya (rantai saldo) — hanya usulan."]</div>
+                    <div class="col-12">
+                        <label class="form-label" for="sNote">@T["Catatan"]</label>
+                        <input type="text" class="form-control" name="Note" id="sNote" maxlength="255" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Buat"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const modalEl = $('statementModal');
+            if (!modalEl) return;
+            const modal = new bootstrap.Modal(modalEl);
+            const url = '@Url.Action("Defaults")';
+
+            async function loadDefaults() {
+                const res = await fetch(`${url}?cashAccountId=${$('sAccount').value}`);
+                if (res.status !== 200) return;
+                const d = await res.json();
+                $('sFrom').value = d.periodFrom;
+                $('sTo').value = d.statementDate;
+                $('sOpen').value = d.openingBalance;
+            }
+
+            $('sAccount').addEventListener('change', loadDefaults);
+            window.openStatementModal = () => { loadDefaults(); modal.show(); };
+        })();
+    </script>
+}

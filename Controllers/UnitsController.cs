@@ -9,10 +9,12 @@ namespace ERP.Web.Controllers;
 public class UnitsController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public UnitsController(ApiClient api)
+    public UnitsController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     [HttpGet]
@@ -33,9 +35,9 @@ public class UnitsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var unit = await _api.GetUnitAsync(id);
+        var unit = await _api.GetUnitAsync(uid);
 
         if (unit is null)
             return NotFound();
@@ -51,7 +53,7 @@ public class UnitsController : Controller
         {
             ModelState.AddModelError(
                 nameof(model.Code),
-                "Kode satuan wajib diisi."
+                _t["Kode satuan wajib diisi."]
             );
         }
 
@@ -116,6 +118,13 @@ public class UnitsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        // UID wajib untuk update (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
+        {
+            TempData["Error"] = "Satuan tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var result = await _api.UpdateUnitAsync(model);
 
         TempData[result.Success ? "Success" : "Error"] =
@@ -129,9 +138,9 @@ public class UnitsController : Controller
     // DELETE di MVC juga POST.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
-        var result = await _api.DeleteUnitAsync(id);
+        var result = await _api.DeleteUnitAsync(uid);
 
         TempData[result.Success ? "Success" : "Error"] =
             result.Success
@@ -152,8 +161,8 @@ public class UnitsController : Controller
         var worksheet = workbook.Worksheets.Add("Unit");
 
         worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Kode";
-        worksheet.Cell(1, 3).Value = "Nama";
+        worksheet.Cell(1, 2).Value = _t["Kode"];
+        worksheet.Cell(1, 3).Value = _t["Nama"];
 
         var header = worksheet.Range("A1:I1");
 
@@ -213,9 +222,9 @@ public class UnitsController : Controller
                     {
                         text.Span("Unit").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span(_t["Dicetak: {0}", DateTime.Now.ToString("dd/MM/yyyy HH:mm")]).FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {listUnits.Count} data").FontColor("#6c757d");
+                        text.Span(_t["Total: {0} data", listUnits.Count]).FontColor("#6c757d");
                     });
                 });
 
@@ -275,7 +284,7 @@ public class UnitsController : Controller
                 page.Footer()
                     .AlignLeft()
                     .PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f)
                     .FontColor("#888888");
             });

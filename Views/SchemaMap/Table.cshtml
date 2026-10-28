@@ -1,0 +1,169 @@
+@model ERP.Web.Models.SchemaTableDetailViewModel
+
+@{
+    ViewData["Title"] = T["Tabel: {0}", Model.Name];
+    string Fmt(long n) => n.ToString("N0", new System.Globalization.CultureInfo("id-ID"));
+    string OnDelete(string action) => action switch
+    {
+        "CASCADE" => "cascade",
+        "SET_NULL" => "set null",
+        "NO_ACTION" => "no action",
+        _ => action.ToLowerInvariant()
+    };
+}
+
+<div class="px-2">
+
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 font-monospace">@Model.Name</h3>
+        <span class="badge text-bg-secondary">@Fmt(Model.RowCount) @T["baris"]</span>
+        <span class="badge text-bg-light border">@Model.Columns.Count @T["kolom"]</span>
+
+        <select class="form-select form-select-sm ms-auto" style="max-width: 240px;"
+                onchange="if (this.value) location.href = '@Url.Action("Table")?name=' + encodeURIComponent(this.value)">
+            <option value="">— @T["Lompat ke tabel"] —</option>
+            @foreach (var t in Model.AllTables)
+            {
+                <option value="@t" selected="@(t == Model.Name)">@t</option>
+            }
+        </select>
+        <a asp-action="Index" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Peta Data"]</a>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- KOLOM -->
+        <div class="col-xl-7">
+            <div class="card custom-card">
+                <div class="card-header custom-card-header py-3 px-4">
+                    <span class="fw-semibold text-white fs-6"><i class="bi bi-list-columns me-1"></i>@T["Kolom"]</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="fw-bold">@T["KOLOM"]</th>
+                                <th class="fw-bold">@T["TIPE"]</th>
+                                <th class="fw-bold text-center">NULL</th>
+                                <th class="fw-bold text-center">KEY</th>
+                                <th class="fw-bold">DEFAULT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.Columns)
+                            {
+                                <tr>
+                                    <td class="font-monospace text-white">
+                                        @c.Name
+                                        @if (c.IsIdentity)
+                                        {
+                                            <span class="badge text-bg-light border small ms-1" title="@T["IDENTITY (nomor urut otomatis)"]">AI</span>
+                                        }
+                                    </td>
+                                    <td class="small text-white-50 font-monospace">@c.Type</td>
+                                    <td class="text-center">
+                                        @if (c.IsNullable)
+                                        {
+                                            <i class="bi bi-check text-white-50"></i>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (c.IsPrimaryKey)
+                                        {
+                                            <span class="badge text-bg-warning">PK</span>
+                                        }
+                                        else if (c.IsUnique)
+                                        {
+                                            <span class="badge text-bg-primary">UNI</span>
+                                        }
+                                        else if (c.IsIndexed)
+                                        {
+                                            <span class="badge text-bg-info">idx</span>
+                                        }
+                                    </td>
+                                    <td class="small text-white-50 font-monospace">@(c.DefaultValue?.Trim('(', ')') ?? "")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- RELASI -->
+        <div class="col-xl-5">
+            <div class="card custom-card mb-3">
+                <div class="card-header custom-card-header py-3 px-4">
+                    <span class="fw-semibold text-white fs-6"><i class="bi bi-box-arrow-up-right text-success me-1"></i>@T["Relasi Keluar (FK)"]</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table table-sm align-middle mb-0">
+                        <tbody>
+                            @if (Model.FkOut.Count == 0)
+                            {
+                                <tr><td class="text-white-50 small">@T["Tidak ada foreign key."]</td></tr>
+                            }
+                            @foreach (var r in Model.FkOut)
+                            {
+                                <tr>
+                                    <td class="font-monospace small text-white">@r.ColumnName</td>
+                                    <td class="text-white-50">→</td>
+                                    <td><a asp-action="Table" asp-route-name="@r.OtherTable" class="font-monospace small">@r.OtherTable</a><span class="text-white-50 small">.@r.OtherColumn</span></td>
+                                    <td class="small text-white-50">@OnDelete(r.OnDelete)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card custom-card mb-3">
+                <div class="card-header custom-card-header py-3 px-4">
+                    <span class="fw-semibold text-white fs-6"><i class="bi bi-box-arrow-in-down text-primary me-1"></i>@T["Relasi Masuk (dirujuk oleh)"]</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table table-sm align-middle mb-0">
+                        <tbody>
+                            @if (Model.FkIn.Count == 0)
+                            {
+                                <tr><td class="text-white-50 small">@T["Tidak dirujuk tabel lain."]</td></tr>
+                            }
+                            @foreach (var r in Model.FkIn)
+                            {
+                                <tr>
+                                    <td><a asp-action="Table" asp-route-name="@r.OtherTable" class="font-monospace small">@r.OtherTable</a><span class="text-white-50 small">.@r.ColumnName</span></td>
+                                    <td class="text-white-50">→</td>
+                                    <td class="font-monospace small text-white">@r.OtherColumn</td>
+                                    <td class="small text-white-50">@OnDelete(r.OnDelete)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @if (Model.Inferred.Count > 0)
+            {
+                <div class="card custom-card">
+                    <div class="card-header custom-card-header py-3 px-4">
+                        <span class="fw-semibold text-white fs-6"><i class="bi bi-lightbulb text-warning me-1"></i>@T["Relasi via Konvensi (*_id tanpa FK)"]</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table custom-table table-sm align-middle mb-0">
+                            <tbody>
+                                @foreach (var r in Model.Inferred)
+                                {
+                                    <tr>
+                                        <td class="font-monospace small text-white">@r.Column</td>
+                                        <td class="text-white-50">→</td>
+                                        <td><a asp-action="Table" asp-route-name="@r.Guess" class="font-monospace small">@r.Guess</a></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

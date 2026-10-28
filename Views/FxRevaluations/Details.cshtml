@@ -1,0 +1,136 @@
+@model ERP.Web.Models.FxRevaluationViewModel
+@{
+    ViewData["Title"] = $"{T["Revaluasi Kurs"]} {Model.RevalNo}";
+    var isVoid = Model.Status == "void";
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-2">@T["Revaluasi Kurs"] @Model.RevalNo</h3>
+        <span class="badge @(isVoid ? "bg-danger" : "bg-success") me-auto">@(isVoid ? T["Dibatalkan"] : T["Posted"])</span>
+
+        @if (!isVoid)
+        {
+            <button type="button" class="btn btn-outline-danger btn-sm" data-perm="delete" data-bs-toggle="modal" data-bs-target="#voidModal">
+                <i class="bi bi-x-circle me-1"></i>@T["Batalkan"]
+            </button>
+        }
+        <a asp-action="Index" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    @if (isVoid)
+    {
+        <div class="alert alert-danger small"><i class="bi bi-x-octagon me-1"></i>@T["Dibatalkan. Alasan: {0}", Model.VoidReason ?? "-"]</div>
+    }
+
+    <div class="card custom-card mb-3">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3 text-white small">
+                <div class="col-md-3"><div class="text-white-50">@T["Tanggal revaluasi"]</div>@Acc.Date(Model.RevalDate)</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Dibalik otomatis"]</div>@Acc.Date(Model.ReversalDate)</div>
+                <div class="col-md-3">
+                    <div class="text-white-50">@T["Jurnal revaluasi"]</div>
+                    @if (Model.JournalUid != null)
+                    {
+                        <a asp-controller="Journals" asp-action="Details" asp-route-uid="@Model.JournalUid" class="text-info">@Model.JournalNo</a>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </div>
+                <div class="col-md-3">
+                    <div class="text-white-50">@T["Jurnal pembalik"]</div>
+                    @if (Model.ReversalJournalUid != null)
+                    {
+                        <a asp-controller="Journals" asp-action="Details" asp-route-uid="@Model.ReversalJournalUid" class="text-info">@Model.ReversalJournalNo</a>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </div>
+                <div class="col-md-3">
+                    <div class="text-white-50">@T["Laba / (rugi) belum terealisasi"]</div>
+                    <span class="fs-5 fw-semibold @(Model.TotalGainLoss >= 0 ? "text-success" : "text-danger")">@Acc.Money(Model.TotalGainLoss)</span>
+                </div>
+                <div class="col-md-6"><div class="text-white-50">@T["Catatan"]</div>@(Model.Note ?? "-")</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Dibuat oleh"]</div>@(Model.CreatedByName ?? "-")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card custom-card">
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>@T["JENIS"]</th>
+                        <th>@T["DOKUMEN / REKENING"]</th>
+                        <th class="text-end">@T["SISA VALAS"]</th>
+                        <th class="text-end">@T["KURS BUKU → PENUTUPAN"]</th>
+                        <th class="text-end">@T["NILAI BUKU (IDR)"]</th>
+                        <th class="text-end">@T["NILAI BARU (IDR)"]</th>
+                        <th class="text-end">@T["LABA / (RUGI)"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in Model.Lines)
+                    {
+                        <tr>
+                            <td class="text-white small">@T[l.SourceLabel]</td>
+                            <td>
+                                @if (l.SourceUid != null && l.SourceType != "cash_account")
+                                {
+                                    <a asp-controller="@l.SourceController" asp-action="Details" asp-route-uid="@l.SourceUid" class="text-info text-decoration-none">@l.DocNo</a>
+                                }
+                                else if (l.SourceUid != null)
+                                {
+                                    <a asp-controller="CashTransactions" asp-action="Index" asp-route-cashAccountUid="@l.SourceUid" class="text-info text-decoration-none">@l.DocNo</a>
+                                }
+                                else
+                                {
+                                    <span class="text-white">@l.DocNo</span>
+                                }
+                                <div class="text-white-50 small">@l.PartyName</div>
+                            </td>
+                            <td class="text-end text-white">@Acc.Fx(l.ForeignBalance, l.CurrencyCode)</td>
+                            <td class="text-end text-white-50 small">@Acc.Rate(l.BookRate) → <span class="text-white">@Acc.Rate(l.ClosingRate)</span></td>
+                            <td class="text-end text-white">@Acc.Money(l.BookFunctional)</td>
+                            <td class="text-end text-white">@Acc.Money(l.NewFunctional)</td>
+                            <td class="text-end fw-semibold @(l.GainLoss >= 0 ? "text-success" : "text-danger")">@Acc.Money(l.GainLoss)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td colspan="6" class="text-end text-white">@T["TOTAL"]</td>
+                        <td class="text-end @(Model.TotalGainLoss >= 0 ? "text-success" : "text-danger")">@Acc.Money(Model.TotalGainLoss)</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (!isVoid)
+{
+    <div class="modal fade" id="voidModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="Void" asp-route-uid="@Model.Uid" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batalkan"] @Model.RevalNo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Jurnal revaluasi dan jurnal pembalik otomatisnya masing-masing dibalik pada tanggalnya sendiri (periode {0} dan {1} harus masih open). Sesudahnya revaluasi bisa diulang.", Acc.Date(Model.RevalDate), Acc.Date(Model.ReversalDate)]</p>
+                    <label class="form-label" for="voidReason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="voidReason" rows="3" maxlength="200" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Batalkan"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

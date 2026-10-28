@@ -10,10 +10,12 @@ namespace ERP.Web.Controllers;
 public class ProductAttributesController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public ProductAttributesController(ApiClient api)
+    public ProductAttributesController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     // =========================
@@ -57,10 +59,10 @@ public class ProductAttributesController : Controller
     // =========================
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
         var attribute =
-            await _api.GetProductAttributeAsync(id);
+            await _api.GetProductAttributeAsync(uid);
 
         if (attribute is null)
             return NotFound();
@@ -125,10 +127,11 @@ public class ProductAttributesController : Controller
     public async Task<IActionResult> Edit(
         ProductAttributeViewModel model)
     {
-        if (!model.Id.HasValue)
+        // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
             TempData["Error"] =
-                "ID atribut tidak valid.";
+                "Atribut tidak ditemukan.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -178,10 +181,10 @@ public class ProductAttributesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
         var result =
-            await _api.DeleteProductAttributeAsync(id);
+            await _api.DeleteProductAttributeAsync(uid);
 
         TempData[result.Success
             ? "Success"
@@ -205,10 +208,10 @@ public class ProductAttributesController : Controller
         var worksheet = workbook.Worksheets.Add("ProductAttributes");
 
         worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Kode";
-        worksheet.Cell(1, 3).Value = "Nama Attribut";
-        worksheet.Cell(1, 4).Value = "Jml Varian";
-        worksheet.Cell(1, 5).Value = "Status";
+        worksheet.Cell(1, 2).Value = _t["Kode"];
+        worksheet.Cell(1, 3).Value = _t["Nama Attribut"];
+        worksheet.Cell(1, 4).Value = _t["Jml Varian"];
+        worksheet.Cell(1, 5).Value = _t["Status"];
 
         var header = worksheet.Range("A1:E1");
 
@@ -226,7 +229,7 @@ public class ProductAttributesController : Controller
             worksheet.Cell(row, 3).Value = item.Name ?? "";
             worksheet.Cell(row, 4).Value = item.VariantCount;
             worksheet.Cell(row, 5).Value =
-                item.IsActive ? "Aktif" : "Nonaktif";
+                item.IsActive ? _t["Aktif"] : _t["Nonaktif"];
 
             row++;
             no++;
@@ -273,9 +276,9 @@ public class ProductAttributesController : Controller
                     {
                         text.Span("Product Attribute").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span(_t["Dicetak: {0}", DateTime.Now.ToString("dd/MM/yyyy HH:mm")]).FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {listAttributes.Count} data").FontColor("#6c757d");
+                        text.Span(_t["Total: {0} data", listAttributes.Count]).FontColor("#6c757d");
                     });
                 });
 
@@ -296,10 +299,10 @@ public class ProductAttributesController : Controller
                     table.Header(header =>
                     {
                         header.Cell().Element(HeaderStyle).Text("No");
-                        header.Cell().Element(HeaderStyle).Text("kode");
-                        header.Cell().Element(HeaderStyle).Text("Nama Attribut");
-                        header.Cell().Element(HeaderStyle).Text("Jml Vatian");
-                        header.Cell().Element(HeaderStyle).Text("status");
+                        header.Cell().Element(HeaderStyle).Text(_t["kode"]);
+                        header.Cell().Element(HeaderStyle).Text(_t["Nama Attribut"]);
+                        header.Cell().Element(HeaderStyle).Text(_t["Jml Varian"]);
+                        header.Cell().Element(HeaderStyle).Text(_t["status"]);
 
                         static QuestPDF.Infrastructure.IContainer HeaderStyle(
                             QuestPDF.Infrastructure.IContainer c)
@@ -325,7 +328,7 @@ public class ProductAttributesController : Controller
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Code ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Name ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.VariantCount.ToString());
-                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? "Aktif" : "Nonaktif");
+                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? _t["Aktif"] : _t["Nonaktif"]);
 
                         no++;
                     }
@@ -346,7 +349,7 @@ public class ProductAttributesController : Controller
                 page.Footer()
                     .AlignLeft()
                     .PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f)
                     .FontColor("#888888");
             });

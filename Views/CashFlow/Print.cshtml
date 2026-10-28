@@ -1,0 +1,13 @@
+@model ERP.Web.Models.CashFlowViewModel
+@{
+    Layout = "_ReportPrintLayout";
+    ViewData["Title"] = T["Arus Kas"];
+    ViewData["Print"] = true;
+}
+<h1>@T["Laporan Arus Kas (Metode Langsung)"]</h1>
+<div class="meta">@T["Periode {0} s/d {1}", Acc.Date(Model.From), Acc.Date(Model.To)] · @T["Akun kas:"] @string.Join(", ", Model.CashAccounts) · @T["Dicetak"] @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+@if (!Model.IsReconciled)
+{
+    <div class="warn">@T["PERINGATAN: saldo akhir tidak sama dengan saldo kas buku besar ({0}).", Acc.Money(Model.ClosingCashLedger)]</div>
+}
+<partial name="_Body" model="Model" view-data="ViewData" />

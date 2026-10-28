@@ -8,10 +8,12 @@ namespace ERP.Web.Controllers;
 public class ShippingAreasController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public ShippingAreasController(ApiClient api)
+    public ShippingAreasController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     [HttpGet]
@@ -34,9 +36,9 @@ public class ShippingAreasController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var shippingArea = await _api.GetShippingAreaAsync(id);
+        var shippingArea = await _api.GetShippingAreaAsync(uid);
 
         if (shippingArea is null)
             return NotFound();
@@ -117,6 +119,13 @@ public class ShippingAreasController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
+        {
+            TempData["Error"] = "Area pengiriman tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var result = await _api.UpdateShippingAreaAsync(model);
 
         TempData[result.Success ? "Success" : "Error"] =
@@ -130,9 +139,15 @@ public class ShippingAreasController : Controller
     // DELETE di MVC juga POST.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
-        var result = await _api.DeleteShippingAreaAsync(id);
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] = "Area pengiriman tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var result = await _api.DeleteShippingAreaAsync(uid);
 
         TempData[result.Success ? "Success" : "Error"] =
             result.Success
@@ -153,11 +168,11 @@ public class ShippingAreasController : Controller
         var worksheet = workbook.Worksheets.Add("Shipping Area");
 
         worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Kode";
-        worksheet.Cell(1, 3).Value = "Nama";
-        worksheet.Cell(1, 4).Value = "Harga";
-        worksheet.Cell(1, 5).Value = "Deskripsi";
-        worksheet.Cell(1, 6).Value = "Aktif";
+        worksheet.Cell(1, 2).Value = _t["Kode"];
+        worksheet.Cell(1, 3).Value = _t["Nama"];
+        worksheet.Cell(1, 4).Value = _t["Harga"];
+        worksheet.Cell(1, 5).Value = _t["Deskripsi"];
+        worksheet.Cell(1, 6).Value = _t["Aktif"];
 
         var header = worksheet.Range("A1:F1");
 
@@ -220,9 +235,9 @@ public class ShippingAreasController : Controller
                     {
                         text.Span("Shipping Area").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span(_t["Dicetak"] + $": {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {listShippingAreas.Count} data").FontColor("#6c757d");
+                        text.Span(_t["Total: {0} data", listShippingAreas.Count]).FontColor("#6c757d");
                     });
                 });
 
@@ -291,7 +306,7 @@ public class ShippingAreasController : Controller
                 page.Footer()
                     .AlignLeft()
                     .PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f)
                     .FontColor("#888888");
             });

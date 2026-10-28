@@ -1,0 +1,158 @@
+@model ERP.Web.Models.PaymentsIndexViewModel
+@{
+    var c = Model.Config;
+    ViewData["Title"] = T[c.Title];
+    var f = Model.Filter;
+    var list = Model.Payments;
+    var query = f.ToQueryString();
+    var qs = query.Length > 0 ? "?" + query : "";
+    var header = new ListHeaderModel
+    {
+        Title = T[c.IsPayable ? "Daftar Pembayaran" : "Daftar Penerimaan"],
+        Count = list.TotalCount,
+        Description = T[c.IsPayable ? "Pembayaran hutang ke supplier" : "Penerimaan piutang dari customer"],
+        PdfUrl = Url.Action("ExportPdf", c.Controller) + qs,
+        ExcelUrl = Url.Action("ExportExcel", c.Controller) + qs,
+        PrintUrl = Url.Action("PrintList", c.Controller) + qs,
+        AddUrl = Url.Action("Create", c.Controller),
+        AddText = T[$"{c.Title} Baru"]
+    };
+    string PageUrl(int p) => Url.Action("Index", c.Controller) + "?" + (query.Length > 0 ? query + "&" : "") + $"page={p}&pageSize={f.PageSize}";
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T[c.Title]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-controller="@c.Controller" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@f.Q" placeholder="@T["No., referensi, keterangan"]" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="partyUid">@T[c.PartyLabel]</label>
+                        <select class="form-select" id="partyUid" name="partyUid">
+                            <option value="">@T["-- Semua --"]</option>
+                            @foreach (var p in Model.Parties)
+                            {
+                                <option value="@p.Uid" selected="@(p.Uid == f.PartyUid)">@p.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="status">@T["Status"]</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">@T["-- Semua --"]</option>
+                            <option value="draft" selected="@(f.Status == "draft")">@T["Draft"]</option>
+                            <option value="posted" selected="@(f.Status == "posted")">@T["Posted"]</option>
+                            <option value="void" selected="@(f.Status == "void")">@T["Dibatalkan"]</option>
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="dateFrom">@T["Dari"]</label>
+                        <input type="date" class="form-control" id="dateFrom" name="dateFrom" value="@f.DateFrom?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="dateTo">@T["Sampai"]</label>
+                        <input type="date" class="form-control" id="dateTo" name="dateTo" value="@f.DateTo?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="pageSize">@T["Per Halaman"]</label>
+                        <select class="form-select" id="pageSize" name="pageSize">
+                            @foreach (var size in new[] { 10, 25, 50, 100 })
+                            {
+                                <option value="@size" selected="@(f.PageSize == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-controller="@c.Controller" asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 150px;">@T["NO."]</th>
+                        <th style="width: 100px;">@T["TANGGAL"]</th>
+                        <th>@(T[c.PartyLabel].ToUpperInvariant())</th>
+                        <th>@T["REKENING"]</th>
+                        <th class="text-end" style="width: 150px;">@T["JUMLAH"]</th>
+                        <th style="width: 120px;">@T["STATUS"]</th>
+                        <th class="text-center" style="width: 70px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (list.Data.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada data."]</td></tr>
+                    }
+                    @foreach (var p in list.Data)
+                    {
+                        var (label, css) = ArApPages.StatusBadge(p.Status);
+                        <tr>
+                            <td class="ps-4"><a asp-controller="@c.Controller" asp-action="Details" asp-route-uid="@p.Uid" class="text-info text-decoration-none">@p.PaymentNo</a></td>
+                            <td class="text-white small">@Acc.Date(p.PaymentDate)</td>
+                            <td class="text-white">@(p.PartyName ?? "-")</td>
+                            <td class="text-white small">@p.CashAccountName</td>
+                            <td class="text-end text-white">
+                                @Acc.Fx(p.Amount, p.CurrencyCode)
+                                @if (p.IsForeign && p.Status != "draft")
+                                {
+                                    <div class="text-white-50 small">≈ @Acc.Money(p.FunctionalAmount)</div>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @css">@T[label]</span>
+                                @if (p.BankStatus != null)
+                                {
+                                    <span class="badge @(p.BankStatus == "confirmed" ? "bg-success" : "bg-warning text-dark")" title="@T["Konfirmasi rekening koran"]"><i class="bi bi-bank me-1"></i>@(p.BankStatus == "confirmed" ? T["Bank: {0}", Acc.Date(p.BankConfirmedDate)] : T["Menunggu bank"])</span>
+                                }
+                                @if (p.Status == "draft" && p.ApprovalStatus is "pending" or "rejected")
+                                {
+                                    var (al, ac, ai) = Appr.RequestBadge(p.ApprovalStatus);
+                                    <span class="badge @ac" title="@T["Status persetujuan"]"><i class="bi @ai me-1"></i>@T[al]</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <div class="row-actions">
+                                    <a asp-controller="@c.Controller" asp-action="Details" asp-route-uid="@p.Uid" class="act-btn act-view" title="@T["Lihat"]"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_ListPagination" model="new ListPaginationModel { Page = list.Page, PageSize = list.PageSize, TotalCount = list.TotalCount, PageUrl = PageUrl }" />
+        </div>
+    </div>
+</div>

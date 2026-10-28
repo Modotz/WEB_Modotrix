@@ -1,0 +1,82 @@
+@model List<ERP.Web.Models.CostAllocationViewModel>
+@{
+    ViewData["Title"] = T["Alokasi Biaya"];
+    var status = ViewData["Status"] as string;
+    var header = new ListHeaderModel
+    {
+        Title = T["Alokasi Biaya"],
+        Count = Model.Count,
+        Description = T["Distribution cycle antar cost center"],
+        AddUrl = Url.Action("Create"),
+        AddText = T["Alokasi Baru"]
+    };
+    (string, string) Badge(string s) => s switch
+    {
+        "posted" => ("Posted", "bg-success"),
+        "void" => ("Dibatalkan", "bg-danger"),
+        _ => ("Draft", "bg-secondary")
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Alokasi Biaya"]</h3>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Biaya bersama (sewa, listrik) dicatat di satu cost center pengirim, lalu dibagi ke cost center yang menikmatinya. Alokasi membuat jurnal BARU: saldo tiap akun beban ber-tag pengirim (awal bulan s.d. tanggal alokasi) dikredit dari pengirim dan didebit ke penerima sesuai persentase — akun aslinya dipertahankan. Total biaya perusahaan dan biaya per project tidak berubah; menjalankan ulang di bulan yang sama hanya memindahkan biaya baru."]
+    </div>
+
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+        <div>
+            <label class="form-label text-white small mb-1" for="fStatus">@T["Status"]</label>
+            <select class="form-select form-select-sm" name="status" id="fStatus" onchange="this.form.submit()">
+                <option value="">@T["-- Semua --"]</option>
+                <option value="draft" selected="@(status == "draft")">@T["Draft"]</option>
+                <option value="posted" selected="@(status == "posted")">@T["Posted"]</option>
+                <option value="void" selected="@(status == "void")">@T["Dibatalkan"]</option>
+            </select>
+        </div>
+    </form>
+
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["NO."]</th>
+                        <th>@T["TANGGAL"]</th>
+                        <th>@T["NAMA"]</th>
+                        <th>@T["DARI"]</th>
+                        <th>@T["KE"]</th>
+                        <th class="text-end">@T["NILAI"]</th>
+                        <th>@T["STATUS"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada alokasi."]</td></tr>
+                    }
+                    @foreach (var a in Model)
+                    {
+                        var (bl, bc) = Badge(a.Status);
+                        <tr>
+                            <td class="ps-4"><a asp-action="Details" asp-route-uid="@a.Uid" class="text-info text-decoration-none">@a.AllocationNo</a></td>
+                            <td class="text-white small">@Acc.Date(a.AllocationDate)</td>
+                            <td class="text-white">@a.Name</td>
+                            <td class="text-white small">@a.FromCostCenterCode</td>
+                            <td class="text-white small">@string.Join(", ", a.Lines.Select(l => $"{l.CostCenterCode} {l.Percentage.ToString("0.##", Acc.Culture)}%"))</td>
+                            <td class="text-end text-white">@(a.Status == "draft" ? "-" : Acc.Money(a.TotalAmount))</td>
+                            <td><span class="badge @bc">@T[bl]</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>

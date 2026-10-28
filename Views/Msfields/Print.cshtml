@@ -150,13 +150,13 @@
 
         <div class="print-button">
             <button type="button" onclick="window.print()">
-                Cetak
+                @T["Cetak"]
             </button>
 
             <button type="button"
                     class="close-button"
                     onclick="window.close()">
-                Tutup
+                @T["Tutup"]
             </button>
         </div>
 
@@ -168,13 +168,13 @@
                 <span>Msfield</span>
                 <span>•</span>
                 <span>
-                    Dicetak:
+                    @T["Dicetak"]:
                     @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
                 </span>
                 <span>•</span>
                 <span>
                     Total:
-                    @Model.TotalData data
+                    @Model.TotalData @T["data"]
                 </span>
             </div>
 
@@ -229,7 +229,7 @@
         </table>
 
         <div class="footer">
-            Dokumen dihasilkan otomatis oleh sistem.
+            @T["Dokumen dihasilkan otomatis oleh sistem."]
         </div>
 
     </div>

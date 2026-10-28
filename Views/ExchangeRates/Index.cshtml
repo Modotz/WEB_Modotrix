@@ -1,0 +1,363 @@
+@model ERP.Web.Models.ExchangeRatesIndexViewModel
+@{
+    ViewData["Title"] = T["Mata Uang & Kurs"];
+    var f = Model.Filter;
+    var list = Model.Rates;
+    var query = f.ToQueryString();
+    var qs = query.Length > 0 ? "?" + query : "";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var header = new ListHeaderModel
+    {
+        Title = T["Riwayat Kurs"],
+        Count = list.TotalCount,
+        Description = T["1 unit valas = n IDR, per tanggal berlaku"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs
+    };
+    string PageUrl(int p) => Url.Action("Index") + "?" + (query.Length > 0 ? query + "&" : "") + $"page={p}&pageSize={f.PageSize}";
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Mata Uang & Kurs"]</h3>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Mata uang fungsional"] <strong>IDR</strong>: @T["semua jurnal & laporan dalam Rupiah. Faktur, pembayaran dan transaksi kas valas menyalin kurs pada tanggal dokumennya (kurs terakhir pada atau sebelum tanggal itu), jadi mengoreksi kurs di sini tidak mengubah dokumen yang sudah dibuat."]
+    </div>
+
+    <div class="row g-3 mb-3">
+        <!-- INPUT KURS HARIAN -->
+        <div class="col-lg-5">
+            <div class="card supplier-card h-100">
+                <div class="card-header bg-transparent d-flex align-items-center gap-2">
+                    <i class="bi bi-calendar-plus"></i>
+                    <span class="fw-semibold">@T["Input Kurs Harian"]</span>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-action="AddDailyRates" data-perm="create">
+                        <div class="mb-3">
+                            <label class="form-label" for="rateDate">@T["Tanggal kurs"]</label>
+                            <input type="date" class="form-control" id="rateDate" name="rateDate" value="@Model.DailyDate.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        @if (!Model.ForeignActive.Any())
+                        {
+                            <p class="text-muted small">@T["Belum ada mata uang asing aktif. Tambahkan di daftar Mata Uang."]</p>
+                        }
+                        @foreach (var c in Model.ForeignActive)
+                        {
+                            <div class="input-group input-group-sm mb-2">
+                                <span class="input-group-text" style="width: 70px;">@c.Code</span>
+                                <input type="number" step="0.000001" min="0" class="form-control text-end" name="rates[@c.Code]"
+                                       placeholder="@(c.LatestRate != null ? T["terakhir {0} ({1})", Acc.Rate(c.LatestRate.Value), Acc.Date(c.LatestRateDate)] : T["belum ada kurs"])" />
+                                <span class="input-group-text">IDR</span>
+                            </div>
+                        }
+                        <div class="form-text mb-3">@T["Kolom kosong diabaikan; kurs yang sudah ada pada tanggal itu diperbarui."]</div>
+                        @if (Model.ForeignActive.Any())
+                        {
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan Kurs"]</button>
+                        }
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MATA UANG -->
+        <div class="col-lg-7">
+            <div class="card supplier-card h-100">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-currency-exchange"></i>
+                        <span class="fw-semibold">@T["Mata Uang"]</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-success" data-perm="create" onclick="openCurrencyModal()">
+                        <i class="bi bi-plus-circle me-1"></i>@T["Tambah Mata Uang"]
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                        <thead>
+                            <tr>
+                                <th class="ps-4" style="width: 80px;">@T["KODE"]</th>
+                                <th>@T["NAMA"]</th>
+                                <th class="text-end">@T["KURS TERAKHIR"]</th>
+                                <th class="text-center" style="width: 90px;">@T["AKSI"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.Currencies)
+                            {
+                                <tr class="@(c.IsActive ? "" : "opacity-50")">
+                                    <td class="ps-4 text-white fw-semibold">@c.Code</td>
+                                    <td class="text-white">
+                                        @c.Name <span class="text-white-50 small">@c.Symbol</span>
+                                        @if (c.IsFunctional)
+                                        {
+                                            <span class="badge bg-primary ms-1">@T["Fungsional"]</span>
+                                        }
+                                        @if (!c.IsActive)
+                                        {
+                                            <span class="badge bg-dark ms-1">@T["Nonaktif"]</span>
+                                        }
+                                    </td>
+                                    <td class="text-end text-white">
+                                        @if (c.IsFunctional)
+                                        {
+                                            <span class="text-white-50">1</span>
+                                        }
+                                        else if (c.LatestRate != null)
+                                        {
+                                            @Acc.Rate(c.LatestRate.Value)
+                                            <div class="text-white-50 small">@Acc.Date(c.LatestRateDate)</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-warning small">@T["belum ada kurs"]</span>
+                                        }
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        @if (!c.IsFunctional)
+                                        {
+                                            <div class="row-actions">
+                                                <button type="button" class="act-btn act-edit btn-edit-currency" data-perm="update" title="@T["Ubah"]"
+                                                        data-currency="@System.Text.Json.JsonSerializer.Serialize(c)"><i class="bi bi-pencil"></i></button>
+                                                @if (!c.IsUsed)
+                                                {
+                                                    <form method="post" asp-action="DeleteCurrency" asp-route-uid="@c.Uid" data-perm="delete"
+                                                          onsubmit='return confirm(@Json.Serialize(T["Hapus mata uang {0}?", c.Code]));'>
+                                                        <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTER RIWAYAT -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="currency">@T["Mata uang"]</label>
+                        <select class="form-select" id="currency" name="currency">
+                            <option value="">@T["-- Semua --"]</option>
+                            @foreach (var c in Model.Currencies.Where(c => !c.IsFunctional))
+                            {
+                                <option value="@c.Code" selected="@(f.Currency == c.Code)">@c.Code</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="dateFrom">@T["Dari tanggal"]</label>
+                        <input type="date" class="form-control" id="dateFrom" name="dateFrom" value="@f.DateFrom?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="dateTo">@T["Sampai tanggal"]</label>
+                        <input type="date" class="form-control" id="dateTo" name="dateTo" value="@f.DateTo?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIWAYAT KURS -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 120px;">@T["TANGGAL"]</th>
+                        <th style="width: 100px;">@T["MATA UANG"]</th>
+                        <th class="text-end" style="width: 170px;">@T["KURS (IDR)"]</th>
+                        <th class="text-end" style="width: 120px;">@T["PERUBAHAN"]</th>
+                        <th>@T["CATATAN"]</th>
+                        <th style="width: 150px;">@T["DIINPUT OLEH"]</th>
+                        <th class="text-center" style="width: 90px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (list.Data.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada kurs."]</td></tr>
+                    }
+                    @foreach (var r in list.Data)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white">@Acc.Date(r.RateDate)</td>
+                            <td class="text-white fw-semibold">@r.CurrencyCode</td>
+                            <td class="text-end text-white">@Acc.Rate(r.Rate)</td>
+                            <td class="text-end small @(r.ChangePercent > 0 ? "text-success" : r.ChangePercent < 0 ? "text-danger" : "text-white-50")">
+                                @if (r.ChangePercent != null)
+                                {
+                                    @((r.ChangePercent > 0 ? "+" : "") + r.ChangePercent.Value.ToString("0.00", Acc.Culture))<text>%</text>
+                                }
+                            </td>
+                            <td class="text-white-50 small">@r.Note</td>
+                            <td class="text-white-50 small">@r.CreatedByName</td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                    <button type="button" class="act-btn act-edit btn-edit-rate" data-perm="update" title="@T["Ubah"]"
+                                            data-uid="@r.Uid" data-currency="@r.CurrencyCode" data-date="@r.RateDate.ToString("yyyy-MM-dd")"
+                                            data-rate="@r.Rate.ToString(inv)" data-note="@r.Note"><i class="bi bi-pencil"></i></button>
+                                    <form method="post" asp-action="DeleteRate" asp-route-uid="@r.Uid" data-perm="delete"
+                                          onsubmit='return confirm(@Json.Serialize(T["Hapus kurs {0} tanggal {1}?", r.CurrencyCode, Acc.Date(r.RateDate)]));'>
+                                        <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_ListPagination" model="new ListPaginationModel { Page = list.Page, PageSize = list.PageSize, TotalCount = list.TotalCount, PageUrl = PageUrl }" />
+        </div>
+    </div>
+</div>
+
+<!-- MODAL MATA UANG -->
+<div class="modal fade" id="currencyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="CreateCurrency" class="modal-content" id="currencyForm">
+            <input type="hidden" name="Uid" id="curUid" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="currencyTitle">@T["Tambah Mata Uang"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-4">
+                        <label class="form-label" for="curCode">@T["Kode (ISO)"]</label>
+                        <input type="text" class="form-control text-uppercase" name="Code" id="curCode" maxlength="3" minlength="3" pattern="[A-Za-z]{3}" required />
+                        <div class="form-text" id="curCodeNote"></div>
+                    </div>
+                    <div class="col-8">
+                        <label class="form-label" for="curName">@T["Nama"]</label>
+                        <input type="text" class="form-control" name="Name" id="curName" maxlength="60" required />
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label" for="curSymbol">@T["Simbol"]</label>
+                        <input type="text" class="form-control" name="Symbol" id="curSymbol" maxlength="8" />
+                    </div>
+                    <div class="col-8 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="curActive" checked />
+                            <input type="hidden" name="IsActive" value="false" />
+                            <label class="form-check-label" for="curActive">@T["Aktif"]</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL UBAH KURS -->
+<div class="modal fade" id="rateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="UpdateRate" class="modal-content">
+            <input type="hidden" name="uid" id="rUid" />
+            <input type="hidden" name="currencyCode" id="rCurrency" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="rateTitle">@T["Ubah Kurs"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label" for="rDate">@T["Tanggal kurs"]</label>
+                        <input type="date" class="form-control" name="rateDate" id="rDate" required />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" for="rRate">@T["Kurs (IDR)"]</label>
+                        <input type="number" step="0.000001" min="0.000001" class="form-control text-end" name="rate" id="rRate" required />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="rNote">@T["Catatan"]</label>
+                        <input type="text" class="form-control" name="note" id="rNote" maxlength="255" placeholder="@T["mis. kurs tengah BI / kurs pajak (KMK)"]" />
+                    </div>
+                </div>
+                <div class="form-text mt-2">@T["Dokumen yang sudah dibuat tidak berubah; kurs baru dipakai dokumen berikutnya."]</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const curModal = new bootstrap.Modal($('currencyModal'));
+            const rateModal = new bootstrap.Modal($('rateModal'));
+            const createUrl = '@Url.Action("CreateCurrency")', updateUrl = '@Url.Action("UpdateCurrency")';
+            const txtAdd = @Json.Serialize(T["Tambah Mata Uang"]), txtEdit = @Json.Serialize(T["Ubah Mata Uang"]);
+            const txtLocked = @Json.Serialize(T["Kode sudah dipakai dan tidak dapat diubah."]);
+            const txtRate = @Json.Serialize(T["Ubah Kurs"]);
+
+            function openCurrency(c) {
+                $('currencyForm').action = c ? updateUrl : createUrl;
+                $('currencyTitle').textContent = c ? `${txtEdit} ${c.Code}` : txtAdd;
+                $('curUid').value = c?.Uid ?? '';
+                $('curCode').value = c?.Code ?? '';
+                $('curCode').readOnly = !!(c && c.IsUsed);
+                $('curCodeNote').textContent = c && c.IsUsed ? txtLocked : '';
+                $('curName').value = c?.Name ?? '';
+                $('curSymbol').value = c?.Symbol ?? '';
+                $('curActive').checked = c ? c.IsActive : true;
+                curModal.show();
+            }
+
+            window.openCurrencyModal = () => openCurrency(null);
+            document.querySelectorAll('.btn-edit-currency').forEach(b => b.addEventListener('click', () => openCurrency(JSON.parse(b.dataset.currency))));
+
+            document.querySelectorAll('.btn-edit-rate').forEach(b => b.addEventListener('click', () => {
+                $('rUid').value = b.dataset.uid;
+                $('rCurrency').value = b.dataset.currency;
+                $('rDate').value = b.dataset.date;
+                $('rRate').value = b.dataset.rate;
+                $('rNote').value = b.dataset.note ?? '';
+                $('rateTitle').textContent = `${txtRate} ${b.dataset.currency}`;
+                rateModal.show();
+            }));
+        })();
+    </script>
+}

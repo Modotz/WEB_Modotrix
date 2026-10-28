@@ -1,0 +1,62 @@
+@model ERP.Web.Models.LoginViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sign in to your account";
+    ViewData["Heading"] = "Sign in to your account";
+}
+
+<form asp-action="Login" asp-controller="Account" method="post" novalidate data-submit-text="Signing in...">
+    <input type="hidden" asp-for="ReturnUrl" />
+
+    @if (Model.DevUsers.Count > 0)
+    {
+        <!-- TESTING (Development saja): pilih user dari dropdown -->
+        <div class="mb-3">
+            <label asp-for="Username" class="form-label d-flex align-items-center gap-2">
+                @T["Login sebagai"] <span class="badge-testing">TESTING</span>
+            </label>
+            <select asp-for="Username" class="form-select" required autofocus>
+                <option value="">@T["-- Pilih user --"]</option>
+                @foreach (var group in Model.DevUsers.GroupBy(u => u.RoleName ?? T["Tanpa Role"]))
+                {
+                    <optgroup label="@group.Key">
+                        @foreach (var u in group)
+                        {
+                            <option value="@u.Username" selected="@(u.Username == Model.Username)">@u.Name (@u.Username)</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+            <span asp-validation-for="Username" class="field-error"></span>
+        </div>
+    }
+    else
+    {
+        <div class="mb-3">
+            <label asp-for="Username" class="form-label">@T["Username atau email"]</label>
+            <input asp-for="Username" class="form-control" placeholder="name@example.com" autocomplete="username" required autofocus />
+            <span asp-validation-for="Username" class="field-error"></span>
+        </div>
+    }
+
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <label asp-for="Password" class="form-label mb-0">Password</label>
+            <a asp-action="ForgotPassword" class="forgot-link">Forgot Password?</a>
+        </div>
+        <div class="input-group">
+            <input asp-for="Password" class="form-control" placeholder="••••••••" autocomplete="current-password" required />
+            <button class="btn btn-outline-secondary" type="button" data-toggle-password="Password" tabindex="-1" aria-label="@T["Tampilkan/sembunyikan password"]">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+        <span asp-validation-for="Password" class="field-error"></span>
+    </div>
+
+    <div class="mb-4 form-check">
+        <input asp-for="RememberMe" class="form-check-input" />
+        <label asp-for="RememberMe" class="form-check-label">Remember me</label>
+    </div>
+
+    <button type="submit" class="btn btn-submit">Sign in</button>
+</form>

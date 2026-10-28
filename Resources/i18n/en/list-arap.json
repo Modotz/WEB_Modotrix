@@ -1,0 +1,20 @@
+{
+  "> 90 Hari": "> 90 Days",
+  "Bayar (−)": "Paid (−)",
+  "Belum ditutup": "Not closed",
+  "Daftar Pembayaran": "Payment List",
+  "Daftar Penerimaan": "Receipt List",
+  "Faktur pembelian dari supplier": "Purchase invoices from suppliers",
+  "Faktur penjualan ke customer": "Sales invoices to customers",
+  "Penerimaan piutang dari customer": "Receivable receipts from customers",
+  "Hasil": "Result",
+  "Hutang (+)": "Payable (+)",
+  "Masa": "Period",
+  "Pembayaran hutang ke supplier": "Payable payments to suppliers",
+  "Piutang (+)": "Receivable (+)",
+  "PPN Keluaran (bulan ini)": "Output VAT (this month)",
+  "PPN Masukan (bulan ini)": "Input VAT (this month)",
+  "Saldo Keluaran": "Output Balance",
+  "Saldo Masukan": "Input Balance",
+  "Terima (−)": "Received (−)"
+}

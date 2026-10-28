@@ -20,10 +20,10 @@
     var statusText = status switch
     {
         "draft" => "DRAFT",
-        "sent" or "terkirim" => "TERKIRIM",
-        "quoted" or "ditawar" => "DITAWAR",
-        "converted" or "jadi_po" => "JADI PO",
-        "cancelled" or "batal" => "BATAL",
+        "sent" or "terkirim" => T["TERKIRIM"],
+        "quoted" or "ditawar" => T["DITAWAR"],
+        "converted" or "jadi_po" => T["JADI PO"],
+        "cancelled" or "batal" => T["BATAL"],
         _ => (rfq.Status ?? "-").ToUpperInvariant()
     };
 
@@ -32,16 +32,16 @@
     var quoteTotal = items.Where(i => i.QuotedPrice > 0)
                           .Sum(i => i.Quantity * i.QuotedPrice);
 
-    var grandLabel = hasQuote ? "TOTAL PENAWARAN" : "ESTIMASI TOTAL";
+    var grandLabel = hasQuote ? T["TOTAL PENAWARAN"] : T["ESTIMASI TOTAL"];
     var grandValue = hasQuote ? quoteTotal : estimateTotal;
 }
 
 <!DOCTYPE html>
-<html lang="id">
+<html lang="@T.Lang">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Cetak RFQ Barang</title>
+        <title>@T["Cetak RFQ Barang"]</title>
 
         <style>
             * {
@@ -335,13 +335,13 @@
 
             <div class="toolbar">
                 <button type="button" onclick="window.print()">
-                    Cetak
+                    @T["Cetak"]
                 </button>
 
                 <button type="button"
                         class="back"
                         onclick="window.close()">
-                    Kembali
+                    @T["Kembali"]
                 </button>
             </div>
 
@@ -361,29 +361,29 @@
                     <h2 class="document-title">REQUEST FOR QUOTATION</h2>
 
                     <div class="info-row">
-                        <span class="info-label">Nomor</span>
+                        <span class="info-label">@T["Nomor"]</span>
                         <span class="info-value">
                             <span class="doc-number">@rfq.RfqNo</span>
                         </span>
                     </div>
 
                     <div class="info-row">
-                        <span class="info-label">Tanggal</span>
+                        <span class="info-label">@T["Tanggal"]</span>
                         <span class="info-value">@Tanggal(rfq.RfqDate)</span>
                     </div>
 
                     <div class="info-row">
-                        <span class="info-label">Berlaku s/d</span>
+                        <span class="info-label">@T["Berlaku s/d"]</span>
                         <span class="info-value">@Tanggal(rfq.ValidUntil)</span>
                     </div>
 
                     <div class="info-row">
-                        <span class="info-label">Supplier</span>
+                        <span class="info-label">@T["Supplier"]</span>
                         <span class="info-value">@(rfq.SupplierName ?? "-")</span>
                     </div>
 
                     <div class="info-row">
-                        <span class="info-label">Status</span>
+                        <span class="info-label">@T["Status"]</span>
                         <span class="info-value">@statusText</span>
                     </div>
                 </div>
@@ -394,11 +394,11 @@
                     <thead>
                         <tr>
                             <th style="width:4%" class="text-center">NO</th>
-                            <th style="width:38%">PRODUK</th>
-                            <th style="width:12%" class="text-right">QTY</th>
-                            <th style="width:14%" class="text-right">EST. HARGA</th>
-                            <th style="width:16%" class="text-right">HARGA PENAWARAN</th>
-                            <th style="width:16%" class="text-right">SUBTOTAL</th>
+                            <th style="width:38%">@T["PRODUK"]</th>
+                            <th style="width:12%" class="text-right">@T["QTY"]</th>
+                            <th style="width:14%" class="text-right">@T["EST. HARGA"]</th>
+                            <th style="width:16%" class="text-right">@T["HARGA PENAWARAN"]</th>
+                            <th style="width:16%" class="text-right">@T["SUBTOTAL"]</th>
                         </tr>
                     </thead>
 
@@ -441,7 +441,7 @@
                         {
                             <tr>
                                 <td colspan="6" class="empty">
-                                    Detail barang tidak tersedia untuk RFQ ini.
+                                    @T["Detail barang tidak tersedia untuk RFQ ini."]
                                 </td>
                             </tr>
                         }
@@ -451,7 +451,7 @@
 
             <div class="bottom-section">
                 <div>
-                    <div class="section-title">Catatan</div>
+                    <div class="section-title">@T["Catatan"]</div>
                     <div class="note">
                         @(string.IsNullOrWhiteSpace(rfq.Note) ? "-" : rfq.Note)
                     </div>
@@ -467,21 +467,21 @@
 
             <div class="signatures">
                 <div class="signature">
-                    <div class="signature-title">Dibuat oleh</div>
+                    <div class="signature-title">@T["Dibuat oleh"]</div>
                     <div class="signature-line"></div>
                     <div class="signature-name">Administrator</div>
                 </div>
 
                 <div class="signature">
-                    <div class="signature-title">Supplier</div>
+                    <div class="signature-title">@T["Supplier"]</div>
                     <div class="signature-line"></div>
-                    <div class="signature-name">(Nama &amp; Tanda Tangan)</div>
+                    <div class="signature-name">@T["(Nama & Tanda Tangan)"]</div>
                 </div>
             </div>
 
             <div class="footer">
                 &copy; @DateTime.Now.Year Modotz App ·
-                Dicetak @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                @T["Dicetak"] @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
             </div>
 
         </div>

@@ -1,0 +1,238 @@
+@model ERP.Web.Models.ApprovalDocumentViewModel
+@*
+    Panel persetujuan untuk halaman detail dokumen.
+    Pemakaian (controller mengisi ViewData["Approval"] = await api.GetApprovalDocumentAsync(docType, uid)):
+        <partial name="_ApprovalPanel" model="approvalModel" />
+    Model.ReturnUrl = halaman kembali setelah aksi (default: URL halaman ini).
+*@
+@{
+    if (Model == null || !Model.ShouldRender)
+    {
+        return;
+    }
+
+    var panelId = "apprPanel_" + Model.DocType.Replace("_", "");
+    var returnUrl = Model.ReturnUrl ?? (Context.Request.Path + Context.Request.QueryString);
+    var latest = Model.Requests.FirstOrDefault();
+    var older = Model.Requests.Skip(1).ToList();
+    var (hLabel, hCss, hIcon) = latest != null
+        ? ERP.Web.Models.Appr.RequestBadge(latest.Status)
+        : ("Perlu persetujuan", "bg-info text-dark", "bi-info-circle");
+    string Dt(DateTime? d) => d?.ToString("dd/MM/yyyy HH:mm") ?? "-";
+    string QuorumText(string type, int? count) => T[ERP.Web.Models.Appr.Quorum(type), count ?? 0];
+}
+<div class="card custom-card mt-3 approval-panel" id="@panelId">
+    <div class="card-header custom-card-header d-flex flex-wrap align-items-center gap-2 py-3 px-4">
+        <span class="fw-semibold text-white fs-6"><i class="bi bi-diagram-2 me-1"></i>@T[Model.Title ?? "Persetujuan"]</span>
+        <span class="badge @hCss"><i class="bi @hIcon me-1"></i>@T[hLabel]</span>
+        @if (latest?.Status == "pending" && latest.CurrentLevel != null)
+        {
+            <span class="text-white-50 small">
+                @T["Level {0} dari {1}", latest.CurrentLevel, latest.LevelCount] ·
+                @T["{0} dari {1} persetujuan", latest.CurrentApproved, latest.CurrentRequired]
+            </span>
+        }
+        <a asp-controller="Approvals" asp-action="Index" class="ms-auto small text-info text-decoration-none"><i class="bi bi-inbox me-1"></i>@T["Kotak Persetujuan"]</a>
+    </div>
+    <div class="card-body px-4 py-3 text-white">
+
+        @if (latest == null && Model.Preview.Required)
+        {
+            <div class="small text-white-50 mb-2">
+                @T["Nominal {0} memerlukan persetujuan lewat alur", Acc.Money(Model.Amount)] <strong class="text-white">@Model.Preview.WorkflowName</strong>:
+            </div>
+            <ol class="small mb-3">
+                @foreach (var l in Model.Preview.Levels)
+                {
+                    <li>
+                        <strong>@l.Name</strong> — @QuorumText(l.QuorumType, l.QuorumCount)
+                        <span class="text-white-50">(@string.Join(", ", l.Approvers))</span>
+                    </li>
+                }
+            </ol>
+        }
+        else if (latest == null)
+        {
+            <div class="small text-white-50 mb-2">@T["Dokumen ini belum pernah diajukan dan saat ini tidak memerlukan persetujuan."]</div>
+        }
+
+        @if (Model.CanSubmit)
+        {
+            <form method="post" asp-controller="Approvals" asp-action="Submit" class="border-top pt-3 mb-2"
+                  onsubmit='return confirm(@Json.Serialize(T["Ajukan {0} untuk persetujuan?", Model.DocNo]));'>
+                <input type="hidden" name="docType" value="@Model.DocType" />
+                <input type="hidden" name="docUid" value="@Model.DocUid" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <label class="form-label small mb-1" for="@(panelId)_reason">@(latest == null ? T["Keterangan pengajuan (opsional)"] : T["Keterangan pengajuan ulang (opsional)"])</label>
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control" name="reason" id="@(panelId)_reason" maxlength="500" />
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>@(latest == null ? T["Ajukan Persetujuan"] : T["Ajukan Ulang"])</button>
+                </div>
+            </form>
+        }
+
+        @if (latest != null)
+        {
+            <div class="row g-2 small mb-3">
+                <div class="col-md-3"><div class="text-white-50">@T["Diajukan oleh"]</div>@latest.RequestedByName · @Dt(latest.RequestedAt)</div>
+                <div class="col-md-3"><div class="text-white-50">@T["Alur"]</div>@(latest.WorkflowName ?? "-")</div>
+                <div class="col-md-2"><div class="text-white-50">@T["Nominal diajukan"]</div>@Acc.Money(latest.Amount)</div>
+                <div class="col-md-2"><div class="text-white-50">@T["Pembuat dokumen"]</div>@(latest.DocCreatedByName ?? "-")</div>
+                @if (latest.DecidedAt != null)
+                {
+                    <div class="col-md-2"><div class="text-white-50">@T["Selesai"]</div>@Dt(latest.DecidedAt)</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(latest.Reason))
+                {
+                    <div class="col-md-8"><div class="text-white-50">@T["Keterangan pengaju"]</div>@latest.Reason</div>
+                }
+                @if (latest.ActionDate != null)
+                {
+                    <div class="col-md-4"><div class="text-white-50">@T["Tanggal aksi"]</div>@Acc.Date(latest.ActionDate)</div>
+                }
+            </div>
+
+            <div class="row g-2 mb-2">
+                @foreach (var l in latest.Levels)
+                {
+                    var (lLabel, lCss) = ERP.Web.Models.Appr.LevelBadge(l.Status);
+                    <div class="col-lg-4 col-md-6">
+                        <div class="border rounded p-2 h-100 @(l.Status == "pending" ? "border-info" : "border-secondary")">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <strong class="small">@T["Level {0}", l.StepLevel] — @l.Name</strong>
+                                <span class="badge @lCss ms-auto">@T[lLabel]</span>
+                            </div>
+                            <div class="small text-white-50 mb-1">
+                                @QuorumText(l.QuorumType, l.QuorumCount) ·
+                                <span class="@(l.ApprovedCount >= l.RequiredCount ? "text-success" : "text-white")">@T["{0} dari {1}", l.ApprovedCount, l.RequiredCount]</span>
+                                <span>(@T["pool {0} orang", l.PoolSize])</span>
+                            </div>
+                            <ul class="list-unstyled small mb-0">
+                                @foreach (var s in l.Steps)
+                                {
+                                    var (sLabel, sCss) = ERP.Web.Models.Appr.StepBadge(s.Status);
+                                    <li class="d-flex flex-wrap align-items-center gap-1 py-1 border-top border-secondary-subtle">
+                                        <i class="bi bi-person-circle"></i>
+                                        <span>@s.UserName</span>
+                                        @if (!string.IsNullOrEmpty(s.RoleName))
+                                        {
+                                            <span class="text-white-50">(@s.RoleName)</span>
+                                        }
+                                        <span class="badge @sCss ms-auto">@T[sLabel]</span>
+                                        @if (s.ActedAt != null)
+                                        {
+                                            <div class="w-100 text-white-50">
+                                                @Dt(s.ActedAt)
+                                                @if (!string.IsNullOrWhiteSpace(s.Note))
+                                                {
+                                                    <em>“@s.Note”</em>
+                                                }
+                                            </div>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (latest.CanDecide)
+            {
+                <form method="post" asp-controller="Approvals" asp-action="Approve" asp-route-uid="@latest.Uid" class="border-top pt-3 mb-2">
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <label class="form-label small mb-1" for="@(panelId)_note">@T["Keputusan Anda (catatan wajib bila menolak)"]</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" name="note" id="@(panelId)_note" maxlength="255" />
+                        <button type="submit" class="btn btn-success"
+                                onclick='return confirm(@Json.Serialize(T["Setujui {0}?", latest.DocNo]));'>
+                            <i class="bi bi-check-lg me-1"></i>@T["Setujui"]
+                        </button>
+                        <button type="submit" class="btn btn-danger" formaction="@Url.Action("Reject", "Approvals", new { uid = latest.Uid })"
+                                onclick='return apprRejectCheck(this, @Json.Serialize(T["Catatan penolakan wajib diisi."]), @Json.Serialize(T["Tolak {0}?", latest.DocNo]));'>
+                            <i class="bi bi-x-lg me-1"></i>@T["Tolak"]
+                        </button>
+                    </div>
+                </form>
+            }
+            else if (latest.Status == "pending" && !string.IsNullOrEmpty(latest.DecideBlockedReason))
+            {
+                <div class="alert alert-warning small py-2 mb-2"><i class="bi bi-person-lock me-1"></i>@T[latest.DecideBlockedReason]</div>
+            }
+
+            @if (latest.CanWithdraw)
+            {
+                <form method="post" asp-controller="Approvals" asp-action="Withdraw" asp-route-uid="@latest.Uid" class="mb-2"
+                      onsubmit='return confirm(@Json.Serialize(T["Tarik pengajuan {0}?", latest.DocNo]));'>
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" name="note" maxlength="255" required placeholder="@T["Alasan penarikan (wajib)"]" />
+                        <button type="submit" class="btn btn-outline-warning"><i class="bi bi-arrow-counterclockwise me-1"></i>@T["Tarik Pengajuan"]</button>
+                    </div>
+                </form>
+            }
+
+            @if (latest.Actions.Count > 0)
+            {
+                <div class="small text-white-50 mt-3 mb-1">@T["Jejak keputusan"]</div>
+                <ul class="list-unstyled small mb-0">
+                    @foreach (var a in latest.Actions)
+                    {
+                        <li class="py-1">
+                            <span class="text-white-50">@Dt(a.ActedAt)</span> · <strong>@(a.UserName ?? "-")</strong> @T[ERP.Web.Models.Appr.DecisionLabel(a.Decision)]
+                            @if (a.StepLevel != null && a.Decision is "approve" or "reject")
+                            {
+                                <span class="text-white-50">(@T["Level {0}", a.StepLevel])</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(a.Note))
+                            {
+                                <em>— “@a.Note”</em>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        }
+
+        @if (older.Count > 0)
+        {
+            <div class="mt-3 border-top pt-2">
+                <a class="small text-info text-decoration-none" data-bs-toggle="collapse" href="#@(panelId)_history" role="button">
+                    <i class="bi bi-clock-history me-1"></i>@T["Riwayat pengajuan sebelumnya ({0})", older.Count]
+                </a>
+                <div class="collapse" id="@(panelId)_history">
+                    @foreach (var r in older)
+                    {
+                        var (rLabel, rCss, rIcon) = ERP.Web.Models.Appr.RequestBadge(r.Status);
+                        <div class="border border-secondary rounded p-2 mt-2 small">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <span class="badge @rCss"><i class="bi @rIcon me-1"></i>@T[rLabel]</span>
+                                <span>@Dt(r.RequestedAt) · @r.RequestedByName</span>
+                                <span class="text-white-50">@r.WorkflowName · @Acc.Money(r.Amount)</span>
+                            </div>
+                            <ul class="list-unstyled mb-0 mt-1">
+                                @foreach (var a in r.Actions)
+                                {
+                                    <li>
+                                        <span class="text-white-50">@Dt(a.ActedAt)</span> · <strong>@(a.UserName ?? "-")</strong> @T[ERP.Web.Models.Appr.DecisionLabel(a.Decision)]
+                                        @if (!string.IsNullOrWhiteSpace(a.Note))
+                                        {
+                                            <em>— “@a.Note”</em>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+<script>
+    function apprRejectCheck(btn, msgNote, msgConfirm) {
+        const note = btn.form.querySelector('input[name="note"]');
+        if (!note.value.trim()) { alert(msgNote); note.focus(); return false; }
+        return confirm(msgConfirm);
+    }
+</script>

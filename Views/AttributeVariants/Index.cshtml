@@ -2,9 +2,9 @@
 @model PagedResult<ProductVariantViewModel>
 
 @{
-    ViewData["Title"] = "Variant";
+    ViewData["Title"] = T["Variant"];
 
-    long attributeId = ViewBag.AttributeId;
+    string attributeUid = ViewBag.AttributeUid ?? "";
     string? search = ViewBag.Search;
     bool? isActive = ViewBag.IsActive;
 
@@ -389,7 +389,7 @@
     <div class="mb-2">
 
         <h3 class="page-title">
-            Varian — @ViewBag.Name
+            @T["Varian"] — @ViewBag.Name
         </h3>
 
         <a asp-controller="ProductAttributes"
@@ -397,7 +397,7 @@
            class="btn-back">
 
             <i class="bi bi-arrow-left"></i>
-            Kembali ke Atribut
+            @T["Kembali ke Atribut"]
 
         </a>
 
@@ -407,7 +407,7 @@
     <div class="attribute-info">
 
         <div class="attribute-label">
-            Atribut
+            @T["Atribut"]
         </div>
 
         <div class="attribute-name">
@@ -423,10 +423,10 @@
     <div class="row g-3">
         <div class="col-lg-4 form-column">
 
-            <div class="card h-100">
+            <div class="card h-100" data-perm="update">
 
                 <div class="card-header">
-                    <h5 id="variantFormTitle">Tambah Varian</h5>
+                    <h5 id="variantFormTitle">@T["Tambah Varian"]</h5>
                 </div>
 
                 <form id="variantForm"
@@ -437,11 +437,11 @@
                     @Html.AntiForgeryToken()
 
                     <input type="hidden"
-                           name="AttributeId"
-                           value="@attributeId" />
+                           name="AttributeUid"
+                           value="@attributeUid" />
 
                     <input type="hidden"
-                           name="Id"
+                           name="Uid"
                            id="editVariantId" />
 
                     <div class="card-body">
@@ -450,12 +450,12 @@
                         <div class="mb-2">
 
                             <label class="form-label">
-                                Kode
+                                @T["Kode"]
                             </label>
 
                             <input type="text"
                                    class="form-control"
-                                   placeholder="Otomatis saat disimpan (VARxxx)"
+                                   placeholder="@T["Otomatis saat disimpan (VARxxx)"]"
                                    readonly />
 
                         </div>
@@ -464,14 +464,14 @@
                         <div class="mb-3">
 
                             <label class="form-label">
-                                Nama Varian
+                                @T["Nama Varian"]
                                 <span class="text-danger">*</span>
                             </label>
 
                             <input type="text"
                                    name="Name"
                                    class="form-control"
-                                   placeholder="mis. Merah, M, 200×120"
+                                   placeholder="@T["mis. Merah, M, 200×120"]"
                                    required />
 
                         </div>
@@ -480,7 +480,7 @@
                         <div class="mb-3">
 
                             <label class="form-label">
-                                Dimensi per satuan (cm)
+                                @T["Dimensi per satuan (cm)"]
                             </label>
 
                             <div class="dimension-row">
@@ -490,28 +490,28 @@
                                        class="form-control"
                                        step="0.01"
                                        min="0"
-                                       placeholder="Panjang" />
+                                       placeholder="@T["Panjang"]" />
 
                                 <input type="number"
                                        name="DefWidth"
                                        class="form-control"
                                        step="0.01"
                                        min="0"
-                                       placeholder="Lebar" />
+                                       placeholder="@T["Lebar"]" />
 
                                 <input type="number"
                                        name="DefHeight"
                                        class="form-control"
                                        step="0.01"
                                        min="0"
-                                       placeholder="Tinggi" />
+                                       placeholder="@T["Tinggi"]" />
 
                             </div>
 
                             <div class="dimension-help">
-                                Otomatis terisi dari Nama (mis.
+                                @T["Otomatis terisi dari Nama (mis."]
                                 <code>200x100x10.5</code> → 200, 100, 10.5).
-                                Boleh diubah manual.
+                                @T["Boleh diubah manual."]
                             </div>
 
                         </div>
@@ -520,13 +520,13 @@
                         <div class="mb-3">
 
                             <label class="form-label">
-                                Keterangan
+                                @T["Keterangan"]
                             </label>
 
                             <textarea name="Description"
                                       class="form-control"
                                       rows="2"
-                                      placeholder="opsional"></textarea>
+                                      placeholder="@T["opsional"]"></textarea>
 
                         </div>
 
@@ -534,7 +534,7 @@
                         <div class="mb-3">
 
                             <label class="form-label">
-                                Urutan
+                                @T["Urutan"]
                             </label>
 
                             <input type="number"
@@ -562,7 +562,7 @@
 
                                 <label class="form-check-label ms-2"
                                        for="variantActive">
-                                    Aktif
+                                    @T["Aktif"]
                                 </label>
 
                             </div>
@@ -580,7 +580,7 @@
                             <i class="bi bi-plus-circle"
                                id="variantSubmitIcon"></i>
 
-                            <span id="variantSubmitText">Tambah</span>
+                            <span id="variantSubmitText">@T["Tambah"]</span>
 
                         </button>
 
@@ -603,12 +603,12 @@
                 <div class="card-header d-flex align-items-center justify-content-between">
 
                     <h5>
-                        Daftar Varian (@Model.TotalData)
+                        @T["Daftar Varian ({0})", Model.TotalData]
                     </h5>
 
                  <span class="menu-description small d-flex align-items-center gap-1">
                    <i class="bi bi-grip-vertical"></i>
-                   Geser baris untuk mengubah urutan
+                   @T["Geser baris untuk mengubah urutan"]
                 </span>
 
                 </div>
@@ -622,31 +622,31 @@
                             <tr>
 
                                 <th class="text-center" style="width: 35px;">
-                                    Urut
+                                    @T["Urut"]
                                 </th>
 
                                 <th style="width: 110px;">
-                                    Kode
+                                    @T["Kode"]
                                 </th>
 
                                 <th>
-                                    Nama Varian
+                                    @T["Nama Varian"]
                                 </th>
 
                                 <th>
-                                    Dimensi P×L×T
+                                    @T["Dimensi P×L×T"]
                                 </th>
 
                                 <th>
-                                    Keterangan
+                                    @T["Keterangan"]
                                 </th>
 
                                 <th class="text-center">
-                                    Status
+                                    @T["Status"]
                                 </th>
 
                                 <th class="text-center" style="width: 90px;">
-                                    Aksi
+                                    @T["Aksi"]
                                 </th>
 
                             </tr>
@@ -662,7 +662,7 @@
                                    
                                     <tr class="variant-drag-row"
                                         draggable="true"
-                                        data-id="@item.Id">
+                                        data-uid="@item.Uid">
                                         
 
                                         <td class="text-center variant-order">
@@ -693,13 +693,13 @@
                                             @if (item.IsActive)
                                             {
                                                 <span class="badge bg-success">
-                                                    Aktif
+                                                    @T["Aktif"]
                                                 </span>
                                             }
                                             else
                                             {
                                                 <span class="badge bg-secondary">
-                                                    Tidak Aktif
+                                                    @T["Tidak Aktif"]
                                                 </span>
                                             }
 
@@ -707,35 +707,35 @@
 
                                         <td class="text-center">
 
-                                            <div class="d-flex justify-content-center gap-2">
+                                            <div class="row-actions">
 
-                                                <button type="button"
-                                                        class="action-btn action-edit"
-                                                        title="Edit"
-                                                        onclick="openEditProductVariant(@item.Id, @attributeId)">
+                                                <button data-perm="update" type="button"
+                                                        class="act-btn act-edit"
+                                                        title="@T["Edit"]"
+                                                        onclick="openEditProductVariant('@item.Uid', '@attributeUid')">
 
-                                                    <i class="bi bi-pencil-square"></i>
+                                                    <i class="bi bi-pencil"></i>
 
                                                 </button>
 
-                                                <form asp-action="Delete"
+                                                <form data-perm="update" asp-action="Delete"
                                                       method="post"
                                                       class="d-inline">
 
                                                     @Html.AntiForgeryToken()
 
                                                     <input type="hidden"
-                                                           name="id"
-                                                           value="@item.Id" />
+                                                           name="uid"
+                                                           value="@item.Uid" />
 
                                                     <input type="hidden"
-                                                           name="attributeId"
-                                                           value="@attributeId" />
+                                                           name="attributeUid"
+                                                           value="@attributeUid" />
 
                                                     <button type="submit"
-                                                            class="action-btn action-delete"
-                                                            title="Hapus"
-                                                            onclick="return confirm('Yakin ingin menghapus variant ini?')">
+                                                            class="act-btn act-delete"
+                                                            title="@T["Hapus"]"
+                                                            onclick='return confirm(@Json.Serialize(T["Yakin ingin menghapus variant ini?"]))'>
 
                                                         <i class="bi bi-trash"></i>
 
@@ -757,7 +757,7 @@
                                     <td colspan="7"
                                         class="empty-state">
 
-                                        Belum ada varian.
+                                        @T["Belum ada varian."]
 
                                     </td>
 
@@ -783,14 +783,14 @@
 @section Scripts {
 <script>
 
-    async function openEditProductVariant(id, attributeId) {
+    async function openEditProductVariant(uid, attributeUid) {
 
         try {
 
             const url =
                 '@Url.Action("GetById", "AttributeVariants")'
-                + '?attributeId=' + attributeId
-                + '&id=' + id;
+                + '?attributeUid=' + encodeURIComponent(attributeUid)
+                + '&uid=' + encodeURIComponent(uid);
 
             console.log("URL:", url);
 
@@ -820,12 +820,12 @@
 
 
             // ==========================
-            // ID
+            // UID
             // ==========================
 
             document.getElementById(
                 "editVariantId"
-            ).value = variant.id;
+            ).value = variant.uid;
 
 
             // ==========================
@@ -897,7 +897,7 @@
 
             document.getElementById(
                 "variantFormTitle"
-            ).innerText = "Edit Varian";
+            ).innerText = @Json.Serialize(T["Edit Varian"]);
 
 
             // ==========================
@@ -916,7 +916,7 @@
 
             document.getElementById(
                 "variantSubmitText"
-            ).innerText = "Simpan Perubahan";
+            ).innerText = @Json.Serialize(T["Simpan Perubahan"]);
 
             document.getElementById(
                 "variantSubmitIcon"
@@ -1102,15 +1102,15 @@ variantTableBody.addEventListener("dragend", async function () {
 
     rows.forEach((row, index) => {
 
-        const id =
-            row.getAttribute("data-id");
+        const uid =
+            row.getAttribute("data-uid");
 
         const sortOrder =
             index + 1;
 
 
         items.push({
-            id: Number(id),
+            uid: uid,
             sortOrder: sortOrder
         });
 
@@ -1146,7 +1146,7 @@ variantTableBody.addEventListener("dragend", async function () {
         const response =
             await fetch(
                 '@Url.Action("Reorder", "AttributeVariants")'
-                + '?attributeId=@attributeId',
+                + '?attributeUid=@attributeUid',
                 {
                     method: "POST",
 
@@ -1175,7 +1175,7 @@ variantTableBody.addEventListener("dragend", async function () {
 
             throw new Error(
                 result.message ||
-                "Gagal menyimpan urutan variant."
+                @Json.Serialize(T["Gagal menyimpan urutan variant."])
             );
 
         }
@@ -1186,7 +1186,7 @@ variantTableBody.addEventListener("dragend", async function () {
         // ===============================
 
         alert(
-            "Urutan variant berhasil disimpan."
+            @Json.Serialize(T["Urutan variant berhasil disimpan."])
         );
 
 
@@ -1203,7 +1203,7 @@ variantTableBody.addEventListener("dragend", async function () {
 
 
         alert(
-            "Gagal menyimpan urutan variant."
+            @Json.Serialize(T["Gagal menyimpan urutan variant."])
         );
 
     }

@@ -1,0 +1,94 @@
+@model ERP.Web.Models.CostCenterPnlViewModel
+@{
+    ViewData["Title"] = T["Laba Rugi per Cost Center"];
+    var header = new ListHeaderModel
+    {
+        Title = T["Periode {0} s/d {1}", Acc.Date(Model.From), Acc.Date(Model.To)],
+        Description = T["Akun beban × cost center (cost-only). Jurnal penutup tahunan tidak dihitung."],
+        ShowRefresh = false
+    };
+    string Cell(decimal v) => v == 0 ? "-" : Acc.Money(v);
+    var glFrom = Model.From.ToString("yyyy-MM-dd");
+    var glTo = Model.To.ToString("yyyy-MM-dd");
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Laba Rugi per Cost Center"]</h3>
+
+    <partial name="_DateRangeFilter" model="(Model.From, Model.To)" />
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Cost center adalah unit akuntabilitas BIAYA, jadi laporan ini hanya menjumlahkan akun beban (tanpa baris laba). Kolom \"Tanpa CC\" = beban yang belum di-tag; total per akun sama dengan Laba Rugi biasa. Alokasi biaya memindahkan angka antar kolom tanpa mengubah total."]
+        @if (Model.TaggedRevenue != 0)
+        {
+            <div class="mt-1">@T["Catatan: ada pendapatan ber-tag cost center sebesar {0} — tidak dimasukkan ke tabel (pendapatan dianalisis per project).", Acc.Money(Model.TaggedRevenue)]</div>
+        }
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="min-width: 220px;">@T["AKUN BEBAN"]</th>
+                            @foreach (var c in Model.CostCenters)
+                            {
+                                <th class="text-end" title="@c.Name">@c.Code</th>
+                            }
+                            <th class="text-end text-white-50">@T["TANPA CC"]</th>
+                            <th class="text-end">@T["TOTAL"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Rows.Count == 0)
+                        {
+                            <tr><td colspan="@(Model.CostCenters.Count + 3)" class="text-center text-muted py-4">@T["Tidak ada beban pada periode ini."]</td></tr>
+                        }
+                        @foreach (var r in Model.Rows)
+                        {
+                            <tr>
+                                <td class="ps-4 text-white">
+                                    @if (r.AccountUid != null)
+                                    {
+                                        <a asp-controller="GeneralLedger" asp-action="Index" asp-route-accountUid="@r.AccountUid" asp-route-from="@glFrom" asp-route-to="@glTo"
+                                           class="text-info text-decoration-none">@r.AccountCode</a>
+                                    }
+                                    else
+                                    {
+                                        @r.AccountCode
+                                    }
+                                    @r.AccountName
+                                </td>
+                                @foreach (var v in r.Amounts)
+                                {
+                                    <td class="text-end @(v < 0 ? "text-danger" : "text-white")">@Cell(v)</td>
+                                }
+                                <td class="text-end text-white-50">@Cell(r.Untagged)</td>
+                                <td class="text-end text-white fw-semibold">@Acc.Money(r.Total)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (Model.Rows.Count > 0)
+                    {
+                        <tfoot>
+                            <tr>
+                                <td class="ps-4 fw-bold text-white">@T["TOTAL BEBAN"]</td>
+                                @foreach (var v in Model.Totals)
+                                {
+                                    <td class="text-end fw-bold text-white">@Cell(v)</td>
+                                }
+                                <td class="text-end fw-bold text-white-50">@Cell(Model.UntaggedTotal)</td>
+                                <td class="text-end fw-bold text-white">@Acc.Money(Model.GrandTotal)</td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

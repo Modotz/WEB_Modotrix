@@ -1,0 +1,186 @@
+@model ERP.Web.Models.AccessRoleMatrixViewModel
+
+@{
+    ViewData["Title"] = T["Hak Akses Role"];
+    var canUpdate = await Access.CanAsync("access-role", "update");
+    var parentIds = Model.Menus.Where(m => m.ParentId != null).Select(m => m.ParentId!.Value).ToHashSet();
+    var actions = new[] { ("view", "Lihat"), ("create", "Tambah"), ("update", "Ubah"), ("delete", "Hapus") };
+}
+
+<div class="px-2">
+
+    <div class="mb-3">
+        <h3 class="fw-semibold text-white mb-0">@T["Hak Akses Role"]</h3>
+    </div>
+
+    <!-- PILIH ROLE -->
+    <div class="card custom-card mb-3">
+        <div class="card-body px-4 py-3">
+            <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label for="roleUid" class="form-label text-white small mb-1">Role</label>
+                    <select name="roleUid" id="roleUid" class="form-select form-select-sm" onchange="this.form.submit()">
+                        @foreach (var role in Model.Roles)
+                        {
+                            <option value="@role.Uid" selected="@(role.Id == Model.RoleId)">@role.Name</option>
+                        }
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MATRIKS -->
+    <form method="post" asp-action="Save" id="accessForm">
+        <input type="hidden" name="RoleUid" value="@Model.RoleUid" />
+
+        <div class="card custom-card">
+            <div class="card-header custom-card-header d-flex align-items-center gap-2 py-3 px-4">
+                <span class="fw-semibold text-white fs-6">@T["Matriks Hak Akses"]</span>
+                @if (Model.IsAdminRole)
+                {
+                    <span class="badge text-bg-danger">@T["Administrator selalu memiliki akses penuh"]</span>
+                }
+                @if (canUpdate)
+                {
+                    <button type="submit" class="btn btn-primary btn-sm px-3 ms-auto custom-btn-add">
+                        <i class="bi bi-save me-1"></i>@T["Simpan"]
+                    </button>
+                }
+            </div>
+
+            <div class="table-responsive">
+                <table class="table custom-table access-matrix align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="fw-bold">MENU</th>
+                            @foreach (var (key, label) in actions)
+                            {
+                                <th class="text-center fw-bold" style="width: 100px;">
+                                    <div>@T[label].ToUpperInvariant()</div>
+                                    <input type="checkbox" class="form-check-input mt-1 check-column"
+                                           data-action="@key" title="@T["Pilih semua {0}", T[label].ToLower()]" />
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Menus.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-center text-white-50 py-4">@T["Belum ada menu."]</td></tr>
+                        }
+
+                        @for (var i = 0; i < Model.Menus.Count; i++)
+                        {
+                            var menu = Model.Menus[i];
+                            var isParent = parentIds.Contains(menu.Id);
+                            var values = new Dictionary<string, bool>
+                            {
+                                ["view"] = menu.CanView,
+                                ["create"] = menu.CanCreate,
+                                ["update"] = menu.CanUpdate,
+                                ["delete"] = menu.CanDelete
+                            };
+                            var fields = new Dictionary<string, string>
+                            {
+                                ["view"] = "CanView",
+                                ["create"] = "CanCreate",
+                                ["update"] = "CanUpdate",
+                                ["delete"] = "CanDelete"
+                            };
+
+                            <tr class="@(isParent ? "menu-parent" : "")" data-menu-id="@menu.Id" data-parent-id="@menu.ParentId">
+                                <td class="text-white">
+                                    <input type="hidden" name="Items[@i].MenuId" value="@menu.Id" />
+                                    @if (menu.ParentId != null)
+                                    {
+                                        <span class="menu-child-indent">&rdsh;</span>
+                                    }
+                                    <i class="@(string.IsNullOrWhiteSpace(menu.Icon) ? "bi bi-dash" : menu.Icon) me-1"></i>
+                                    @T[menu.Title]
+                                    @if (!string.IsNullOrWhiteSpace(menu.Url) && menu.Url != "#")
+                                    {
+                                        <small class="text-white-50 ms-1">/@menu.Url</small>
+                                    }
+                                </td>
+                                @foreach (var (key, _) in actions)
+                                {
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input perm"
+                                               name="Items[@i].@fields[key]" value="true"
+                                               data-action="@key"
+                                               checked="@values[key]" />
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (canUpdate)
+            {
+                <div class="card-footer d-flex justify-content-end py-3 px-4">
+                    <button type="submit" class="btn btn-primary btn-sm px-3 custom-btn-add">
+                        <i class="bi bi-save me-1"></i>@T["Simpan Hak Akses"]
+                    </button>
+                </div>
+            }
+        </div>
+    </form>
+
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const form = document.getElementById('accessForm');
+            const boxes = (action) => form.querySelectorAll(`input.perm[data-action="${action}"]`);
+
+            // Header kolom: pilih/kosongkan semua untuk satu aksi.
+            function syncHeader(action) {
+                const header = form.querySelector(`.check-column[data-action="${action}"]`);
+                const all = [...boxes(action)];
+                header.checked = all.length > 0 && all.every(b => b.checked);
+                header.indeterminate = !header.checked && all.some(b => b.checked);
+            }
+
+            form.querySelectorAll('.check-column').forEach(header => {
+                header.addEventListener('change', () => {
+                    boxes(header.dataset.action).forEach(b => b.checked = header.checked);
+                });
+                syncHeader(header.dataset.action);
+            });
+
+            form.addEventListener('change', (e) => {
+                const box = e.target;
+                if (!box.classList.contains('perm')) return;
+
+                const row = box.closest('tr');
+                const action = box.dataset.action;
+
+                // Centang menu induk ikut mencentang/mengosongkan anak-anaknya pada kolom yang sama.
+                form.querySelectorAll(`tr[data-parent-id="${row.dataset.menuId}"] input.perm[data-action="${action}"]`)
+                    .forEach(child => child.checked = box.checked);
+
+                // Aksi tambah/ubah/hapus butuh izin lihat.
+                if (box.checked && action !== 'view') {
+                    row.querySelector('input.perm[data-action="view"]').checked = true;
+                }
+
+                // Menu anak yang dicentang lihat membuat induknya ikut terlihat di sidebar.
+                if (box.checked && action === 'view' && row.dataset.parentId) {
+                    const parent = form.querySelector(`tr[data-menu-id="${row.dataset.parentId}"] input.perm[data-action="view"]`);
+                    if (parent) parent.checked = true;
+                }
+
+                ['view', 'create', 'update', 'delete'].forEach(syncHeader);
+            });
+
+            @if (!canUpdate)
+            {
+                <text>form.querySelectorAll('input[type=checkbox]').forEach(b => b.disabled = true);</text>
+            }
+        })();
+    </script>
+}

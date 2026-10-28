@@ -1,0 +1,234 @@
+@model ERP.Web.Models.JournalFormViewModel
+
+@{
+    var isRevise = Model.Mode == "revise";
+    var isEdit = Model.Mode == "edit";
+    var title = isRevise ? T["Revisi Jurnal {0}", Model.OriginalNo] : isEdit ? T["Ubah Draft {0}", Model.OriginalNo] : T["Jurnal Baru"];
+    ViewData["Title"] = title;
+    var action = isRevise ? "Revise" : isEdit ? "Update" : "Create";
+}
+
+<div class="px-2">
+
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@title</h3>
+        <a asp-action="@(Model.Uid == null ? "Index" : "Details")" asp-route-uid="@Model.Uid" class="btn btn-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>@T["Kembali"]
+        </a>
+    </div>
+
+    @if (isRevise)
+    {
+        <div class="alert alert-warning small">
+            <i class="bi bi-info-circle me-1"></i>
+            @T["Revisi tidak mengubah jurnal {0}. Sistem membuat jurnal pembalik (bertanggal hari ini) lalu jurnal baru sesuai isian di bawah, dalam satu transaksi.", Model.OriginalNo]
+        </div>
+    }
+
+    <form method="post" asp-action="@action" id="journalForm">
+        <input type="hidden" name="Uid" value="@Model.Uid" />
+        <input type="hidden" name="OriginalNo" value="@Model.OriginalNo" />
+
+        <div class="card custom-card mb-3">
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="JournalDate">@T["Tanggal"]</label>
+                        <input type="date" class="form-control form-control-sm" name="JournalDate" id="JournalDate"
+                               value="@Model.JournalDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="Reference">@T["Referensi"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Reference" id="Reference" value="@Model.Reference" maxlength="100" />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label text-white small mb-1" for="Description">@T["Keterangan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Description" id="Description" value="@Model.Description" maxlength="255" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="ReversalDate" title="@T["Isi untuk jurnal akrual: tanggal jurnal baliknya"]">@T["Tgl balik (akrual)"]</label>
+                        <input type="date" class="form-control form-control-sm" name="ReversalDate" id="ReversalDate"
+                               value="@Model.ReversalDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    @if (isRevise)
+                    {
+                        <div class="col-12">
+                            <label class="form-label text-white small mb-1" for="Reason">@T["Alasan revisi (wajib)"]</label>
+                            <input type="text" class="form-control form-control-sm" name="Reason" id="Reason" value="@Model.Reason" maxlength="200" required />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header d-flex justify-content-between align-items-center py-3 px-4">
+                <span class="fw-semibold text-white fs-6">@T["Baris Jurnal"]</span>
+                <span class="text-white-50 small">@T["Akun kontrol (piutang, hutang, persediaan, GR/IR) tidak tersedia — diisi lewat dokumennya."]</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table custom-table align-middle mb-0" id="linesTable">
+                    <thead>
+                        <tr>
+                            <th class="fw-bold" style="width: 28%;">@T["AKUN"]</th>
+                            <th class="fw-bold">@T["KETERANGAN"]</th>
+                            <th class="fw-bold" style="width: 150px;" title="@T["Hanya untuk akun pendapatan/beban"]">@T["CC / PROJECT"]</th>
+                            <th class="fw-bold text-end" style="width: 170px;">@T["DEBIT"]</th>
+                            <th class="fw-bold text-end" style="width: 170px;">@T["KREDIT"]</th>
+                            <th style="width: 50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="linesBody">
+                        @for (var i = 0; i < Model.Lines.Count; i++)
+                        {
+                            var l = Model.Lines[i];
+                            <tr class="journal-line">
+                                <td>
+                                    <select class="form-select form-select-sm line-account" name="Lines[@i].AccountId">
+                                        <option value="0">@T["— Pilih akun —"]</option>
+                                        @foreach (var a in Model.Accounts)
+                                        {
+                                            <option value="@a.Id" data-type="@a.Type" selected="@(a.Id == l.AccountId)">@a.Label</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input type="text" class="form-control form-control-sm" name="Lines[@i].Description" value="@l.Description" maxlength="255" /></td>
+                                <td>
+                                    <select class="form-select form-select-sm line-cc dim-select mb-1" name="Lines[@i].CostCenterId" title="@T["Cost center"]">
+                                        <option value="">@T["— CC —"]</option>
+                                        @foreach (var cc in Model.Dimensions.CostCenters)
+                                        {
+                                            <option value="@cc.Id" selected="@(cc.Id == l.CostCenterId)">@cc.Code</option>
+                                        }
+                                    </select>
+                                    <select class="form-select form-select-sm line-project dim-select" name="Lines[@i].ProjectId" title="@T["Project"]">
+                                        <option value="">@T["— Project —"]</option>
+                                        @foreach (var p in Model.Dimensions.Projects)
+                                        {
+                                            <option value="@p.Id" data-type="@p.ProjectType" selected="@(p.Id == l.ProjectId)">@p.Code</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end line-debit" name="Lines[@i].Debit" value="@(l.Debit == 0 ? "" : l.Debit.ToString(System.Globalization.CultureInfo.InvariantCulture))" /></td>
+                                <td><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end line-credit" name="Lines[@i].Credit" value="@(l.Credit == 0 ? "" : l.Credit.ToString(System.Globalization.CultureInfo.InvariantCulture))" /></td>
+                                <td class="text-center"><button type="button" class="act-btn act-delete btn-remove-line" title="@T["Hapus baris"]"><i class="bi bi-x-lg"></i></button></td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2">
+                                <button type="button" class="btn btn-outline-light btn-sm" id="btnAddLine"><i class="bi bi-plus-lg me-1"></i>@T["Tambah Baris"]</button>
+                            </td>
+                            <td></td>
+                            <td class="text-end fw-bold text-white" id="totalDebit">0,00</td>
+                            <td class="text-end fw-bold text-white" id="totalCredit">0,00</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="6" class="text-end small" id="balanceInfo"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            @if (isRevise)
+            {
+                <button type="submit" class="btn btn-warning" onclick='return confirm(@Json.Serialize(T["Simpan revisi? Jurnal lama akan dibalik dan jurnal baru diposting."]));'>
+                    <i class="bi bi-check2-circle me-1"></i>@T["Simpan Revisi"]
+                </button>
+            }
+            else
+            {
+                <button type="submit" name="submitAction" value="draft" class="btn btn-outline-light"><i class="bi bi-save me-1"></i>@T["Simpan Draft"]</button>
+                <button type="submit" name="submitAction" value="post" class="btn btn-primary"
+                        onclick='return confirm(@Json.Serialize(T["Simpan dan posting? Jurnal posted tidak bisa diubah, hanya dibatalkan/direvisi."]));'>
+                    <i class="bi bi-check2-circle me-1"></i>@T["Simpan & Posting"]
+                </button>
+            }
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const body = document.getElementById('linesBody');
+            const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const txtBalanced = @Json.Serialize(T["Seimbang"]), txtDiff = @Json.Serialize(T["Selisih {0} — jurnal harus seimbang"]);
+            const num = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+
+            function renumber() {
+                body.querySelectorAll('tr.journal-line').forEach((tr, i) => {
+                    tr.querySelectorAll('[name]').forEach(el => {
+                        el.name = el.name.replace(/Lines\[\d+\]/, `Lines[${i}]`);
+                    });
+                });
+            }
+
+            function recalc() {
+                let d = 0, c = 0;
+                body.querySelectorAll('tr.journal-line').forEach(tr => {
+                    d += num(tr.querySelector('.line-debit').value);
+                    c += num(tr.querySelector('.line-credit').value);
+                });
+                document.getElementById('totalDebit').textContent = fmt.format(d);
+                document.getElementById('totalCredit').textContent = fmt.format(c);
+                const diff = Math.round((d - c) * 100) / 100;
+                const info = document.getElementById('balanceInfo');
+                info.innerHTML = diff === 0 && d > 0
+                    ? `<span class="text-success"><i class="bi bi-check-circle me-1"></i>${txtBalanced}</span>`
+                    : `<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>${txtDiff.replace('{0}', fmt.format(Math.abs(diff)))}</span>`;
+            }
+
+            // Satu sisi per baris: mengisi debit mengosongkan kredit, dan sebaliknya.
+            body.addEventListener('input', (e) => {
+                const tr = e.target.closest('tr');
+                if (e.target.classList.contains('line-debit') && num(e.target.value) > 0) tr.querySelector('.line-credit').value = '';
+                if (e.target.classList.contains('line-credit') && num(e.target.value) > 0) tr.querySelector('.line-debit').value = '';
+                recalc();
+            });
+
+            body.addEventListener('click', (e) => {
+                const btn = e.target.closest('.btn-remove-line');
+                if (!btn) return;
+                if (body.querySelectorAll('tr.journal-line').length <= 2) return;
+                btn.closest('tr').remove();
+                renumber();
+                recalc();
+            });
+
+            document.getElementById('btnAddLine').addEventListener('click', () => {
+                const first = body.querySelector('tr.journal-line');
+                const tr = first.cloneNode(true);
+                tr.querySelectorAll('input').forEach(i => i.value = '');
+                tr.querySelector('select').value = '0';
+                tr.querySelectorAll('.line-cc, .line-project').forEach(s => s.value = '');
+                body.appendChild(tr);
+                syncDims(tr);
+                renumber();
+                tr.querySelector('select').focus();
+            });
+
+            // Level 11: dimensi hanya untuk akun pendapatan/beban; project internal tidak untuk pendapatan.
+            function syncDims(tr) {
+                const type = tr.querySelector('.line-account').selectedOptions[0]?.dataset.type;
+                const pl = type === 'expense' || type === 'revenue';
+                tr.querySelectorAll('.line-cc, .line-project').forEach(s => { s.disabled = !pl; if (!pl) s.value = ''; });
+                tr.querySelectorAll('.line-project option[data-type="internal"]').forEach(o => {
+                    o.hidden = type === 'revenue';
+                    if (o.hidden && o.selected) o.parentElement.value = '';
+                });
+            }
+
+            body.addEventListener('change', (e) => {
+                if (e.target.classList.contains('line-account')) syncDims(e.target.closest('tr'));
+            });
+            body.querySelectorAll('tr.journal-line').forEach(syncDims);
+
+            recalc();
+        })();
+    </script>
+}

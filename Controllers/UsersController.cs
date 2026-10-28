@@ -14,10 +14,12 @@ namespace ERP.Web.Controllers;
 public class UsersController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public UsersController(ApiClient api)
+    public UsersController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     //[HttpGet]
@@ -55,11 +57,11 @@ public class UsersController : Controller
     }
 
 
-    // GET DATA USER BERDASARKAN ID
+    // GET DATA USER BERDASARKAN UID
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var user = await _api.GetUserAsync(id);
+        var user = await _api.GetUserAsync(uid);
 
         if (user is null)
             return NotFound();
@@ -76,7 +78,7 @@ public class UsersController : Controller
         {
             return BadRequest(new
             {
-                message = "Foto belum dipilih di ERP.Web."
+                message = _t["Foto belum dipilih di ERP.Web."]
             });
         }
 
@@ -89,8 +91,8 @@ public class UsersController : Controller
             {
                 message =
                     string.IsNullOrWhiteSpace(result.Error)
-                        ? "API gagal mengupload foto."
-                        : result.Error
+                        ? _t["API gagal mengupload foto."]
+                        : _t[result.Error]
             });
         }
 
@@ -241,9 +243,10 @@ public class UsersController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(UserViewModel model)
     {
-        if (!model.Id.HasValue)
+        // UID wajib untuk update (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
-            TempData["Error"] = "ID user tidak valid.";
+            TempData["Error"] = "User tidak ditemukan.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -275,9 +278,9 @@ public class UsersController : Controller
     // DELETE di MVC juga POST.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid uid)
     {
-        var result = await _api.DeleteUserAsync(id);
+        var result = await _api.DeleteUserAsync(uid);
 
         TempData[result.Success ? "Success" : "Error"] =
             result.Success
@@ -298,7 +301,7 @@ public class UsersController : Controller
         var worksheet = workbook.Worksheets.Add("User");
 
         worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Nama";
+        worksheet.Cell(1, 2).Value = _t["Nama"];
         worksheet.Cell(1, 3).Value = "Username";
         worksheet.Cell(1, 4).Value = "Email";
         worksheet.Cell(1, 5).Value = "Role";
@@ -321,7 +324,7 @@ public class UsersController : Controller
             worksheet.Cell(row, 4).Value = item.Email;
             worksheet.Cell(row, 5).Value = item.RoleName;
             worksheet.Cell(row, 6).Value =
-                item.IsActive ? "Aktif" : "Nonaktif";
+                item.IsActive ? _t["Aktif"] : _t["Nonaktif"];
 
             row++;
             no++;
@@ -368,9 +371,9 @@ public class UsersController : Controller
                     {
                         text.Span("User").FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}").FontColor("#6c757d");
+                        text.Span(_t["Dicetak: {0}", DateTime.Now.ToString("dd/MM/yyyy HH:mm")]).FontColor("#6c757d");
                         text.Span(" · ").FontColor("#6c757d");
-                        text.Span($"Total: {listUsers.Count} data").FontColor("#6c757d");
+                        text.Span(_t["Total: {0} data", listUsers.Count]).FontColor("#6c757d");
                     });
                 });
 
@@ -423,7 +426,7 @@ public class UsersController : Controller
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Username ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.Email ?? "");
                         table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.RoleName ?? "");
-                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? "Aktif" : "Nonaktif");
+                        table.Cell().Element(c => Cell(c, bgBgColor)).Text(item.IsActive ? _t["Aktif"] : _t["Nonaktif"]);
 
                         no++;
                     }
@@ -444,7 +447,7 @@ public class UsersController : Controller
                 page.Footer()
                     .AlignLeft()
                     .PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8.5f)
                     .FontColor("#888888");
             });

@@ -1,0 +1,105 @@
+@model ERP.Web.Models.AssetPurchaseOrderFormViewModel
+@{
+    var isEdit = Model.Uid != null;
+    var title = isEdit ? T["Ubah PO Aset {0}", Model.ApoNo] : T["Tambah PO Aset"];
+    ViewData["Title"] = title;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@title</h3>
+        @if (isEdit)
+        {
+            <a asp-action="Details" asp-route-uid="@Model.Uid" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+        }
+    </div>
+
+    <form method="post" asp-action="@(isEdit ? "Update" : "Create")">
+        <input type="hidden" name="Uid" value="@Model.Uid" />
+        <input type="hidden" name="ApoNo" value="@Model.ApoNo" />
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Data PO"]</span></div>
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="ApoDate">@T["Tanggal PO"]</label>
+                        <input type="date" class="form-control form-control-sm" name="ApoDate" id="ApoDate" value="@Model.ApoDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-white small mb-1" for="SupplierId">@T["Supplier"]</label>
+                        <select class="form-select form-select-sm" name="SupplierId" id="SupplierId" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var s in Model.Options.Suppliers)
+                            {
+                                <option value="@s.Id" selected="@(s.Id == Model.SupplierId)">@s.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-white small mb-1" for="Note">@T["Catatan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Note" id="Note" value="@Model.Note" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Aset dipesan"]</span></div>
+            <partial name="_AssetItemsEditor" model="@(new ERP.Web.Models.AssetItemsEditorModel { Items = Model.Items, Categories = Model.Options.Categories, ShowDiscount = true, CategoryRequired = true, PriceLabel = "Harga Satuan" })" />
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="alert alert-info small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>@T["PPN dihitung sekali di header atas (subtotal − diskon). Nilai perolehan aset = harga setelah diskon baris & alokasi diskon header, tanpa PPN; PPN Masukan dicatat lewat faktur pembelian."]
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card custom-card">
+                    <div class="card-body px-4 py-3 text-white small">
+                        <div class="d-flex justify-content-between mb-2"><span>@T["Subtotal"]</span><strong id="itemsTotal">0</strong></div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="DiscountAmount">@T["Diskon"]</label>
+                            <input type="number" class="form-control form-control-sm text-end w-50" name="DiscountAmount" id="DiscountAmount" min="0" step="0.01"
+                                   value="@(Model.DiscountAmount == 0 ? "" : Model.DiscountAmount.ToString("0.##", inv))" />
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="TaxPercent">@T["PPN %"]</label>
+                            <input type="number" class="form-control form-control-sm text-end w-50" name="TaxPercent" id="TaxPercent" min="0" max="100" step="0.01"
+                                   value="@(Model.TaxPercent == 0 ? "" : Model.TaxPercent.ToString("0.##", inv))" />
+                        </div>
+                        <div class="d-flex justify-content-between mb-2"><span>@T["PPN"]</span><span id="taxOut">0</span></div>
+                        <div class="d-flex justify-content-between border-top pt-2 fs-6"><span>@T["Total"]</span><strong id="grandOut">0</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>@T["Simpan Draft"]</button>
+        </div>
+    </form>
+</div>
+<script>
+    (function () {
+        const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        let subtotal = 0;
+        function totals() {
+            const disc = parseFloat(document.getElementById('DiscountAmount').value) || 0;
+            const pct = parseFloat(document.getElementById('TaxPercent').value) || 0;
+            const dpp = Math.max(subtotal - disc, 0);
+            const tax = Math.round(dpp * pct) / 100;
+            document.getElementById('taxOut').textContent = fmt.format(tax);
+            document.getElementById('grandOut').textContent = fmt.format(dpp + tax);
+        }
+        document.addEventListener('items:changed', e => { subtotal = e.detail.total; totals(); });
+        document.getElementById('DiscountAmount').addEventListener('input', totals);
+        document.getElementById('TaxPercent').addEventListener('input', totals);
+        document.querySelector('#itemsTable tbody').dispatchEvent(new Event('input', { bubbles: true }));
+    })();
+</script>

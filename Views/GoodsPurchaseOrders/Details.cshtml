@@ -11,6 +11,9 @@
     var isDraft = status == "draft";
     var isCancelled = status == "cancelled" || status == "canceled";
     var statusText = status.Replace("_", " ");
+    var approval = ViewData["Approval"] as ApprovalDocumentViewModel;
+    var needsApproval = approval?.RequiresApproval == true;
+    var isPendingApproval = status == "pending_approval";
       
     var statusClass = (status == "draft" || status == "pending")
     ? "product-badge-unit"
@@ -45,14 +48,16 @@
                 {
                     <a asp-controller="GoodsPurchaseOrders"
                        asp-action="Edit"
-                       asp-route-id="@Model.Id"
+                       asp-route-uid="@Model.Uid"
+                       data-perm="update"
                        class="btn btn-warning btn-sm">
-                        <i class="bi bi-pencil"></i> Edit
+                        <i class="bi bi-pencil"></i> @T["Edit"]
                     </a>
 
                     <form asp-action="Approve"
-                          asp-route-id="@Model.Id"
+                          asp-route-uid="@Model.Uid"
                           method="post"
+                          data-perm="update"
                           class="po-action-form">
                         @Html.AntiForgeryToken()
 
@@ -60,15 +65,23 @@
                                 class="btn btn-primary btn-sm"
                                 data-bs-toggle="modal"
                                 data-bs-target="#approvePOModal">
-                            <i class="bi bi-check2-circle"></i> Setujui
+                            @if (needsApproval)
+                            {
+                                <i class="bi bi-send"></i> @T["Ajukan Persetujuan"]
+                            }
+                            else
+                            {
+                                <i class="bi bi-check2-circle"></i> @T["Setujui"]
+                            }
                         </button>
                     </form>
 
                     <button type="button"
                             class="btn btn-outline-danger btn-sm"
+                            data-perm="update"
                             data-bs-toggle="modal"
                             data-bs-target="#cancelPOModal">
-                        <i class="bi bi-x-circle"></i> Batalkan
+                        <i class="bi bi-x-circle"></i> @T["Batalkan"]
                     </button>
                 }
 
@@ -76,30 +89,33 @@
                 {
                     <a asp-controller="GoodsReceipts"
                        asp-action="Create"
-                       asp-route-poId="@Model.Id"
+                       asp-route-poUid="@Model.Uid"
+                       data-perm="goods-receipts:create"
                        class="btn btn-success btn-sm d-inline-flex">
-                        <i class="bi bi-box-arrow-in-down"></i> Terima Barang
+                        <i class="bi bi-box-arrow-in-down"></i> @T["Terima Barang"]
                     </a>
 
                     <button type="button"
                             class="btn btn-outline-danger btn-sm"
-                            onclick="alert('Fitur pengajuan pembatalan akan dibuat berikutnya.');">
-                        <i class="bi bi-x-circle"></i> Ajukan Pembatalan
+                            data-perm="update"
+                            onclick='alert(@Json.Serialize(T["Fitur pengajuan pembatalan akan dibuat berikutnya."]));'>
+                        <i class="bi bi-x-circle"></i> @T["Ajukan Pembatalan"]
                     </button>
                 }
 
                 @if (isCancelled || status == "received")
                 {
                     <form asp-action="Delete"
-                          asp-route-id="@Model.Id"
+                          asp-route-uid="@Model.Uid"
                           method="post"
+                          data-perm="delete"
                           class="po-action-form"
-                          onsubmit="return confirm('Yakin ingin menghapus Purchase Order ini?');">
+                          onsubmit='return confirm(@Json.Serialize(T["Yakin ingin menghapus Purchase Order ini?"]));'>
                         @Html.AntiForgeryToken()
 
                         <button type="submit"
                                 class="btn btn-outline-danger btn-sm"
-                                title="Hapus PO">
+                                title="@T["Hapus PO"]">
                             <i class="bi bi-trash"></i>
                         </button>
                     </form>
@@ -107,22 +123,22 @@
 
                 <a asp-controller="GoodsPurchaseOrders"
                    asp-action="Print"
-                   asp-route-id="@Model.Id"
+                   asp-route-uid="@Model.Uid"
                    target="_blank"
                    class="btn btn-light btn-sm">
-                    <i class="bi bi-printer"></i> Cetak
+                    <i class="bi bi-printer"></i> @T["Cetak"]
                 </a>
 
                 <a asp-controller="GoodsPurchaseOrders"
                    asp-action="ExportPdf"
-                   asp-route-id="@Model.Id"
+                   asp-route-uid="@Model.Uid"
                    class="btn btn-danger btn-sm">
                     <i class="bi bi-file-pdf"></i> PDF
                 </a>
 
                 <a asp-action="Index"
                    class="btn btn-secondary btn-sm"
-                   title="Kembali">
+                   title="@T["Kembali"]">
                     <i class="bi bi-arrow-left"></i>
                 </a>
 
@@ -136,17 +152,17 @@
             <div class="po-info-column">
 
                 <div class="po-info-row">
-                    <strong>Tanggal PO</strong>
+                    <strong>@T["Tanggal PO"]</strong>
                     <span>@Model.PODate.ToString("yyyy-MM-dd")</span>
                 </div>
 
                 <div class="po-info-row">
-                    <strong>Supplier</strong>
+                    <strong>@T["Supplier"]</strong>
                     <span>@(Model.SupplierName ?? "-")</span>
                 </div>
 
                 <div class="po-info-row">
-                    <strong>Catatan</strong>
+                    <strong>@T["Catatan"]</strong>
                     <span>
                         @(string.IsNullOrWhiteSpace(Model.Note)
                             ? "-"
@@ -159,14 +175,14 @@
             <div class="po-info-column">
 
                 <div class="po-info-row">
-                    <strong>Perkiraan Terima</strong>
+                    <strong>@T["Perkiraan Terima"]</strong>
                     <span>
                         @(Model.ExpectedDate?.ToString("yyyy-MM-dd") ?? "-")
                     </span>
                 </div>
 
                 <div class="po-info-row">
-                    <strong>Gudang Tujuan</strong>
+                    <strong>@T["Gudang Tujuan"]</strong>
                     <span>@(Model.WarehouseName ?? "-")</span>
                 </div>
 
@@ -175,11 +191,24 @@
         </div>
     </section>
 
+    @if (isPendingApproval)
+    {
+        <div class="alert alert-warning small mt-3 mb-0">
+            <i class="bi bi-hourglass-split me-1"></i>@T["PO ini sedang menunggu persetujuan; tidak dapat diubah, dihapus, atau dibatalkan sampai diputuskan atau pengajuannya ditarik."]
+        </div>
+    }
+
+    @if (approval != null)
+    {
+        approval.ReturnUrl = Url.Action("Details", new { uid = Model.Uid });
+        <partial name="_ApprovalPanel" model="approval" />
+    }
+
     <!-- ITEM PURCHASE ORDER -->
     <section class="po-view-card po-items-card">
 
         <div class="po-view-card-header">
-            <strong>Item</strong>
+            <strong>@T["Item"]</strong>
         </div>
 
         <div class="po-table-wrapper">
@@ -188,14 +217,14 @@
                 <thead>
                     <tr>
                         <th class="po-number-col">#</th>
-                        <th class="text-start">Produk</th>
-                        <th class="text-start">Satuan</th>
-                        <th>Qty Pesan</th>
-                        <th>Diterima</th>
-                        <th>Sisa</th>
-                        <th>Harga</th>
-                        <th>Disk%</th>
-                        <th class="text-end">Subtotal</th>
+                        <th class="text-start">@T["Produk"]</th>
+                        <th class="text-start">@T["Satuan"]</th>
+                        <th>@T["Qty Pesan"]</th>
+                        <th>@T["Diterima"]</th>
+                        <th>@T["Sisa"]</th>
+                        <th>@T["Harga"]</th>
+                        <th>@T["Disk%"]</th>
+                        <th class="text-end">@T["Subtotal"]</th>
                     </tr>
                 </thead>
 
@@ -260,7 +289,7 @@
                         <tr>
                             <td colspan="9" class="po-empty">
                                 <i class="bi bi-inbox"></i>
-                                Belum ada item Purchase Order.
+                                @T["Belum ada item Purchase Order."]
                             </td>
                         </tr>
                     }
@@ -268,14 +297,14 @@
 
                 <tfoot>
                     <tr class="po-subtotal-row">
-                        <td colspan="8" class="text-end">Subtotal</td>
+                        <td colspan="8" class="text-end">@T["Subtotal"]</td>
                         <td class="text-end po-money">
                             @subtotal.ToString("N0",  new System.Globalization.CultureInfo("id-ID"))
                         </td>
                     </tr>
 
                     <tr class="po-subtotal-row">
-                        <td colspan="8" class="text-end">Diskon</td>
+                        <td colspan="8" class="text-end">@T["Diskon"]</td>
                         <td class="text-end po-money">
                            - @Model.DiscountAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID"))
                         </td>
@@ -283,7 +312,7 @@
 
                     <tr class="po-subtotal-row">
                         <td colspan="8" class="text-end">
-                            Pajak(@Model.TaxPercent.ToString("N0", new System.Globalization.CultureInfo("id-ID"))%)
+                            @(T["Pajak"])(@Model.TaxPercent.ToString("N0", new System.Globalization.CultureInfo("id-ID"))%)
                         </td>
                         <td class="text-end po-money">
                             @Model.TaxAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID"))
@@ -291,7 +320,7 @@
                     </tr>
 
                     <tr class="po-total-row">
-                        <td colspan="8" class="text-end">Total</td>
+                        <td colspan="8" class="text-end">@T["Total"]</td>
                         <td class="text-end po-money">
                             @Model.TotalAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID"))
                         </td>
@@ -309,7 +338,7 @@
         <section class="po-view-card po-related-card">
 
             <div class="po-view-card-header">
-                <strong>Penerimaan Terkait</strong>
+                <strong>@T["Penerimaan Terkait"]</strong>
             </div>
 
             <div class="po-table-wrapper">
@@ -317,16 +346,16 @@
 
                     <thead>
                         <tr>
-                            <th>No. Penerimaan</th>
-                            <th>Tanggal</th>
-                            <th>Faktur</th>
+                            <th>@T["No. Penerimaan"]</th>
+                            <th>@T["Tanggal"]</th>
+                            <th>@T["Faktur"]</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         <tr>
                             <td colspan="3" class="po-empty">
-                                Belum ada penerimaan.
+                                @T["Belum ada penerimaan."]
                             </td>
                         </tr>
                     </tbody>
@@ -339,7 +368,7 @@
         <section class="po-view-card po-related-detail-card">
 
             <div class="po-view-card-header">
-                <strong>Detail Penerimaan Terkait</strong>
+                <strong>@T["Detail Penerimaan Terkait"]</strong>
             </div>
 
             <div class="po-table-wrapper">
@@ -348,11 +377,11 @@
                     <thead>
                         <tr>
                             <th class="po-number-col">#</th>
-                            <th class="text-start">Produk</th>
-                            <th>Qty (Satuan)</th>
-                            <th>Qty Dasar</th>
-                            <th>Harga</th>
-                            <th class="text-end">Subtotal</th>
+                            <th class="text-start">@T["Produk"]</th>
+                            <th>@T["Qty (Satuan)"]</th>
+                            <th>@T["Qty Dasar"]</th>
+                            <th>@T["Harga"]</th>
+                            <th class="text-end">@T["Subtotal"]</th>
                         </tr>
                     </thead>
 
@@ -360,8 +389,8 @@
                         <tr>
                             <td colspan="6" class="po-empty">
                                 <i class="bi bi-arrow-left"></i>
-                                Klik ikon <i class="bi bi-eye"></i>
-                                pada daftar penerimaan untuk melihat detailnya di sini.
+                                @T["Klik ikon"] <i class="bi bi-eye"></i>
+                                @T["pada daftar penerimaan untuk melihat detailnya di sini."]
                             </td>
                         </tr>
                     </tbody>
@@ -389,18 +418,18 @@
 
                 <div class="modal-header">
                     <h5 class="modal-title" id="cancelPOModalLabel">
-                        Konfirmasi Pembatalan PO
+                        @T["Konfirmasi Pembatalan PO"]
                     </h5>
 
                     <button type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
-                            aria-label="Tutup">
+                            aria-label="@T["Tutup"]">
                     </button>
                 </div>
 
                 <div class="modal-body">
-                    Apakah kamu yakin ingin membatalkan Purchase Order
+                    @T["Apakah kamu yakin ingin membatalkan Purchase Order"]
                     <strong>@Model.PONo</strong>?
                 </div>
 
@@ -408,18 +437,18 @@
                     <button type="button"
                             class="btn btn-secondary btn-sm"
                             data-bs-dismiss="modal">
-                        Tidak
+                        @T["Tidak"]
                     </button>
 
                     <form asp-action="Cancel"
-                          asp-route-id="@Model.Id"
+                          asp-route-uid="@Model.Uid"
                           method="post">
 
                         @Html.AntiForgeryToken()
 
                         <button type="submit"
                                 class="btn btn-danger btn-sm">
-                            Ya, batalkan
+                            @T["Ya, batalkan"]
                         </button>
                     </form>
                 </div>
@@ -442,38 +471,43 @@
 
                 <div class="modal-header">
                     <h5 class="modal-title" id="approvePOModalLabel">
-                        Konfirmasi Persetujuan PO
+                        @T["Konfirmasi Persetujuan PO"]
                     </h5>
 
                     <button type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
-                            aria-label="Tutup">
+                            aria-label="@T["Tutup"]">
                     </button>
                 </div>
 
                 <div class="modal-body">
-                    Apakah kamu yakin ingin menyetujui Purchase Order
-                    <strong>@Model.PONo</strong>?
-
+                    @if (needsApproval)
+                    {
+                        <text>@T["PO ini memerlukan persetujuan sesuai alur"] <strong>@approval!.Preview.WorkflowName</strong>. @T["Ajukan Purchase Order"] <strong>@Model.PONo</strong>?</text>
+                    }
+                    else
+                    {
+                        <text>@T["Apakah kamu yakin ingin menyetujui Purchase Order"] <strong>@Model.PONo</strong>?</text>
+                    }
                 </div>
 
                 <div class="modal-footer">
                     <button type="button"
                             class="btn btn-secondary btn-sm"
                             data-bs-dismiss="modal">
-                        Tidak
+                        @T["Tidak"]
                     </button>
 
                     <form asp-action="Approve"
-                          asp-route-id="@Model.Id"
+                          asp-route-uid="@Model.Uid"
                           method="post">
                         @Html.AntiForgeryToken()
 
                         <button type="submit"
                                 class="btn btn-primary btn-sm">
                             <i class="bi bi-check2-circle"></i>
-                            Ya, setujui
+                            @(needsApproval ? T["Ya, ajukan"] : T["Ya, setujui"])
                         </button>
                     </form>
                 </div>

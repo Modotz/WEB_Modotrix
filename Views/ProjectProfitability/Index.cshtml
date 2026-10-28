@@ -1,0 +1,83 @@
+@model ERP.Web.Models.ProjectProfitabilityViewModel
+@{
+    ViewData["Title"] = T["Profitabilitas Project"];
+    var header = new ListHeaderModel
+    {
+        Title = T["Periode {0} s/d {1}", Acc.Date(Model.From), Acc.Date(Model.To)],
+        Count = Model.Rows.Count,
+        Description = T["Pendapatan − biaya baris jurnal ber-tag project"],
+        ShowRefresh = false
+    };
+    var from = Model.From.ToString("yyyy-MM-dd");
+    var to = Model.To.ToString("yyyy-MM-dd");
+    var margin = Model.TotalRevenue - Model.TotalCost;
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Profitabilitas Project"]</h3>
+
+    <partial name="_DateRangeFilter" model="(Model.From, Model.To)" />
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Project adalah unit profitabilitas: pendapatan (faktur penjualan ber-tag project) dikurangi biaya (faktur pembelian, kas, jurnal ber-tag project). Project internal tidak punya pendapatan, sehingga marginnya negatif sebesar total biaya — itu menunjukkan nilai investasinya, bukan kesalahan. Project yang sudah selesai tetap tampil bila ada transaksi di periode ini."]
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">@T["PROJECT"]</th>
+                            <th>@T["TIPE"]</th>
+                            <th>@T["CUSTOMER"]</th>
+                            <th>@T["STATUS"]</th>
+                            <th class="text-end">@T["PENDAPATAN"]</th>
+                            <th class="text-end">@T["BIAYA"]</th>
+                            <th class="text-end">@T["MARGIN"]</th>
+                            <th class="text-end" style="width: 100px;">@T["MARGIN %"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Rows.Count == 0)
+                        {
+                            <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada project."]</td></tr>
+                        }
+                        @foreach (var p in Model.Rows)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <a asp-action="Details" asp-route-uid="@p.Uid" asp-route-from="@from" asp-route-to="@to" class="text-info text-decoration-none fw-semibold">@p.Code</a>
+                                    <div class="text-white small">@p.Name</div>
+                                </td>
+                                <td><span class="badge @(p.ProjectType == "client" ? "bg-primary" : "bg-secondary")">@T[ERP.Web.Models.ProjectViewModel.TypeLabel(p.ProjectType)]</span></td>
+                                <td class="text-white small">@(p.CustomerName ?? "-")</td>
+                                <td><span class="badge @ERP.Web.Models.ProjectViewModel.StatusCss(p.Status)">@T[ERP.Web.Models.ProjectViewModel.StatusLabel(p.Status)]</span></td>
+                                <td class="text-end text-white">@Acc.Money(p.Revenue)</td>
+                                <td class="text-end text-white">@Acc.Money(p.Cost)</td>
+                                <td class="text-end fw-semibold @(p.Margin < 0 ? "text-danger" : "text-success")">@Acc.Money(p.Margin)</td>
+                                <td class="text-end text-white">@(p.MarginPercent == null ? "-" : p.MarginPercent.Value.ToString("0.#", Acc.Culture) + "%")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (Model.Rows.Count > 0)
+                    {
+                        <tfoot>
+                            <tr>
+                                <td class="ps-4 fw-bold text-white" colspan="4">@T["TOTAL"]</td>
+                                <td class="text-end fw-bold text-white">@Acc.Money(Model.TotalRevenue)</td>
+                                <td class="text-end fw-bold text-white">@Acc.Money(Model.TotalCost)</td>
+                                <td class="text-end fw-bold @(margin < 0 ? "text-danger" : "text-success")">@Acc.Money(margin)</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

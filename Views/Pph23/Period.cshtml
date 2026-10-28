@@ -1,0 +1,285 @@
+@model ERP.Web.Models.Pph23PeriodViewModel
+@{
+    var s = Model.Summary;
+    ViewData["Title"] = T["PPh 23"] + " " + s.Period;
+    var year = s.Period.Length >= 4 ? s.Period[..4] : null;
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var defaultDate = today < s.DueDate ? today : s.DueDate;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@T["PPh 23 — Masa"] @s.Period</h3>
+        <a asp-action="ExportPeriodExcel" asp-route-period="@s.Period" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+        <a asp-action="Index" asp-route-year="@year" class="btn btn-secondary btn-sm" title="@T["Kembali"]"><i class="bi bi-arrow-left"></i></a>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Dipotong"] (@s.SlipCount @T["bukti potong"])</div>
+            <div class="fs-5 fw-semibold text-white">@Acc.Money(s.Withheld)</div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Disetor"]</div>
+            <div class="fs-5 fw-semibold text-white">@Acc.Money(s.Deposited)</div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["Belum disetor"] · @T["jatuh tempo"] @Acc.Date(s.DueDate)</div>
+            <div class="fs-5 fw-semibold @(s.IsOverdue ? "text-danger" : s.Outstanding > 0 ? "text-warning" : "text-success")">@Acc.Money(s.Outstanding)</div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card custom-card h-100"><div class="card-body px-4 py-3">
+            <div class="text-white-50 small">@T["No. Bukti Potong belum diisi"]</div>
+            <div class="fs-5 fw-semibold @(s.MissingCertificates > 0 ? "text-warning" : "text-success")">@s.MissingCertificates</div>
+        </div></div></div>
+    </div>
+
+    <!-- SETOR -->
+    @if (s.Outstanding > 0)
+    {
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white fs-6">@T["Setor PPh 23 Masa Ini"]</span></div>
+            <div class="card-body px-4 py-3">
+                <form method="post" asp-action="CreateDeposit" class="row g-2 align-items-end" data-perm="create"
+                      onsubmit='return confirm(@Json.Serialize(T["Setor PPh 23 masa {0}? Semua potongan yang belum disetor (bertanggal sampai tanggal setor) dijurnal D Hutang PPh 23 | K rekening.", s.Period]));'>
+                    <input type="hidden" name="period" value="@s.Period" />
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="depositDate">@T["Tanggal setor"]</label>
+                        <input type="date" class="form-control form-control-sm" id="depositDate" name="depositDate" value="@defaultDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="cashAccountId">@T["Dari rekening (IDR)"]</label>
+                        <select class="form-select form-select-sm" id="cashAccountId" name="cashAccountId" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var c in Model.CashAccounts)
+                            {
+                                <option value="@c.Id">@c.OptionLabel(T["saldo"])</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="ntpn">@T["NTPN (bukti setor)"]</label>
+                        <input type="text" class="form-control form-control-sm" id="ntpn" name="ntpn" maxlength="30" placeholder="@T["boleh diisi nanti"]" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="note">@T["Catatan"]</label>
+                        <input type="text" class="form-control form-control-sm" id="note" name="note" maxlength="255" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-bank me-1"></i>@T["Setor"] @Acc.Money(s.Outstanding)</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+
+    <!-- BUKTI POTONG -->
+    <div class="card custom-card mb-3">
+        <div class="card-header custom-card-header py-3 px-4 d-flex align-items-center gap-2">
+            <span class="fw-semibold text-white fs-6">@T["Daftar Bukti Potong"]</span>
+            <span class="badge bg-secondary">@Model.Slips.Count</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>@T["TANGGAL"]</th>
+                        <th>@T["FAKTUR"]</th>
+                        <th>@T["SUPPLIER / NPWP"]</th>
+                        <th>@T["TARIF"]</th>
+                        <th class="text-end">@T["DPP"]</th>
+                        <th class="text-end">@T["PPH 23"]</th>
+                        <th>@T["NO. BUKTI POTONG"]</th>
+                        <th>@T["SETORAN"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Slips.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-white-50 py-3">@T["Tidak ada potongan PPh 23 pada masa ini."]</td></tr>
+                    }
+                    @foreach (var r in Model.Slips)
+                    {
+                        <tr>
+                            <td class="text-white small">@Acc.Date(r.InvoiceDate)</td>
+                            <td><a asp-controller="PurchaseInvoices" asp-action="Details" asp-route-uid="@r.InvoiceUid" class="text-info text-decoration-none">@r.InvoiceNo</a></td>
+                            <td class="text-white small">
+                                @(r.SupplierName ?? "-")
+                                <div class="@(r.HasNpwp ? "text-white-50" : "text-warning")">@(r.HasNpwp ? r.Npwp ?? T["NPWP belum diisi"] : T["Tanpa NPWP (tarif 2×)"])</div>
+                            </td>
+                            <td class="text-white-50 small">@r.RateName <span class="text-white">@r.Percent.ToString("0.##", Acc.Culture)%</span></td>
+                            <td class="text-end text-white">@Acc.Money(r.Base)</td>
+                            <td class="text-end text-white fw-semibold">@Acc.Money(r.Amount)</td>
+                            <td class="small">
+                                @if (r.CertNo != null)
+                                {
+                                    <span class="font-monospace text-white">@r.CertNo</span>
+                                    <div class="text-white-50">@Acc.Date(r.CertDate)</div>
+                                }
+                                else
+                                {
+                                    <span class="text-warning">@T["belum diisi"]</span>
+                                }
+                                <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-info btn-cert" data-perm="update" title="@T["Isi / ubah No. Bukti Potong"]"
+                                        data-uid="@r.InvoiceUid" data-no="@r.CertNo" data-date="@r.CertDate?.ToString("yyyy-MM-dd")" data-invoice="@r.InvoiceNo"><i class="bi bi-pencil"></i></button>
+                            </td>
+                            <td class="small">
+                                @if (r.DepositNo != null)
+                                {
+                                    <span class="text-success">@r.DepositNo</span>
+                                    <div class="text-white-50">@Acc.Date(r.DepositDate)</div>
+                                }
+                                else
+                                {
+                                    <span class="text-warning">@T["belum disetor"]</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.Slips.Count > 0)
+                {
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="4" class="text-end text-white">@T["TOTAL"]</td>
+                            <td class="text-end text-white">@Acc.Money(Model.Slips.Sum(r => r.Base))</td>
+                            <td class="text-end text-white">@Acc.Money(Model.Slips.Sum(r => r.Amount))</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+
+    <!-- RIWAYAT SETORAN -->
+    <div class="card custom-card mb-3">
+        <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white fs-6">@T["Riwayat Setoran"]</span></div>
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>@T["NO."]</th><th>@T["TANGGAL"]</th><th>@T["REKENING"]</th><th>@T["NTPN"]</th>
+                        <th class="text-end">@T["BUKTI POTONG"]</th><th class="text-end">@T["JUMLAH"]</th><th>@T["JURNAL"]</th><th>@T["STATUS"]</th><th class="text-center" style="width: 70px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Deposits.Count == 0)
+                    {
+                        <tr><td colspan="9" class="text-center text-white-50 py-3">@T["Belum ada setoran."]</td></tr>
+                    }
+                    @foreach (var d in Model.Deposits)
+                    {
+                        <tr class="@(d.Status == "void" ? "opacity-50" : "")">
+                            <td class="text-white">@d.DepositNo</td>
+                            <td class="text-white small">@Acc.Date(d.DepositDate)</td>
+                            <td class="text-white small">@d.CashAccountName</td>
+                            <td class="font-monospace small text-white">@(d.Ntpn ?? "-")</td>
+                            <td class="text-end text-white small">@d.InvoiceCount</td>
+                            <td class="text-end text-white fw-semibold">@Acc.Money(d.Amount)</td>
+                            <td>
+                                @if (d.JournalUid != null)
+                                {
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@d.JournalUid" class="text-info small">@d.JournalNo</a>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @(d.Status == "void" ? "bg-danger" : "bg-success")">@(d.Status == "void" ? T["Dibatalkan"] : T["Posted"])</span>
+                                @if (d.VoidReason != null)
+                                {
+                                    <div class="text-white-50 small">@d.VoidReason</div>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (d.Status == "posted")
+                                {
+                                    <div class="row-actions">
+                                        <button type="button" class="act-btn act-delete btn-void-deposit" data-perm="delete" title="@T["Batalkan"]"
+                                                data-uid="@d.Uid" data-no="@d.DepositNo" data-date="@d.DepositDate.ToString("yyyy-MM-dd")"><i class="bi bi-x-circle"></i></button>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="certModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="UpdateCertificate" class="modal-content">
+            <input type="hidden" name="invoiceUid" id="certInvoice" />
+            <input type="hidden" name="period" value="@s.Period" />
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Bukti Potong"] — <span id="certTitle"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small">@T["Nomor Bukti Potong diterbitkan e-Bupot Unifikasi Coretax setelah dilaporkan. Kosongkan nomor untuk menghapus (mis. sebelum membatalkan faktur)."]</p>
+                <div class="row g-3">
+                    <div class="col-7">
+                        <label class="form-label" for="certNo">@T["No. Bukti Potong"]</label>
+                        <input type="text" class="form-control font-monospace" name="certNo" id="certNo" maxlength="30" />
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label" for="certDate">@T["Tanggal"]</label>
+                        <input type="date" class="form-control" name="certDate" id="certDate" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="voidModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="VoidDeposit" class="modal-content">
+            <input type="hidden" name="uid" id="voidUid" />
+            <input type="hidden" name="period" value="@s.Period" />
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Batalkan"] <span id="voidTitle"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small">@T["Jurnal setoran dibalik (kas kembali, Hutang PPh 23 muncul lagi) dan bukti potongnya kembali berstatus belum disetor."]</p>
+                <div class="mb-3">
+                    <label class="form-label" for="voidDate">@T["Tanggal pembatalan"]</label>
+                    <input type="date" class="form-control" name="date" id="voidDate" value="@today.ToString("yyyy-MM-dd")" required />
+                </div>
+                <label class="form-label" for="voidReason">@T["Alasan (wajib)"]</label>
+                <textarea class="form-control" name="reason" id="voidReason" rows="3" maxlength="200" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                <button type="submit" class="btn btn-danger">@T["Batalkan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const cert = new bootstrap.Modal($('certModal')), voidM = new bootstrap.Modal($('voidModal'));
+            const today = '@today.ToString("yyyy-MM-dd")';
+            document.querySelectorAll('.btn-cert').forEach(b => b.addEventListener('click', () => {
+                $('certInvoice').value = b.dataset.uid;
+                $('certTitle').textContent = b.dataset.invoice;
+                $('certNo').value = b.dataset.no ?? '';
+                $('certDate').value = b.dataset.date || today;
+                cert.show();
+            }));
+            document.querySelectorAll('.btn-void-deposit').forEach(b => b.addEventListener('click', () => {
+                $('voidUid').value = b.dataset.uid;
+                $('voidTitle').textContent = b.dataset.no;
+                $('voidDate').min = b.dataset.date;
+                voidM.show();
+            }));
+        })();
+    </script>
+}

@@ -1,0 +1,64 @@
+@model ERP.Web.Models.AssetPurchaseRequestFormViewModel
+@{
+    var isEdit = Model.Uid != null;
+    var title = isEdit ? T["Ubah PR Aset {0}", Model.AprNo] : T["Tambah PR Aset"];
+    ViewData["Title"] = title;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@title</h3>
+        @if (isEdit)
+        {
+            <a asp-action="Details" asp-route-uid="@Model.Uid" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+        }
+    </div>
+
+    <form method="post" asp-action="@(isEdit ? "Update" : "Create")">
+        <input type="hidden" name="Uid" value="@Model.Uid" />
+        <input type="hidden" name="AprNo" value="@Model.AprNo" />
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Data PR"]</span></div>
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="AprDate">@T["Tanggal PR"]</label>
+                        <input type="date" class="form-control form-control-sm" name="AprDate" id="AprDate" value="@Model.AprDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="NeededDate">@T["Tanggal dibutuhkan"]</label>
+                        <input type="date" class="form-control form-control-sm" name="NeededDate" id="NeededDate" value="@Model.NeededDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="Requester">@T["Pemohon"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Requester" id="Requester" value="@Model.Requester" maxlength="100" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="Department">@T["Departemen"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Department" id="Department" value="@Model.Department" maxlength="100" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label text-white small mb-1" for="Note">@T["Catatan"]</label>
+                        <textarea class="form-control form-control-sm" name="Note" id="Note" rows="2">@Model.Note</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header d-flex justify-content-between align-items-center py-3 px-4">
+                <span class="fw-semibold text-white">@T["Aset yang diminta"]</span>
+                <span class="text-white small">@T["Total estimasi"]: <strong id="itemsTotal">0</strong></span>
+            </div>
+            <partial name="_AssetItemsEditor" model="@(new ERP.Web.Models.AssetItemsEditorModel { Items = Model.Items, Categories = Model.Options.Categories, PriceLabel = "Est. Harga" })" />
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>@T["Simpan Draft"]</button>
+        </div>
+    </form>
+</div>

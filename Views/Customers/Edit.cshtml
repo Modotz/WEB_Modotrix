@@ -1,11 +1,11 @@
 @model CustomerViewModel
 
 @{
-    ViewData["Title"] = "Edit Customers";
+    ViewData["Title"] = T["Edit Customers"];
 }
 
 <div class="page-header">
-    <h1>Edit Customers</h1>
+    <h1>@T["Edit Customers"]</h1>
 </div>
 
 <div class="customer-edit-wrapper">
@@ -14,7 +14,7 @@
     <div class="customer-form-card">
 
         <div class="customer-form-header">
-            <h3>Edit Customers</h3>
+            <h3>@T["Edit Customers"]</h3>
         </div>
 
         <form asp-action="Edit"
@@ -24,7 +24,7 @@
 
             @Html.AntiForgeryToken()
 
-            <input asp-for="Id" type="hidden" />
+            <input asp-for="Uid" type="hidden" />
 
             <div class="customer-form-body">
 
@@ -70,13 +70,13 @@
                             <img id="photoPreview"
                                  class="customer-photo-image"
                                  style="display:none;"
-                                 alt="Preview Foto" />
+                                 alt="@T["Preview Foto"]" />
                         }
 
                     </div>
 
                     <label for="imageInput" class="btn btn-outline-secondary btn-sm">
-                        🖼 Pilih Foto/Logo
+                        🖼 @T["Pilih Foto/Logo"]
                     </label>
 
                     <input id="imageInput"
@@ -86,7 +86,7 @@
                            style="display:none;" />
 
                     <div class="photo-info">
-                        JPG/PNG/WEBP, maks 2 MB.
+                        @T["JPG/PNG/WEBP, maks 2 MB."]
                     </div>
 
                 </div>
@@ -132,12 +132,12 @@
 
                     <div class="col-md-6 mb-3">
                         <label asp-for="Nik" class="form-label">
-                            NIK (No. KTP)
+                            @T["NIK (No. KTP)"]
                         </label>
 
                         <input asp-for="Nik"
                                class="form-control"
-                               placeholder="16 digit" />
+                               placeholder="@T["16 digit"]" />
 
                         <span asp-validation-for="Nik" class="text-danger"></span>
                     </div>
@@ -159,11 +159,11 @@
 
                     <div class="col-md-6 mb-3">
                         <label asp-for="CustomerGroupId" class="form-label">
-                            Kelompok Customer
+                            @T["Kelompok Customer"]
                         </label>
 
                         <select asp-for="CustomerGroupId" class="form-select">
-                            <option value="">— Tanpa kelompok —</option>
+                            <option value="">@T["— Tanpa kelompok —"]</option>
 
                             @if (ViewBag.CustomerGroups != null)
                             {
@@ -175,7 +175,7 @@
                         </select>
 
                         <div class="form-help">
-                            Diskon default kelompok akan otomatis terisi saat membuat Sales Order.
+                            @T["Diskon default kelompok akan otomatis terisi saat membuat Sales Order."]
                         </div>
 
                         <span asp-validation-for="CustomerGroupId" class="text-danger"></span>
@@ -187,7 +187,7 @@
                         </label>
 
                         <select asp-for="SalesForceId" class="form-select">
-                            <option value="">— Tanpa sales —</option>
+                            <option value="">@T["— Tanpa sales —"]</option>
 
                             @if (ViewBag.SalesForces != null)
                             {
@@ -199,7 +199,7 @@
                         </select>
 
                         <div class="form-help">
-                            Penanggung jawab penjualan untuk customer ini.
+                            @T["Penanggung jawab penjualan untuk customer ini."]
                         </div>
 
                         <span asp-validation-for="SalesForceId" class="text-danger"></span>
@@ -210,11 +210,11 @@
                 <!-- PRICE LIST -->
                 <div class="mb-3">
                     <label asp-for="PriceListId" class="form-label">
-                        Price List (Harga Khusus)
+                        @T["Price List (Harga Khusus)"]
                     </label>
 
                     <select asp-for="PriceListId" class="form-select">
-                        <option value="">— Ikut kelompok / harga default —</option>
+                        <option value="">@T["— Ikut kelompok / harga default —"]</option>
 
                         @if (ViewBag.PriceLists != null)
                         {
@@ -226,9 +226,9 @@
                     </select>
 
                     <div class="form-help">
-                        Harga khusus customer ini (menang atas kelompok).
-                        Kosong = ikut kelompok / harga default.
-                        Diskon kelompok tetap ditumpuk di atasnya.
+                        @T["Harga khusus customer ini (menang atas kelompok)."]
+                        @T["Kosong = ikut kelompok / harga default."]
+                        @T["Diskon kelompok tetap ditumpuk di atasnya."]
                     </div>
 
                     <span asp-validation-for="PriceListId" class="text-danger"></span>
@@ -237,7 +237,7 @@
                 <!-- ALAMAT UTAMA -->
                 <div class="mb-3">
                     <label asp-for="Address" class="form-label">
-                        Alamat Utama (Penagihan)
+                        @T["Alamat Utama (Penagihan)"]
                         <span class="text-danger">*</span>
                     </label>
 
@@ -264,11 +264,11 @@
             <!-- FOOTER CUSTOMER -->
             <div class="customer-form-footer">
                 <button type="submit" class="btn btn-primary">
-                    💾 Simpan
+                    💾 @T["Simpan"]
                 </button>
 
                 <a asp-action="Index" asp-controller="Customers" class="btn btn-secondary">
-                    Batal
+                    @T["Batal"]
                 </a>
             </div>
 
@@ -282,16 +282,16 @@
         <div class="customer-form-header">
             <div class="section-header-row">
 
-                <h3>🏪 Akun Toko Online</h3>
+                <h3>🏪 @T["Akun Toko Online"]</h3>
 
                 <div class="section-status">
                     @if (Model.RegisteredOnline == true)
                     {
-                        <span class="badge bg-success">Aktif</span>
+                        <span class="badge bg-success">@T["Aktif"]</span>
                     }
                     else
                     {
-                        <span class="badge bg-secondary">Nonaktif</span>
+                        <span class="badge bg-secondary">@T["Nonaktif"]</span>
                     }
                 </div>
 
@@ -301,14 +301,14 @@
         <div class="customer-form-body">
 
             <div class="online-account-info">
-                <strong>ⓘ Atur status akun & reset password login toko untuk customer ini.</strong>
+                <strong>ⓘ @T["Atur status akun & reset password login toko untuk customer ini."]</strong>
                 <br />
 
-                Customer login di
+                @T["Customer login di"]
                 <span class="login-url">https://erp-lite.mrdesk.net/shop/login</span>
-                memakai email di atas.
+                @T["memakai email di atas."]
 
-                Akun hanya bisa login bila statusnya Aktif.
+                @T["Akun hanya bisa login bila statusnya Aktif."]
             </div>
 
             <div class="row">
@@ -316,19 +316,19 @@
                 <!-- STATUS AKUN -->
                 <div class="col-md-4 mb-3">
                     <label asp-for="RegisteredOnline" class="form-label">
-                        Status Akun
+                        @T["Status Akun"]
                     </label>
 
                     <select asp-for="RegisteredOnline" class="form-select">
-                        <option value="true">Aktif (boleh login)</option>
-                        <option value="false">Nonaktif</option>
+                        <option value="true">@T["Aktif (boleh login)"]</option>
+                        <option value="false">@T["Nonaktif"]</option>
                     </select>
                 </div>
 
                 <!-- PASSWORD -->
                 <div class="col-md-4 mb-3">
                     <label asp-for="Password" class="form-label">
-                        Password Baru
+                        @T["Password Baru"]
                     </label>
 
                     <div class="password-wrapper">
@@ -336,7 +336,7 @@
                                id="passwordInput"
                                class="form-control"
                                type="password"
-                               placeholder="Kosongkan bila tidak diubah" />
+                               placeholder="@T["Kosongkan bila tidak diubah"]" />
 
                         <button type="button"
                                 class="password-toggle"
@@ -345,20 +345,20 @@
                         </button>
                     </div>
 
-                    <div class="form-help">Min. 6 karakter.</div>
+                    <div class="form-help">@T["Min. 6 karakter."]</div>
                 </div>
 
                 <!-- KONFIRMASI PASSWORD -->
                 <div class="col-md-4 mb-3">
                     <label for="confirmPassword" class="form-label">
-                        Ulangi Password
+                        @T["Ulangi Password"]
                     </label>
 
                     <input id="confirmPassword"
                            name="confirmPassword"
                            class="form-control"
                            type="password"
-                           placeholder="Ulangi password baru" />
+                           placeholder="@T["Ulangi password baru"]" />
 
                     <div id="passwordError" class="text-danger password-error"></div>
                 </div>
@@ -371,7 +371,7 @@
             <button type="button"
                     class="btn btn-primary"
                     onclick="saveOnlineAccount()">
-                💾 Simpan Akun Toko
+                💾 @T["Simpan Akun Toko"]
             </button>
         </div>
 
@@ -382,7 +382,7 @@
 
         <div class="customer-form-header">
             <div class="section-header-row">
-                <h3>🚚 Alamat Pengiriman</h3>
+                <h3>🚚 @T["Alamat Pengiriman"]</h3>
 
                 <span class="badge bg-secondary">
                     @(ViewBag.ShippingAddressesCount ?? 0)
@@ -397,28 +397,28 @@
                 <div class="row align-items-end">
 
                     <div class="col-lg-3 col-md-6 mb-2">
-                        <label class="form-label">Nama Alamat</label>
+                        <label class="form-label">@T["Nama Alamat"]</label>
 
                         <input type="text"
                                id="shippingName"
                                class="form-control"
-                               placeholder="Mis. Rumah, Kantor" />
+                               placeholder="@T["Mis. Rumah, Kantor"]" />
                     </div>
 
                     <div class="col-lg-4 col-md-6 mb-2">
-                        <label class="form-label">Alamat</label>
+                        <label class="form-label">@T["Alamat"]</label>
 
                         <input type="text"
                                id="shippingAddress"
                                class="form-control"
-                               placeholder="Alamat lengkap tujuan" />
+                               placeholder="@T["Alamat lengkap tujuan"]" />
                     </div>
 
                     <div class="col-lg-3 col-md-6 mb-2">
-                        <label class="form-label">Area Pengiriman</label>
+                        <label class="form-label">@T["Area Pengiriman"]</label>
 
                         <select id="shippingAreaId" class="form-select">
-                            <option value="">— Tanpa area —</option>
+                            <option value="">@T["— Tanpa area —"]</option>
 
                             @if (ViewBag.ShippingAreas != null)
                             {
@@ -434,7 +434,7 @@
                         <button type="button"
                                 class="btn btn-success w-100"
                                 onclick="addShippingAddress()">
-                            + Tambah
+                            + @T["Tambah"]
                         </button>
                     </div>
 
@@ -448,10 +448,10 @@
                     <table class="table table-hover align-middle shipping-table">
                         <thead>
                             <tr>
-                                <th>NAMA ALAMAT</th>
-                                <th>ALAMAT</th>
-                                <th>AREA PENGIRIMAN</th>
-                                <th class="text-center">AKSI</th>
+                                <th>@T["NAMA ALAMAT"]</th>
+                                <th>@T["ALAMAT"]</th>
+                                <th>@T["AREA PENGIRIMAN"]</th>
+                                <th class="text-center">@T["AKSI"]</th>
                             </tr>
                         </thead>
 
@@ -479,24 +479,24 @@
                                         </td>
 
                                         <td class="text-center">
-                                            <div class="d-flex justify-content-center gap-1">
+                                            <div class="row-actions">
 
                                                 <button type="button"
-                                                        class="btn btn-sm btn-warning"
-                                                        title="Edit"
-                                                        data-id="@address.Id"
+                                                        class="act-btn act-edit"
+                                                        title="@T["Edit"]"
+                                                        data-uid="@address.Uid"
                                                         data-name="@address.Name"
                                                         data-address="@address.Address"
                                                         data-area-id="@address.ShippingAreaId"
                                                         onclick="openEditShippingAddress(this)">
-                                                    <i class="bi bi-pencil-fill"></i>
+                                                    <i class="bi bi-pencil"></i>
                                                 </button>
 
                                                 <button type="button"
-                                                        class="btn btn-sm btn-danger"
-                                                        title="Delete"
-                                                        onclick="deleteShippingAddress(this, '@address.Id')">
-                                                    <i class="bi bi-trash-fill"></i>
+                                                        class="act-btn act-delete"
+                                                        title="@T["Hapus"]"
+                                                        onclick="deleteShippingAddress(this, '@address.Uid')">
+                                                    <i class="bi bi-trash"></i>
                                                 </button>
 
                                             </div>
@@ -508,7 +508,7 @@
                             <tr id="emptyShippingRow"
                                 style="@(ViewBag.ShippingAddressesCount != null && (int)ViewBag.ShippingAddressesCount > 0 ? "display:none;" : "")">
                                 <td colspan="4" class="text-center py-4 text-muted">
-                                    Belum ada alamat pengiriman.
+                                    @T["Belum ada alamat pengiriman."]
                                 </td>
                             </tr>
 
@@ -537,13 +537,13 @@
             <div class="modal-header">
                 <h5 class="modal-title" id="editShippingAddressModalLabel">
                     <i class="bi bi-pencil"></i>
-                    Ubah Alamat Pengiriman
+                    @T["Ubah Alamat Pengiriman"]
                 </h5>
 
                 <button type="button"
                         class="btn-close"
                         data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                        aria-label="@T["Tutup"]"></button>
             </div>
 
             <form asp-controller="Customers"
@@ -554,12 +554,12 @@
 
                 <div class="modal-body">
 
-                    <input type="hidden" id="editShippingAddressId" name="id" />
-                    <input type="hidden" name="customerId" value="@Model.Id" />
+                    <input type="hidden" id="editShippingAddressUid" name="uid" />
+                    <input type="hidden" name="customerUid" value="@Model.Uid" />
 
                     <div class="mb-3">
                         <label for="editShippingAddressName" class="form-label">
-                            Nama Alamat
+                            @T["Nama Alamat"]
                         </label>
 
                         <input type="text"
@@ -572,7 +572,7 @@
 
                     <div class="mb-3">
                         <label for="editShippingAddressAddress" class="form-label">
-                            Alamat
+                            @T["Alamat"]
                         </label>
 
                         <input type="text"
@@ -585,13 +585,13 @@
 
                     <div class="mb-3">
                         <label for="editShippingAreaId" class="form-label">
-                            Area Pengiriman
+                            @T["Area Pengiriman"]
                         </label>
 
                         <select id="editShippingAreaId"
                                 name="shippingAreaId"
                                 class="form-select">
-                            <option value="">— Tanpa area —</option>
+                            <option value="">@T["— Tanpa area —"]</option>
 
                             @if (ViewBag.ShippingAreas != null)
                             {
@@ -609,12 +609,12 @@
                     <button type="button"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
-                        Batal
+                        @T["Batal"]
                     </button>
 
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-save"></i>
-                        Simpan Perubahan
+                        @T["Simpan Perubahan"]
                     </button>
                 </div>
 
@@ -637,13 +637,13 @@
         const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
         if (!allowedTypes.includes(file.type)) {
-            alert("Format foto harus JPG, PNG, atau WEBP.");
+            alert(@Json.Serialize(T["Format foto harus JPG, PNG, atau WEBP."]));
             event.target.value = "";
             return;
         }
 
         if (file.size > 2 * 1024 * 1024) {
-            alert("Ukuran foto maksimal 2 MB.");
+            alert(@Json.Serialize(T["Ukuran foto maksimal 2 MB."]));
             event.target.value = "";
             return;
         }
@@ -687,16 +687,16 @@
         error.textContent = "";
 
         if (password !== "" && password.length < 6) {
-            error.textContent = "Password minimal 6 karakter.";
+            error.textContent = @Json.Serialize(T["Password minimal 6 karakter."]);
             return;
         }
 
         if (password !== "" && password !== confirmPassword) {
-            error.textContent = "Password tidak sama.";
+            error.textContent = @Json.Serialize(T["Password tidak sama."]);
             return;
         }
 
-        alert("Bagian akun toko akan disimpan bersama data customer.");
+        alert(@Json.Serialize(T["Bagian akun toko akan disimpan bersama data customer."]));
     }
 
     // TAMBAH ALAMAT PENGIRIMAN
@@ -710,13 +710,13 @@
         const areaId = areaSelect.value;
 
         if (!name) {
-            alert("Nama alamat wajib diisi.");
+            alert(@Json.Serialize(T["Nama alamat wajib diisi."]));
             nameInput.focus();
             return;
         }
 
         if (!address) {
-            alert("Alamat wajib diisi.");
+            alert(@Json.Serialize(T["Alamat wajib diisi."]));
             addressInput.focus();
             return;
         }
@@ -727,7 +727,7 @@
 
         if (button) {
             button.disabled = true;
-            button.innerHTML = "Menyimpan...";
+            button.innerHTML = @Json.Serialize(T["Menyimpan..."]);
         }
 
         const form = document.createElement("form");
@@ -745,7 +745,7 @@
         }
 
         const fields = {
-            customerId: "@Model.Id",
+            customerUid: "@Model.Uid",
             name: name,
             address: address,
             shippingAreaId: areaId
@@ -765,7 +765,7 @@
 
     // EDIT ALAMAT PENGIRIMAN
     function openEditShippingAddress(button) {
-        document.getElementById("editShippingAddressId").value = button.dataset.id;
+        document.getElementById("editShippingAddressUid").value = button.dataset.uid;
         document.getElementById("editShippingAddressName").value = button.dataset.name;
         document.getElementById("editShippingAddressAddress").value = button.dataset.address;
         document.getElementById("editShippingAreaId").value = button.dataset.areaId || "";
@@ -775,8 +775,8 @@
     }
 
     // HAPUS ALAMAT PENGIRIMAN
-    function deleteShippingAddress(button, addressId) {
-        if (!confirm("Yakin ingin menghapus alamat pengiriman ini?")) {
+    function deleteShippingAddress(button, addressUid) {
+        if (!confirm(@Json.Serialize(T["Yakin ingin menghapus alamat pengiriman ini?"]))) {
             return;
         }
 
@@ -795,8 +795,8 @@
         }
 
         const fields = {
-            id: addressId,
-            customerId: "@Model.Id"
+            uid: addressUid,
+            customerUid: "@Model.Uid"
         };
 
         Object.entries(fields).forEach(([key, value]) => {

@@ -1,0 +1,154 @@
+@model ERP.Web.Models.DeferralRunViewModel
+@{
+    ViewData["Title"] = T["Proses Rekognisi"];
+    var total = Model.Lines.Sum(l => l.Amount);
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Proses Rekognisi"]</h3>
+
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+        <div>
+            <label class="form-label text-white small mb-1" for="fPeriod">@T["Proses s/d bulan"]</label>
+            <input type="month" class="form-control form-control-sm" name="period" id="fPeriod" value="@Model.Period" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>@T["Pratinjau"]</button>
+        <a asp-controller="DeferralSchedules" asp-action="Index" class="btn btn-outline-info btn-sm ms-auto"><i class="bi bi-calendar-range me-1"></i>@T["Jadwal Prepaid/Deferred"]</a>
+    </form>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Baris jadwal yang jatuh tempo s/d bulan terpilih diakui per bulan: satu dokumen + satu jurnal bertanggal akhir bulan itu (prepaid: D beban / K 1-1700; diterima di muka: D 2-1700 / K pendapatan). Hanya sampai bulan berjalan. Kalau ada satu bulan yang periodenya belum dibuat atau sudah ditutup, seluruh proses ditolak — tanggal tidak dipindah otomatis."]
+    </div>
+
+    @if (Model.LockedPeriods.Count > 0)
+    {
+        <div class="alert alert-danger small">
+            <i class="bi bi-lock me-1"></i>
+            @T["Periode {0} belum dibuat atau sudah ditutup, padahal ada baris yang jatuh tempo di sana. Proses akan ditolak seluruhnya.", string.Join(", ", Model.LockedPeriods)]
+        </div>
+    }
+
+    <div class="card supplier-card supplier-table-card mb-3">
+        <div class="card-header bg-transparent d-flex flex-wrap align-items-center gap-2 py-3 px-4">
+            <span class="fw-semibold text-white">@T["Baris jatuh tempo s/d {0}", Model.Period]</span>
+            <span class="badge bg-secondary">@Model.Lines.Count</span>
+            <span class="ms-auto text-white fw-semibold">@Acc.Money(total)</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["BULAN"]</th>
+                        <th>@T["JENIS"]</th>
+                        <th>@T["KETERANGAN"]</th>
+                        <th>@T["AKUN TUJUAN"]</th>
+                        <th class="text-end pe-4">@T["NOMINAL"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Lines.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-center text-muted py-4">@T["Tidak ada baris yang jatuh tempo."]</td></tr>
+                    }
+                    @foreach (var l in Model.Lines)
+                    {
+                        var prepaid = l.SourceType == "purchase_invoice";
+                        <tr class="@(Model.LockedPeriods.Contains(l.Period) ? "table-danger-soft" : "")">
+                            <td class="ps-4 text-white">@l.Period</td>
+                            <td><span class="badge @(prepaid ? "bg-primary" : "bg-info text-dark")">@T[prepaid ? "Prepaid" : "Diterima di muka"]</span></td>
+                            <td class="small"><a asp-controller="DeferralSchedules" asp-action="Details" asp-route-uid="@l.ScheduleUid" class="text-info">@l.Description</a></td>
+                            <td class="text-white small">@l.TargetAccountCode @l.TargetAccountName</td>
+                            <td class="text-end text-white pe-4">@Acc.Money(l.Amount)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Lines.Count > 0)
+        {
+            <div class="card-body border-top border-secondary py-3 px-4">
+                <form method="post" asp-action="Run" class="d-flex flex-wrap gap-2 align-items-end" data-perm="create"
+                      onsubmit='return confirm(@Json.Serialize(T["Proses rekognisi s/d {0}? Jurnal dibuat per bulan.", Model.Period]));'>
+                    <input type="hidden" name="period" value="@Model.Period" />
+                    <div class="flex-grow-1">
+                        <label class="form-label text-white small mb-1" for="note">@T["Catatan (opsional)"]</label>
+                        <input type="text" class="form-control form-control-sm" name="note" id="note" maxlength="255" />
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm" disabled="@(Model.LockedPeriods.Count > 0)"><i class="bi bi-play-fill me-1"></i>@T["Proses Rekognisi"]</button>
+                </form>
+            </div>
+        }
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <div class="card-header bg-transparent py-3 px-4"><span class="fw-semibold text-white">@T["Riwayat proses"]</span></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["NO."]</th>
+                        <th>@T["BULAN"]</th>
+                        <th class="text-end">@T["BARIS"]</th>
+                        <th class="text-end">@T["TOTAL"]</th>
+                        <th>@T["JURNAL"]</th>
+                        <th>@T["STATUS"]</th>
+                        <th class="pe-4"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.History.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada proses rekognisi."]</td></tr>
+                    }
+                    @foreach (var h in Model.History)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white small text-nowrap">@h.RecognitionNo<div class="text-white-50">@h.CreatedByName · @h.CreatedAt?.ToString("dd/MM/yyyy HH:mm")</div></td>
+                            <td class="text-white">@h.Period</td>
+                            <td class="text-end text-white">@h.LineCount</td>
+                            <td class="text-end text-white">@Acc.Money(h.TotalAmount)</td>
+                            <td class="small">
+                                @if (h.JournalUid != null)
+                                {
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@h.JournalUid" class="text-info text-nowrap">@h.JournalNo</a>
+                                }
+                                @if (h.ReversalJournalUid != null)
+                                {
+                                    <div><span class="text-white-50">@T["pembalik"]</span> <a asp-controller="Journals" asp-action="Details" asp-route-uid="@h.ReversalJournalUid" class="text-info text-nowrap">@h.ReversalJournalNo</a></div>
+                                }
+                            </td>
+                            <td>
+                                @if (h.Status == "posted")
+                                {
+                                    <span class="badge bg-success">@T["Posted"]</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">@T["Dibatalkan"]</span>
+                                    <div class="small text-white-50">@h.ReverseReason</div>
+                                }
+                                @if (!string.IsNullOrEmpty(h.Note))
+                                {
+                                    <div class="small text-white-50">@h.Note</div>
+                                }
+                            </td>
+                            <td class="pe-4">
+                                @if (h.CanReverse)
+                                {
+                                    <form method="post" asp-action="ReverseLast" class="d-flex gap-1" data-perm="delete"
+                                          onsubmit='return confirm(@Json.Serialize(T["Batalkan rekognisi {0}? Jurnalnya dibalik dan barisnya kembali menunggu.", h.RecognitionNo]));'>
+                                        <input type="hidden" name="period" value="@Model.Period" />
+                                        <input type="text" class="form-control form-control-sm" name="reason" placeholder="@T["Alasan"]" required style="width:10rem" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm text-nowrap"><i class="bi bi-arrow-counterclockwise me-1"></i>@T["Batalkan"]</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

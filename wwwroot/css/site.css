@@ -231,6 +231,19 @@ body {
     flex: 1;
 }
 
+.theme-toggle {
+    color: #fff;
+    font-size: 20px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+}
+
+    .theme-toggle:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+    }
+
 .user-box {
     display: flex;
     align-items: center;
@@ -3908,8 +3921,8 @@ body.sidebar-collapsed .main-content {
     }
 
     .category-table tbody tr.category-parent-row td {
-        background: #f8f9fa;
-        color: #172033;
+        background: #16233a;
+        color: #e5e7eb;
     }
 
 .category-code {
@@ -7146,4 +7159,453 @@ select.unit-form-control option {
     .page-content {
         padding: 20px 15px;
     }
+}
+
+
+/* =========================================================
+   SIDEBAR DINAMIS (menu dari tabel menus + hak akses)
+   ========================================================= */
+
+.nav-link-main.active {
+    background: rgba(0, 168, 157, 0.18);
+    color: #fff;
+}
+
+/* Menu yang belum dimigrasi dari PHP ke .NET */
+.nav-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+    .nav-disabled:hover {
+        background: transparent;
+        color: var(--sidebar-text);
+    }
+
+
+/* =========================================================
+   TOPBAR - USER MENU
+   ========================================================= */
+
+.user-box .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    padding: 0;
+    text-align: left;
+}
+
+    .user-box .dropdown-toggle::after {
+        margin-left: 6px;
+    }
+
+
+/* =========================================================
+   HAK AKSES (ACCESS ROLE)
+   ========================================================= */
+
+.access-matrix .menu-parent td {
+    background: rgba(255, 255, 255, 0.04);
+    font-weight: 600;
+}
+
+.access-matrix .menu-child-indent {
+    display: inline-block;
+    width: 22px;
+    color: #7f94aa;
+}
+
+.access-matrix .form-check-input {
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   BRANDING & APP SETTINGS
+   ========================================================= */
+
+.brand-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.settings-logo-preview {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #7f94aa;
+    font-size: 1.5rem;
+    overflow: hidden;
+}
+
+    .settings-logo-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+/* Toggle lipat tabel standar (_ListHeader) */
+.js-list-toggle i { transition: transform .15s ease; }
+.js-list-toggle.collapsed i { transform: rotate(180deg); }
+
+/* Tabel standar yang kolom pertamanya bukan nomor urut "#" (akuntansi, aset, persetujuan): rata kiri, lebar bebas */
+.supplier-page .supplier-table.first-left th:nth-child(1),
+.supplier-page .supplier-table.first-left td:nth-child(1) {
+    width: auto;
+    text-align: left;
+}
+
+/* Kolom filter fleksibel tidak boleh terlalu sempit (teks "-- Semua --" terpotong) — bungkus ke baris berikut */
+.supplier-page .supplier-filter form.row > .col-md {
+    min-width: 130px;
+}
+
+/* =========================================================
+   STANDAR UKURAN INPUT FORM & MODAL — sama dengan input kartu filter (27px / 12px)
+   ========================================================= */
+.main-content .form-control:not(textarea):not([type="file"]):not([type="color"]):not(.form-control-plaintext),
+.main-content .form-select:not([multiple]):not([size]),
+.modal .form-control:not(textarea):not([type="file"]):not([type="color"]):not(.form-control-plaintext),
+.modal .form-select:not([multiple]):not([size]) {
+    height: 27px !important;
+    min-height: 27px !important;
+    padding: 3px 8px !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    border-radius: 4px !important;
+}
+
+.main-content .form-select:not([multiple]):not([size]),
+.modal .form-select:not([multiple]):not([size]) {
+    padding-right: 26px !important;
+    background-position: right 8px center !important;
+    background-size: 12px 10px !important;
+}
+
+.main-content textarea.form-control,
+.modal textarea.form-control {
+    min-height: 54px !important;
+    padding: 5px 8px !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+}
+
+.main-content .form-control[type="file"],
+.modal .form-control[type="file"],
+.main-content .form-select[multiple],
+.modal .form-select[multiple] {
+    min-height: 27px !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+}
+
+.main-content .form-label,
+.modal .form-label {
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.main-content .input-group-text,
+.modal .input-group-text {
+    min-height: 27px;
+    padding: 3px 8px;
+    font-size: 12px;
+}
+
+.main-content .input-group > .btn,
+.modal .input-group > .btn {
+    padding: 3px 9px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.main-content .form-check-input,
+.modal .form-check-input {
+    min-height: 0;
+}
+
+/* =========================================================
+   STANDAR TOMBOL AKSI BARIS TABEL (lihat / ubah / hapus / lainnya)
+   <div class="row-actions"> <a class="act-btn act-view"> <i class="bi bi-eye"></i> ...
+   ========================================================= */
+.row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+    .row-actions form {
+        display: inline-flex;
+        margin: 0;
+    }
+
+.act-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    color: #94a3b8;
+    border: 1px solid #34445f;
+    border-radius: 7px;
+    font-size: 13px;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+    .act-btn:hover { background: #1e293b; color: #fff; }
+    .act-btn:disabled, .act-btn.disabled { opacity: .45; pointer-events: none; }
+
+.act-view { color: #2dd4bf; }
+    .act-view:hover { background: #0f766e; border-color: #0f766e; color: #fff; }
+.act-edit { color: #60a5fa; }
+    .act-edit:hover { background: #2563eb; border-color: #2563eb; color: #fff; }
+.act-delete { color: #f87171; }
+    .act-delete:hover { background: #dc3545; border-color: #dc3545; color: #fff; }
+.act-other { color: #a5b4fc; }
+    .act-other:hover { background: #4338ca; border-color: #4338ca; color: #fff; }
+
+/* Teks pendukung form & modal ikut ukuran standar */
+.main-content .form-text,
+.modal .form-text {
+    font-size: 11px;
+    margin-top: 3px;
+}
+
+.main-content .form-check-label,
+.modal .form-check-label {
+    font-size: 12px;
+}
+
+.modal .modal-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.modal .modal-header {
+    padding: 10px 16px;
+}
+
+.modal .modal-body {
+    padding: 14px 16px;
+    font-size: 12.5px;
+}
+
+.modal .modal-footer {
+    padding: 8px 16px;
+}
+
+    .modal .modal-footer .btn {
+        padding: 4px 12px;
+        font-size: 12px;
+        line-height: 1.5;
+        border-radius: 5px;
+    }
+
+/* Input tanggal di kartu filter jangan melebihi lebar kolom */
+.supplier-page .supplier-filter .form-control,
+.supplier-page .supplier-filter .form-select {
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* Input berkelas khusus (Satuan & Konversi) ikut ukuran standar */
+.main-content .unit-form-control {
+    height: 27px !important;
+    min-height: 27px !important;
+    padding: 3px 8px !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+}
+
+
+/* =========================================================
+   PENCARIAN MENU SIDEBAR
+   ========================================================= */
+
+.sidebar-search {
+    position: sticky;
+    top: 78px; /* tepat di bawah .brand */
+    z-index: 4;
+    padding: 12px 12px 4px;
+    background: var(--sidebar-bg);
+}
+
+.sidebar-search-box {
+    position: relative;
+}
+
+    .sidebar-search-box > .bi-search {
+        position: absolute;
+        top: 50%;
+        left: 12px;
+        transform: translateY(-50%);
+        font-size: 13px;
+        color: var(--sidebar-text);
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+.sidebar-search-input {
+    width: 100%;
+    height: 38px;
+    padding: 0 60px 0 36px;
+    font-size: 13px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    outline: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+    .sidebar-search-input::placeholder {
+        color: var(--sidebar-text);
+        opacity: 0.6;
+    }
+
+    .sidebar-search-input:focus {
+        background: rgba(255, 255, 255, 0.09);
+        border-color: var(--sidebar-active);
+        box-shadow: 0 0 0 2px rgba(0, 168, 157, 0.2);
+    }
+
+    .sidebar-search-input::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+.sidebar-search-kbd {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    padding: 2px 6px;
+    font-family: inherit;
+    font-size: 10px;
+    color: var(--sidebar-text);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    box-shadow: none;
+    pointer-events: none;
+}
+
+.sidebar-search-clear {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--sidebar-text);
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+}
+
+    .sidebar-search-clear:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+    }
+
+.sidebar-search.has-value .sidebar-search-clear {
+    display: flex;
+}
+
+.sidebar-search.has-value .sidebar-search-kbd {
+    display: none;
+}
+
+.sidebar-menu .search-hidden {
+    display: none !important;
+}
+
+.sidebar-menu mark {
+    padding: 0;
+    color: #fff;
+    background: rgba(0, 168, 157, 0.4);
+    border-radius: 2px;
+}
+
+/* Hasil pertama = yang dibuka saat menekan Enter */
+.sidebar-menu.is-searching .is-first:not(.active) {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+
+.sidebar-menu .nav-link-main:focus-visible,
+.sidebar-menu .nav-group:focus-visible,
+.sidebar-menu .nav-sub:focus-visible {
+    outline: 2px solid var(--sidebar-active);
+    outline-offset: -2px;
+}
+
+.sidebar-search-empty {
+    padding: 24px 12px;
+    font-size: 13px;
+    text-align: center;
+    color: var(--sidebar-text);
+    opacity: 0.7;
+}
+
+    .sidebar-search-empty i {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 20px;
+    }
+
+/* Level 11: baris anggaran yang terlampaui (Anggaran, Anggaran vs Realisasi, cek anggaran faktur) */
+.table-danger-soft > td {
+    background-color: rgba(220, 53, 69, 0.14) !important;
+}
+
+/* Level 11: pilihan cost center/project nonaktif (akun neraca) — redup, bukan blok terang */
+.form-select.dim-select:disabled {
+    background-color: transparent;
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* Kas & Bank: mata uang / akun COA terkunci (rekening sudah dipakai) — tetap terbaca di tema gelap */
+#cCurrency:disabled,
+#cCoa:disabled {
+    background-color: transparent;
+    color: inherit;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Level 12: layar rekonsiliasi bank — saran nominal sama & baris yang bisa dipilih */
+.table-success-soft > td {
+    background-color: rgba(25, 135, 84, 0.18) !important;
+}
+
+tr.selectable {
+    cursor: pointer;
+}
+
+.recon-bar {
+    position: sticky;
+    bottom: 0.5rem;
+    z-index: 5;
 }

@@ -1,0 +1,302 @@
+/* =====================================================================
+   TEMA TERANG — penyesuaian manual (dimuat setelah theme-light.css).
+   Halaman-halaman memakai utilitas Bootstrap untuk tema gelap (text-white,
+   btn-outline-light, ...). Di tema terang utilitas itu dipetakan ke warna gelap,
+   kecuali di sidebar (tetap gelap) dan di elemen berlatar warna (tombol, badge).
+   ===================================================================== */
+
+html[data-theme="light"] {
+    color-scheme: light;
+}
+
+html[data-theme="light"] body {
+    background: #f3f5f9;
+    color: #1f2937;
+}
+
+/* ---------- teks ---------- */
+html[data-theme="light"] .main-content .text-white:not(.btn):not(.badge):not([class*="bg-"]):not(.nav-link) {
+    color: #1f2937 !important;
+}
+
+html[data-theme="light"] .main-content .text-white-50 {
+    color: #64748b !important;
+}
+
+html[data-theme="light"] .main-content .text-light:not(.btn):not(.badge) {
+    color: #334155 !important;
+}
+
+/* Warna Bootstrap yang terlalu pucat di atas putih */
+html[data-theme="light"] .main-content .text-info {
+    color: #0a7a95 !important;
+}
+
+html[data-theme="light"] .main-content .text-warning {
+    color: #b45309 !important;
+}
+
+html[data-theme="light"] .main-content .text-success {
+    color: #15803d !important;
+}
+
+html[data-theme="light"] .main-content .text-danger {
+    color: #b91c1c !important;
+}
+
+/* ---------- tombol ---------- */
+html[data-theme="light"] .main-content .btn-outline-light {
+    color: #334155;
+    border-color: #cbd5e1;
+    background: #ffffff;
+}
+
+    html[data-theme="light"] .main-content .btn-outline-light:hover,
+    html[data-theme="light"] .main-content .btn-outline-light:focus {
+        color: #0f172a;
+        background: #e2e8f0;
+        border-color: #94a3b8;
+    }
+
+html[data-theme="light"] .main-content .btn-light {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #1f2937;
+}
+
+html[data-theme="light"] .main-content .btn-secondary {
+    background: #64748b;
+    border-color: #64748b;
+}
+
+html[data-theme="light"] .btn-close {
+    filter: none !important;
+    opacity: .6;
+}
+
+/* ---------- kartu, tabel, form ---------- */
+html[data-theme="light"] .card,
+html[data-theme="light"] .modal-content {
+    background: #ffffff;
+    color: #1f2937;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+html[data-theme="light"] .custom-card {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+}
+
+html[data-theme="light"] .custom-card-header {
+    background: #ffffff !important;
+    border-bottom-color: #e2e8f0 !important;
+}
+
+html[data-theme="light"] .custom-table {
+    --bs-table-color: #1f2937 !important;
+}
+
+    html[data-theme="light"] .custom-table thead th {
+        background: #f8fafc !important;
+        color: #64748b !important;
+        border-bottom-color: #e2e8f0 !important;
+    }
+
+    html[data-theme="light"] .custom-table tbody td {
+        border-bottom-color: #eef2f7 !important;
+    }
+
+    html[data-theme="light"] .custom-table tbody tr:hover {
+        background: #f1f5f9 !important;
+    }
+
+    html[data-theme="light"] .custom-table tfoot td {
+        border-top-color: #e2e8f0;
+    }
+
+html[data-theme="light"] .table-active,
+html[data-theme="light"] .table-active > td {
+    --bs-table-bg-state: #e0f2fe;
+}
+
+html[data-theme="light"] .form-control,
+html[data-theme="light"] .form-select {
+    background-color: #ffffff;
+    color: #1f2937;
+    border-color: #cbd5e1;
+}
+
+    html[data-theme="light"] .form-control:focus,
+    html[data-theme="light"] .form-select:focus {
+        background-color: #ffffff;
+        color: #0f172a;
+        border-color: #60a5fa;
+    }
+
+    html[data-theme="light"] .form-control::placeholder {
+        color: #94a3b8;
+    }
+
+html[data-theme="light"] .form-control:disabled,
+html[data-theme="light"] .form-select:disabled {
+    background-color: #f1f5f9;
+    color: #64748b;
+}
+
+html[data-theme="light"] .form-check-input {
+    border-color: #94a3b8;
+}
+
+/* ---------- paginasi, dropdown, modal ---------- */
+html[data-theme="light"] .pagination .page-link {
+    background: #ffffff;
+    color: #334155;
+    border-color: #e2e8f0;
+}
+
+html[data-theme="light"] .pagination .page-item.active .page-link {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+}
+
+html[data-theme="light"] .pagination .page-item.disabled .page-link {
+    color: #94a3b8;
+    background: #f8fafc;
+}
+
+html[data-theme="light"] .dropdown-menu {
+    background: #ffffff;
+    border-color: #e2e8f0;
+}
+
+html[data-theme="light"] .modal-header,
+html[data-theme="light"] .modal-footer,
+html[data-theme="light"] .card-header,
+html[data-theme="light"] .card-footer {
+    border-color: #e2e8f0;
+}
+
+/* ---------- topbar ---------- */
+html[data-theme="light"] .topbar {
+    background: #ffffff;
+    border-bottom-color: #e2e8f0;
+}
+
+html[data-theme="light"] .sidebar-toggle,
+html[data-theme="light"] .theme-toggle {
+    color: #334155;
+}
+
+    html[data-theme="light"] .sidebar-toggle:hover,
+    html[data-theme="light"] .theme-toggle:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+
+html[data-theme="light"] .user-box .dropdown-toggle,
+html[data-theme="light"] .user-info strong {
+    color: #1f2937;
+}
+
+html[data-theme="light"] .user-info small {
+    color: #64748b;
+}
+
+/* ---------- alert ---------- */
+html[data-theme="light"] .alert-info {
+    background: #e0f2fe;
+    border-color: #bae6fd;
+    color: #075985;
+}
+
+html[data-theme="light"] .alert-warning {
+    background: #fef3c7;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+/* ---------- sidebar tetap gelap ---------- */
+html[data-theme="light"] .sidebar {
+    color: #f4f7fb;
+}
+
+    html[data-theme="light"] .sidebar .brand-text strong {
+        color: #ffffff;
+    }
+
+/* Tombol aksi baris tabel — mode terang */
+html[data-theme="light"] .act-btn { background: #fff; border-color: #cfd8e3; color: #64748b; }
+html[data-theme="light"] .act-btn:hover { background: #f1f5f9; color: #0f172a; }
+html[data-theme="light"] .act-view { color: #0d9488; }
+html[data-theme="light"] .act-edit { color: #3b82f6; }
+html[data-theme="light"] .act-delete { color: #dc2626; }
+html[data-theme="light"] .act-other { color: #6366f1; }
+html[data-theme="light"] .act-view:hover { background: #0d9488; border-color: #0d9488; color: #fff; }
+html[data-theme="light"] .act-edit:hover { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+html[data-theme="light"] .act-delete:hover { background: #dc2626; border-color: #dc2626; color: #fff; }
+html[data-theme="light"] .act-other:hover { background: #6366f1; border-color: #6366f1; color: #fff; }
+
+/* Baris induk Kategori Produk — mode terang */
+html[data-theme="light"] .category-table tbody tr.category-parent-row td { background: #f1f5f9 !important; color: #172033 !important; }
+
+/* Edit Price List: prefix Rp, switch PPN mati, tombol simpan harga — mode terang */
+html[data-theme="light"] .pl-edit .input-group-text.pl-rp { background-color: #f1f5f9 !important; color: #334155 !important; border: 1px solid #cfd8e3 !important; border-right: 0 !important; }
+html[data-theme="light"] .pl-edit .form-switch .form-check-input:not(:checked) { background-color: #fff !important; border-color: #cbd5e1 !important; }
+html[data-theme="light"] .pl-edit .btn-save-item { background-color: #fff !important; border-color: #cfd8e3 !important; color: #0d9488 !important; }
+html[data-theme="light"] .pl-edit .btn-save-item:hover { background-color: #0d9488 !important; color: #fff !important; }
+
+/* =========================================================
+   STANDAR WARNA INPUT — mode terang (semua halaman & modal)
+   Input yang bisa diisi = putih; readonly / disabled = abu-abu (beda jelas dari yang aktif).
+   ========================================================= */
+html[data-theme="light"] .main-content .form-control:not([readonly]):not(:disabled):not(.form-control-plaintext),
+html[data-theme="light"] .main-content .form-select:not(:disabled),
+html[data-theme="light"] .modal .form-control:not([readonly]):not(:disabled):not(.form-control-plaintext),
+html[data-theme="light"] .modal .form-select:not(:disabled) {
+    background-color: #ffffff !important;
+    border-color: #cfd8e3 !important;
+    color: #1e293b !important;
+}
+
+html[data-theme="light"] .main-content .form-control:not([readonly]):not(:disabled):focus,
+html[data-theme="light"] .main-content .form-select:not(:disabled):focus,
+html[data-theme="light"] .modal .form-control:not([readonly]):not(:disabled):focus,
+html[data-theme="light"] .modal .form-select:not(:disabled):focus {
+    border-color: #00a89d !important;
+    box-shadow: 0 0 0 2px rgba(0, 168, 157, .15) !important;
+}
+
+html[data-theme="light"] .main-content .form-control[readonly],
+html[data-theme="light"] .main-content .form-control:disabled,
+html[data-theme="light"] .main-content .form-select:disabled,
+html[data-theme="light"] .modal .form-control[readonly],
+html[data-theme="light"] .modal .form-control:disabled,
+html[data-theme="light"] .modal .form-select:disabled {
+    background-color: #eef1f5 !important;
+    border-color: #d8dee8 !important;
+    color: #64748b !important;
+}
+
+html[data-theme="light"] .main-content .form-control::placeholder,
+html[data-theme="light"] .modal .form-control::placeholder {
+    color: #94a3b8 !important;
+}
+
+html[data-theme="light"] .main-content .input-group-text,
+html[data-theme="light"] .modal .input-group-text {
+    background-color: #f1f5f9 !important;
+    border-color: #cfd8e3 !important;
+    color: #475569 !important;
+}
+
+html[data-theme="light"] .main-content .unit-form-control:not([readonly]):not(:disabled) {
+    background-color: #ffffff !important;
+    border: 1px solid #cfd8e3 !important;
+    color: #1e293b !important;
+}
+html[data-theme="light"] .main-content .unit-form-control:focus {
+    border-color: #00a89d !important;
+    box-shadow: 0 0 0 2px rgba(0, 168, 157, .15) !important;
+}

@@ -1,0 +1,319 @@
+@model ERP.Web.Models.AssetFormViewModel
+@{
+    var isEdit = Model.Uid != null;
+    var locked = Model.FinancialLocked;
+    var title = isEdit ? T["Ubah Aset {0}", Model.AssetNo] : T["Tambah Aset"];
+    ViewData["Title"] = title;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var o = Model.Options;
+    string Num(decimal v) => v == 0 ? "" : v.ToString(inv);
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@title</h3>
+        @if (isEdit)
+        {
+            <a asp-action="Details" asp-route-uid="@Model.Uid" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+        }
+    </div>
+
+    @if (locked)
+    {
+        <div class="alert alert-info small">
+            <i class="bi bi-info-circle me-1"></i>@T["Aset sudah aktif: hanya data non-finansial yang dapat diubah. Umur/residu/metode diubah lewat tombol Ubah Jadwal di halaman detail."]
+        </div>
+    }
+
+    <form method="post" asp-action="@(isEdit ? "Update" : "Create")" id="assetForm">
+        <input type="hidden" name="Uid" value="@Model.Uid" />
+        <input type="hidden" name="AssetNo" value="@Model.AssetNo" />
+        <input type="hidden" name="Status" value="@Model.Status" />
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Data Aset"]</span></div>
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label text-white small mb-1" for="Name">@T["Nama aset"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Name" id="Name" value="@Model.Name" maxlength="150" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-white small mb-1" for="AssetCategoryId">@T["Kategori"]</label>
+                        <select class="form-select form-select-sm" name="AssetCategoryId" id="AssetCategoryId" required disabled="@locked">
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var c in o.Categories)
+                            {
+                                <option value="@c.Id" selected="@(c.Id == Model.AssetCategoryId)"
+                                        data-life="@c.UsefulLifeMonths" data-method="@c.DepreciationMethod"
+                                        data-factor="@c.DecliningFactor?.ToString(inv)" data-salvage="@c.SalvagePercent.ToString(inv)">@c.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="SupplierId">@T["Supplier"]</label>
+                        <select class="form-select form-select-sm" name="SupplierId" id="SupplierId">
+                            <option value="">@T["— Tidak ada —"]</option>
+                            @foreach (var s in o.Suppliers)
+                            {
+                                <option value="@s.Id" selected="@(s.Id == Model.SupplierId)">@s.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="Location">@T["Lokasi"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Location" id="Location" value="@Model.Location" maxlength="150" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="WarrantyUntil">@T["Garansi s/d"]</label>
+                        <input type="date" class="form-control form-control-sm" name="WarrantyUntil" id="WarrantyUntil" value="@Model.WarrantyUntil?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-white small mb-1" for="Note">@T["Catatan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Note" id="Note" value="@Model.Note" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <fieldset disabled="@locked">
+            <div class="card custom-card mb-3">
+                <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Perolehan"]</span></div>
+                <div class="card-body px-4 py-3">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-white small mb-1" for="AcquisitionSource">@T["Sumber perolehan"]</label>
+                            <select class="form-select form-select-sm" name="AcquisitionSource" id="AcquisitionSource">
+                                @foreach (var (value, label) in AssetLabels.Sources.Where(s => s.Value != "purchase_order" || Model.AcquisitionSource == "purchase_order"))
+                                {
+                                    <option value="@value" selected="@(value == Model.AcquisitionSource)">@T[label]</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-white small mb-1" for="AcquisitionDate">@T["Tanggal perolehan"]</label>
+                            <input type="date" class="form-control form-control-sm" name="AcquisitionDate" id="AcquisitionDate" value="@Model.AcquisitionDate.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-3 src src-cash src-opening">
+                            <label class="form-label text-white small mb-1" for="AcquisitionCost">@T["Harga perolehan"]</label>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" name="AcquisitionCost" id="AcquisitionCost" value="@Num(Model.AcquisitionCost)" />
+                        </div>
+
+                        <div class="col-md-5 src src-cash">
+                            <label class="form-label text-white small mb-1" for="CashAccountId">@T["Dibayar dari rekening"]</label>
+                            <select class="form-select form-select-sm" name="CashAccountId" id="CashAccountId">
+                                <option value="">@T["— Pilih —"]</option>
+                                @foreach (var c in o.CashAccounts)
+                                {
+                                    <option value="@c.Id" selected="@(c.Id == Model.CashAccountId)">@c.Name (@T["saldo"] @Acc.Money(c.Balance))</option>
+                                }
+                            </select>
+                            <div class="form-text text-white-50">@T["Jurnal: Dr akun aset / Cr kas-bank. Saldo rekening dicek per tanggal perolehan."]</div>
+                        </div>
+
+                        <div class="col-md-4 src src-stock">
+                            <label class="form-label text-white small mb-1" for="ProductId">@T["Produk"]</label>
+                            <select class="form-select form-select-sm" name="ProductId" id="ProductId">
+                                <option value="">@T["— Pilih —"]</option>
+                                @foreach (var p in o.Products)
+                                {
+                                    <option value="@p.Id" selected="@(p.Id == Model.ProductId)" data-uid="@p.Uid" data-serial="@(p.TrackSerial ? "1" : "0")"
+                                            data-cost="@p.CostPrice.ToString(inv)">@p.Label</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 src src-stock">
+                            <label class="form-label text-white small mb-1" for="SourceWarehouseId">@T["Gudang asal"]</label>
+                            <select class="form-select form-select-sm" name="SourceWarehouseId" id="SourceWarehouseId">
+                                <option value="">@T["— Pilih —"]</option>
+                                @foreach (var w in o.Warehouses)
+                                {
+                                    <option value="@w.Id" selected="@(w.Id == Model.SourceWarehouseId)" data-uid="@w.Uid">@w.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 src src-stock" id="serialBox">
+                            <label class="form-label text-white small mb-1" for="SerialNo">@T["Nomor serial"]</label>
+                            <input type="text" class="form-control form-control-sm" name="SerialNo" id="SerialNo" value="@Model.SerialNo" list="serialList" maxlength="100" autocomplete="off" />
+                            <datalist id="serialList"></datalist>
+                        </div>
+                        <div class="col-12 src src-stock">
+                            <div class="form-text text-white-50">@T["Barang keluar dari stok gudang (biaya FIFO/rata-rata saat aktivasi). Jurnal: Dr akun aset / Cr persediaan."] <span id="stockCostHint"></span></div>
+                        </div>
+
+                        <div class="col-md-3 src src-opening">
+                            <label class="form-label text-white small mb-1" for="OpeningDate">@T["Tanggal mulai pencatatan"]</label>
+                            <input type="date" class="form-control form-control-sm" name="OpeningDate" id="OpeningDate" value="@Model.OpeningDate?.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-3 src src-opening">
+                            <label class="form-label text-white small mb-1" for="OpeningAccumulated">@T["Akumulasi penyusutan s/d tanggal itu"]</label>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" name="OpeningAccumulated" id="OpeningAccumulated" value="@Num(Model.OpeningAccumulated)" />
+                        </div>
+                        <div class="col-md-4 src src-opening">
+                            <label class="form-label text-white small mb-1" for="CounterAccountId">@T["Akun lawan (ekuitas)"]</label>
+                            <select class="form-select form-select-sm" name="CounterAccountId" id="CounterAccountId">
+                                @foreach (var a in o.EquityAccounts)
+                                {
+                                    <option value="@a.Id" selected="@(a.Id == (Model.CounterAccountId ?? o.DefaultCounterAccountId))">@a.Label</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 src src-opening">
+                            <div class="form-text text-white-50">@T["Aset yang sudah dimiliki sebelum go-live: Dr aset (harga perolehan) / Cr akumulasi / Cr akun lawan. Jadwal mulai bulan berikutnya dari sisa nilai."]</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card custom-card mb-3">
+                <div class="card-header custom-card-header py-3 px-4"><span class="fw-semibold text-white">@T["Penyusutan"]</span></div>
+                <div class="card-body px-4 py-3">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-white small mb-1" for="DepreciationMethod">@T["Metode"]</label>
+                            <select class="form-select form-select-sm" name="DepreciationMethod" id="DepreciationMethod">
+                                @foreach (var (value, label) in AssetLabels.Methods)
+                                {
+                                    <option value="@value" selected="@(value == Model.DepreciationMethod)">@T[label]</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-white small mb-1" for="DecliningFactor">@T["Faktor"]</label>
+                            <input type="number" step="0.01" min="0.01" max="10" class="form-control form-control-sm" name="DecliningFactor" id="DecliningFactor" value="@Model.DecliningFactor?.ToString(inv)" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-white small mb-1" for="UsefulLifeMonths">@T["Umur (bulan)"]</label>
+                            <input type="number" min="0" max="1200" class="form-control form-control-sm" name="UsefulLifeMonths" id="UsefulLifeMonths" value="@Model.UsefulLifeMonths" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-white small mb-1" for="SalvageValue">@T["Nilai residu"]</label>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" name="SalvageValue" id="SalvageValue" value="@Model.SalvageValue.ToString(inv)" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-white small mb-1" for="DepreciationStart">@T["Mulai penyusutan (bulan)"]</label>
+                            <input type="month" class="form-control form-control-sm" id="DepreciationStartMonth" value="@Model.DepreciationStart?.ToString("yyyy-MM")" />
+                            <input type="hidden" name="DepreciationStart" id="DepreciationStart" value="@Model.DepreciationStart?.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-3" id="unitsBox">
+                            <label class="form-label text-white small mb-1" for="TotalEstimatedUnits">@T["Estimasi total unit"]</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end" name="TotalEstimatedUnits" id="TotalEstimatedUnits" value="@Model.TotalEstimatedUnits?.ToString(inv)" />
+                        </div>
+                        <div class="col-md-9 d-flex align-items-end">
+                            <div class="form-text text-white-50" id="methodHint"></div>
+                        </div>
+                        <div class="col-12 form-text text-white-50">@T["Konvensi bulan penuh. Kosongkan mulai penyusutan = bulan perolehan. Jadwal dibuat penuh saat aset diaktifkan."]</div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="submit" name="submitAction" value="save" class="btn btn-secondary btn-sm"><i class="bi bi-save me-1"></i>@(locked ? T["Simpan"] : T["Simpan Draft"])</button>
+            @if (!locked)
+            {
+                <button type="submit" name="submitAction" value="activate" class="btn btn-primary btn-sm"
+                        onclick='return confirm(@Json.Serialize(T["Aktifkan aset? Jurnal perolehan dibuat dan data finansial terkunci."]));'>
+                    <i class="bi bi-check2-circle me-1"></i>@T["Simpan & Aktifkan"]
+                </button>
+            }
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const locked = @Json.Serialize(locked);
+            const serialsUrl = '@Url.Action("Serials")';
+            const txtCost = @Json.Serialize(T["Perkiraan biaya: {0}"]);
+
+            function showSource() {
+                const src = $('AcquisitionSource').value;
+                document.querySelectorAll('.src').forEach(el => el.classList.toggle('d-none', !el.classList.contains('src-' + src)));
+                showSerial();
+            }
+
+            function showSerial() {
+                const p = $('ProductId').selectedOptions[0];
+                const isSerial = p && p.dataset.serial === '1';
+                $('serialBox').classList.toggle('d-none', $('AcquisitionSource').value !== 'stock' || !isSerial);
+                $('stockCostHint').textContent = p && p.value
+                    ? txtCost.replace('{0}', Number(p.dataset.cost || 0).toLocaleString('id-ID', { minimumFractionDigits: 2 }))
+                    : '';
+                loadSerials();
+            }
+
+            async function loadSerials() {
+                const p = $('ProductId').selectedOptions[0], w = $('SourceWarehouseId').selectedOptions[0];
+                const list = $('serialList');
+                list.innerHTML = '';
+                if (!p || !w || !p.dataset.uid || !w.dataset.uid || p.dataset.serial !== '1') return;
+                try {
+                    const res = await fetch(`${serialsUrl}?productUid=${p.dataset.uid}&warehouseUid=${w.dataset.uid}`);
+                    if (!res.ok) return;
+                    for (const s of await res.json()) {
+                        const opt = document.createElement('option');
+                        opt.value = s.serialNo;
+                        list.appendChild(opt);
+                    }
+                } catch (e) { }
+            }
+
+            const hints = {
+                straight_line: @Json.Serialize(T["(Harga perolehan − residu) ÷ umur bulan; jadwal dibuat di muka."]),
+                declining_balance: @Json.Serialize(T["Tiap bulan diambil yang lebih besar: NBV × faktor ÷ umur bulan, atau (NBV − residu) ÷ sisa bulan (changeover ke garis lurus)."]),
+                sum_of_years: @Json.Serialize(T["Bobot tahun menurun, dibagi rata 12 bulan. Tidak bisa ditambah biaya (capex) sesudah akuisisi."]),
+                units_of_production: @Json.Serialize(T["(Harga perolehan − residu) ÷ estimasi unit × unit bulan itu. Jadwal tidak dibuat di muka — catat unit produksi tiap bulan di detail aset; umur hanya estimasi."]),
+                none: ''
+            };
+
+            function toggleFactor() {
+                const method = $('DepreciationMethod').value;
+                const dec = method === 'declining_balance', units = method === 'units_of_production';
+                $('DecliningFactor').disabled = locked || !dec;
+                if (dec && !$('DecliningFactor').value) $('DecliningFactor').value = '2';
+                $('unitsBox').classList.toggle('d-none', !units);
+                $('TotalEstimatedUnits').disabled = locked || !units;
+                $('methodHint').textContent = hints[method] ?? '';
+            }
+
+            function applyCategory() {
+                const c = $('AssetCategoryId').selectedOptions[0];
+                if (!c || !c.value) return;
+                $('DepreciationMethod').value = c.dataset.method;
+                $('UsefulLifeMonths').value = c.dataset.life;
+                if (c.dataset.factor) $('DecliningFactor').value = c.dataset.factor;
+                applySalvage();
+                toggleFactor();
+            }
+
+            function applySalvage() {
+                const c = $('AssetCategoryId').selectedOptions[0];
+                const cost = Number($('AcquisitionCost').value || 0);
+                if (c && c.value && cost > 0) $('SalvageValue').value = (Math.round(cost * Number(c.dataset.salvage || 0)) / 100).toFixed(2);
+            }
+
+            $('DepreciationStartMonth').addEventListener('change', () => {
+                const v = $('DepreciationStartMonth').value;
+                $('DepreciationStart').value = v ? v + '-01' : '';
+            });
+
+            if (!locked) {
+                $('AcquisitionSource').addEventListener('change', showSource);
+                $('ProductId').addEventListener('change', showSerial);
+                $('SourceWarehouseId').addEventListener('change', loadSerials);
+                $('DepreciationMethod').addEventListener('change', toggleFactor);
+                $('AssetCategoryId').addEventListener('change', applyCategory);
+                $('AcquisitionCost').addEventListener('change', applySalvage);
+            }
+
+            showSource();
+            toggleFactor();
+        })();
+    </script>
+}

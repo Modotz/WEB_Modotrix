@@ -1,10 +1,33 @@
+@using ERP.Web.Controllers
+@using ERP.Web.Security
+@inject ERP.Web.Services.BrandingService Branding
+@{
+    var branding = await Branding.GetAsync();
+    var logoUrl = Branding.AssetUrl(branding.Logo);
+    var displayName = User.FindFirst(AccountController.DisplayNameClaim)?.Value ?? User.Identity?.Name ?? string.Empty;
+    var roleName = User.FindFirst(AccountController.RoleNameClaim)?.Value ?? string.Empty;
+
+    // Sembunyikan tombol aksi (data-perm) yang tidak diizinkan untuk halaman ini.
+    var hiddenActionsCss = await Access.BuildHiddenActionsCssAsync(MenuRegistry.ResolveMenuUrl(
+        ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty,
+        ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty));
+}
 <!DOCTYPE html>
-<html lang="id">
+<html lang="@T.Lang" data-theme="dark">
 <head>
     <meta charset="utf-8" />
+
+    <script>
+        // Terapkan tema tersimpan sebelum halaman dirender (tanpa kedip).
+        (function () {
+            var theme = "dark";
+            try { theme = localStorage.getItem("erp-theme") === "light" ? "light" : "dark"; } catch (e) { }
+            document.documentElement.setAttribute("data-theme", theme);
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>@ViewData["Title"] - ERP Net 9</title>
+    <title>@ViewData["Title"] - @branding.AppName</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -13,6 +36,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-light.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-light-overrides.css" asp-append-version="true" />
+
+    @if (hiddenActionsCss.Length > 0)
+    {
+        <style>
+            @Html.Raw(hiddenActionsCss)
+        </style>
+    }
 </head>
 
 <body>
@@ -22,509 +54,24 @@
 
         <div class="brand">
             <div class="brand-icon">
-                <i class="bi bi-boxes"></i>
+                @if (logoUrl != null)
+                {
+                    <img src="@logoUrl" alt="" class="brand-logo-img"
+                         onerror="this.replaceWith(Object.assign(document.createElement(&quot;i&quot;), { className: &quot;bi bi-boxes&quot; }))" />
+                }
+                else
+                {
+                    <i class="bi bi-boxes"></i>
+                }
             </div>
 
             <div class="brand-text">
-                <strong>ERP NET 9</strong>
+                <strong>@branding.AppName</strong>
                 <small>Enterprise System</small>
             </div>
         </div>
 
-        <nav class="sidebar-menu">
-
-            <!-- DASHBOARD -->
-                <button class="nav-group"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#"
-                        aria-expanded="true">
-                    <span>
-                <i class="bi bi-speedometer2"></i>
-                Dashboard</span>
-            </button>
-
-            <!-- ALUR PROSES -->
-                <button class="nav-group"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#"
-                        aria-expanded="true">
-                    <span>
-                <i class="bi bi-diagram-3"></i>
-               Alur Proses</span>
-            </button>
-
-
-            <!-- MASTER DATA -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#masterDataMenu"
-                    aria-expanded="true">
-
-                <span>
-                    <i class="bi bi-folder2"></i>
-                    Master Data
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse show"
-                 id="masterDataMenu">
-
-                <a asp-controller="Users"
-                   asp-action="Index"
-                   class="nav-sub">
-                    <i class="bi bi-people"></i>
-                    Users
-                </a>
-
-                <a asp-controller="Menus"
-                   asp-action="Index"
-                   class="nav-sub">
-                    <i class="bi bi-list-ul"></i>
-                    Menu
-                </a>
-
-                <a asp-controller="Roles"
-                   asp-action="Index"
-                   class="nav-sub">
-                    <i class="bi bi-shield-lock"></i>
-                    Roles
-                </a>
-
-                <a href="#" class="nav-sub">
-                    <i class="bi bi-key"></i>
-                    Hak Akses
-                </a>
-            </div>
-
-
-            <!-- PENGATURAN -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#settingMenu">
-
-                <span>
-                    <i class="bi bi-gear"></i>
-                    Pengaturan
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="settingMenu">
-
-                <a href="#" class="nav-sub">
-                    <i class="bi bi-sliders"></i>
-                    App Settings
-                </a>
-
-                <a href="#" class="nav-sub">
-                    <i class="bi bi-clock-history"></i>
-                    Log Audit
-                </a>
-
-                <a asp-controller="Msfields"
-                   asp-action="Index" class="nav-sub">
-                  <i class="bi bi-table"></i>
-                   Msfield
-                </a>
-
-                <a href="#" class="nav-sub">
-                    <i class="bi bi-magic"></i>
-                    Code Generator
-                </a>
-
-                <a href="#" class="nav-sub">
-                    <i class="bi bi-trash3"></i>
-                    Reset Data
-                </a>
-
-                <a href="#" class="nav-sub">
-                    <i class="bi bi-diagram-2"></i>
-                    Peta Data
-                </a>
-            </div>
-
-
-            <!-- INVENTORY -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#inventoryMenu">
-
-                <span>
-                    <i class="bi bi-box-seam"></i>
-                    Inventory
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="inventoryMenu">
-
-                <a asp-controller="Products"
-                   asp-action="Index"
-                   class="nav-sub">
-                   <i class="bi bi-box"></i>
-                   Produk
-                </a>
-
-                <a asp-controller="ProductCategories"
-                   asp-action="Index" class="nav-sub">
-                   <i class="bi bi-tags"></i>
-                   Kategori Produk
-                </a>
-
-                <a asp-controller="ProductAttributes"
-                   asp-action="Index" class="nav-sub">
-                   <i class="bi bi-palette"></i>
-                   Atribut & Varian
-                </a>
-
-                <a href="#" class="nav-sub">Stok per Gudang</a>
-                <a href="#" class="nav-sub">Material Request</a>
-
-                <a asp-controller="GoodsReceipts"
-                   asp-action="Index"
-                   class="nav-sub">
-                   <i class="bi bi-box-arrow-in-down"></i>
-                   Penerimaan
-                </a>
-
-                <a href="#" class="nav-sub">Pengeluaran</a>
-                <a href="#" class="nav-sub">Transfer Gudang</a>
-                <a href="#" class="nav-sub">Penyesuaian</a>
-                <a href="#" class="nav-sub">Serial Unit</a>
-
-                 <a asp-controller="Units"
-                   asp-action="Index"
-                   class="nav-sub">
-                   <i class="bi bi-rulers"></i>
-                   Satuan
-                </a>
-
-                <a asp-controller="Brands"
-                   asp-action="Index" class="nav-sub">
-                  <i class="bi bi-table"></i>
-                   Brands
-                </a>
-
-                <a asp-controller="Warehouse"
-                   asp-action="Index" class="nav-sub">
-                  <i class="bi bi-building"></i>
-                   Gudang
-                </a>
-            </div>
-
-
-            <!-- PURCHASE REQUEST -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#purchaseRequestMenu">
-
-                <span>
-                    <i class="bi bi-bag-check"></i>
-                    Purchase Request
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="purchaseRequestMenu">
-
-                <a href="#" class="nav-sub">PR Barang</a>
-                <a href="#" class="nav-sub">PR Jasa</a>
-                <a href="#" class="nav-sub">PR Aset</a>
-            </div>
-
-
-            <!-- PEMBELIAN -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#pembelianMenu">
-
-                <span>
-                    <i class="bi bi-cart3"></i>
-                    Pembelian
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="pembelianMenu"> 
-                 <a asp-controller="GoodsRfq"
-                       asp-action="Index"
-                       class="nav-sub">
-                        <i class="bi bi-envelope-paper"></i>
-                        RFQ Barang
-                </a>
-                <a href="#" class="nav-sub">RFQ Jasa</a>
-                <a href="#" class="nav-sub">RFQ Aset</a>
-
-                <a asp-controller="GoodsPurchaseOrders"
-                   asp-action="Index"
-                   class="nav-sub">
-                    <i class="bi bi-file-earmark-text"></i>
-                    PO Barang
-                </a>
-                <a href="#" class="nav-sub">PO Jasa</a>
-                <a href="#" class="nav-sub">PO Aset</a>
-
-                <a asp-controller="GoodsPurchaseOrders"
-                       asp-action="ReceivingQueue"
-                       class="nav-sub">
-                        <i class="bi bi-box-arrow-in-down"></i>
-                        Antrian Penerimaan
-                </a>
-
-                <a href="#" class="nav-sub">Retur Barang</a>
-                <a href="#" class="nav-sub">Retur Aset</a>
-
-                <a asp-controller="Suppliers"
-                       asp-action="Index"
-                       class="nav-sub">
-                        <i class="bi bi-truck"></i>
-                        Supplier
-                    </a>
-             </div>
-
-            <!-- PENJUALAN -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#penjualanMenu">
-
-                <span>
-                    <i class="bi bi-receipt"></i>
-                    Penjualan
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="penjualanMenu">
-
-                <a href="#" class="nav-sub">SO Barang</a>
-                <a href="#" class="nav-sub">SO Jasa</a>
-                <a href="#" class="nav-sub">Retur Penjualan</a>
-                    <a asp-controller="Customers"
-                       asp-action="Index"
-                       class="nav-sub">
-                        <i class="bi bi-people"></i>
-                        Customer
-                    </a>
-
-                <a asp-controller="CustomerGroups"
-                   asp-action="Index"
-                   class="nav-sub">
-                    <i class="bi bi-people"></i>
-                    Group Customer
-                </a>
-
-                 <a asp-controller="SalesForces"
-                       asp-action="Index"
-                       class="nav-sub">
-                        <i class="bi bi-person-badge"></i>
-                        Sales Force
-                    </a>
-                 <a asp-controller="PriceLists"
-                       asp-action="Index"
-                       class="nav-sub">
-                        <i class="bi bi-tags"></i>
-                        Price List
-                    </a>
-                    <a asp-controller="ShippingAreas"
-                       asp-action="Index"
-                       class="nav-sub">
-                        <i class="bi bi-truck"></i>
-                        Area Pengiriman
-                    </a>
-            </div>
-
-
-            <!-- LAPORAN -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#laporanMenu">
-
-                <span>
-                    <i class="bi bi-bar-chart"></i>
-                    Laporan
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="laporanMenu">
-
-                <a href="#" class="nav-sub">Laporan Pembelian</a>
-                <a href="#" class="nav-sub">Laporan Penjualan</a>
-                <a href="#" class="nav-sub">Laporan Mutasi Stok</a>
-                <a href="#" class="nav-sub">Laba Kotor</a>
-                <a href="#" class="nav-sub">Kartu Stok</a>
-                
-                <a href="#" class="nav-sub">Kategori Produk</a>
-                <a href="#" class="nav-sub">Umur Stok</a>
-                <a href="#" class="nav-sub">Outstanding PO</a>
-                <a href="#" class="nav-sub">Outstanding SO</a>
-                <a href="#" class="nav-sub">Matriks Stok/Gudang</a>
-            </div>
-
-
-            <!-- PRODUKSI -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#produksiMenu">
-
-                <span>
-                    <i class="bi bi-gear-wide-connected"></i>
-                    Produksi
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="produksiMenu">
-
-                <a href="#" class="nav-sub">Bill of Materials</a>
-                <a href="#" class="nav-sub">Production Order</a>
-                <a asp-controller="WorkCenters"
-                   asp-action="Index" class="nav-sub">
-                     <i class="bi bi-pc-display"></i>
-                    Work Center
-                </a>
-                <a href="#" class="nav-sub">Work Order</a>
-                <a href="#" class="nav-sub">Katalog Produk</a>
-            </div>
-
-
-            <!-- MANAJEMEN ASET -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#assetMenu">
-
-                <span>
-                    <i class="bi bi-building"></i>
-                    Manajemen Aset
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="assetMenu">
-
-                <a href="#" class="nav-sub">Daftar Aset</a>
-                <a href="#" class="nav-sub">Serah Terima</a>
-                <a href="#" class="nav-sub">Penyusutan</a>
-                <a href="#" class="nav-sub">Maintenance</a>
-                <a href="#" class="nav-sub">Kategori Aset</a>
-                <a href="#" class="nav-sub">Nilai Buku Aset</a>
-            </div>
-
-
-            <!-- AKUNTANSI -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#accountingMenu">
-
-                <span>
-                    <i class="bi bi-calculator"></i>
-                    Akuntansi
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="accountingMenu">
-
-                <a href="#" class="nav-sub">Bagan Akun</a>
-                <a href="#" class="nav-sub">Periode Akuntansi</a>
-                <a href="#" class="nav-sub">Kas &amp; Bank</a>
-                <a href="#" class="nav-sub">Saldo Awal</a>
-                <a href="#" class="nav-sub">Jurnal Umum</a>
-                <a href="#" class="nav-sub">Transaksi Kas &amp; Bank</a>
-                <a href="#" class="nav-sub">Faktur Pembelian</a>
-                <a href="#" class="nav-sub">Faktur Penjualan</a>
-                <a href="#" class="nav-sub">Pembayaran Hutang</a>
-                <a href="#" class="nav-sub">Penerimaan Piutang</a>
-                <a href="#" class="nav-sub">Umur Hutang</a>
-                <a href="#" class="nav-sub">Umur Piutang</a>
-                <a href="#" class="nav-sub">Buku Besar</a>
-                <a href="#" class="nav-sub">Neraca Saldo</a>
-                <a href="#" class="nav-sub">Laba Rugi</a>
-                <a href="#" class="nav-sub">Neraca</a>
-                <a href="#" class="nav-sub">Arus Kas</a>
-                <a href="#" class="nav-sub">Rekap PPN</a>
-                <a href="#" class="nav-sub">Kartu Hutang</a>
-                <a href="#" class="nav-sub">Kartu Piutang</a>
-                <a href="#" class="nav-sub">Perubahan Ekuitas</a>
-                <a href="#" class="nav-sub">Tutup Buku</a>
-            </div>
-
-
-            <!-- PERSETUJUAN -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#approvalMenu">
-
-                <span>
-                    <i class="bi bi-check2-square"></i>
-                    Persetujuan
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="approvalMenu">
-
-                <a href="#" class="nav-sub">Kotak Persetujuan</a>
-                <a href="#" class="nav-sub">Alur Persetujuan</a>
-            </div>
-
-
-            <!-- TOKO ONLINE -->
-            <button class="nav-group"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#onlineMenu">
-
-                <span>
-                    <i class="bi bi-shop"></i>
-                    Toko Online
-                </span>
-
-                <i class="bi bi-chevron-down"></i>
-            </button>
-
-            <div class="collapse"
-                 id="onlineMenu">
-
-                <a href="#" class="nav-sub">Pesanan Online</a>
-            </div>
-
-        </nav>
+        @await Component.InvokeAsync("Sidebar")
 
     </aside>
 
@@ -544,15 +91,43 @@
 
             <div class="topbar-spacer"></div>
 
-            <div class="user-box">
-                <div class="user-avatar">
-                    A
-                </div>
+            <div class="dropdown me-1">
+                <button type="button" class="btn theme-toggle lang-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Bahasa"]">
+                    <span class="fw-semibold small">@T.Lang.ToUpperInvariant()</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li><a class="dropdown-item @(T.IsEnglish ? "" : "active")" href="@Url.Action("Set", "Language", new { lang = "id", returnUrl = Context.Request.Path + Context.Request.QueryString })">🇮🇩 Bahasa Indonesia</a></li>
+                    <li><a class="dropdown-item @(T.IsEnglish ? "active" : "")" href="@Url.Action("Set", "Language", new { lang = "en", returnUrl = Context.Request.Path + Context.Request.QueryString })">🇬🇧 English</a></li>
+                </ul>
+            </div>
 
-                <div class="user-info">
-                    <strong>Administrator</strong>
-                    <small>System Admin</small>
-                </div>
+            <button type="button" class="btn theme-toggle me-2" id="themeToggle" title="@T["Ganti tema terang/gelap"]">
+                <i class="bi bi-sun"></i>
+            </button>
+
+            <div class="user-box dropdown">
+                <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="user-avatar">
+                        @(string.IsNullOrEmpty(displayName) ? "?" : displayName.Substring(0, 1).ToUpperInvariant())
+                    </div>
+
+                    <div class="user-info">
+                        <strong>@displayName</strong>
+                        <small>@roleName</small>
+                    </div>
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li><h6 class="dropdown-header">@User.Identity?.Name</h6></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form asp-controller="Account" asp-action="Logout" method="post">
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="bi bi-box-arrow-right me-2"></i>@T["Logout"]
+                            </button>
+                        </form>
+                    </li>
+                </ul>
             </div>
 
         </header>
@@ -563,7 +138,7 @@
             @if (TempData["Success"] != null)
             {
                 <div class="alert alert-success alert-dismissible fade show">
-                    @TempData["Success"]
+                    @T[TempData["Success"]?.ToString()]
 
                     <button type="button"
                             class="btn-close"
@@ -574,7 +149,7 @@
             @if (TempData["Error"] != null)
             {
                 <div class="alert alert-danger alert-dismissible fade show">
-                    @TempData["Error"]
+                    @T[TempData["Error"]?.ToString()]
 
                     <button type="button"
                             class="btn-close"
@@ -600,6 +175,24 @@
             document.body.classList.toggle('sidebar-collapsed');
 
         });
+
+    // Tema terang/gelap (disimpan per browser).
+    (function () {
+        const btn = document.getElementById('themeToggle');
+        const icon = btn?.querySelector('i');
+        const sync = () => {
+            const light = document.documentElement.getAttribute('data-theme') === 'light';
+            if (icon) icon.className = light ? 'bi bi-moon-stars' : 'bi bi-sun';
+            btn?.setAttribute('title', light ? '@T["Ganti ke tema gelap"]' : '@T["Ganti ke tema terang"]');
+        };
+        btn?.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('erp-theme', next); } catch (e) { }
+            sync();
+        });
+        sync();
+    })();
 </script>
 
 @await RenderSectionAsync("Scripts", required: false)

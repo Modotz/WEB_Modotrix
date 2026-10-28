@@ -1,7 +1,7 @@
 ﻿@model ERP.Web.Models.PagedResult<ERP.Web.Models.RoleViewModel>
 
 @{
-    ViewData["Title"] = "Master Roles";
+    ViewData["Title"] = T["Master Roles"];
     var no = (Model.Page - 1) * Model.PageSize;
 }
 
@@ -9,18 +9,19 @@
 
     <!-- HEADER -->
     <div class="mb-3">
-        <h3 class="fw-semibold text-white mb-0">Master Roles</h3>
+        <h3 class="fw-semibold text-white mb-0">@T["Master Roles"]</h3>
     </div>
 
     <!-- TABLE CARD -->
     <div class="card custom-card">
 
         <div class="card-header custom-card-header d-flex justify-content-between align-items-center py-3 px-4"> 
-            <span class="fw-semibold text-white fs-6">Daftar Role</span>
+            <span class="fw-semibold text-white fs-6">@T["Daftar Role"]</span>
             <button type="button"
                     class="btn btn-primary btn-sm px-3 py-1-5 custom-btn-add"
+                    data-perm="create"
                     onclick="openCreateRole()">
-                <i class="bi bi-plus me-1"></i>Tambah Role
+                <i class="bi bi-plus me-1"></i>@T["Tambah Role"]
             </button>
         </div>
 
@@ -29,10 +30,10 @@
                 <thead>
                     <tr>
                         <th class="text-center fw-bold" style="width: 50px;">#</th>
-                        <th class="fw-bold" style="width: 180px;">NAMA ROLE</th>
-                        <th class="fw-bold">DESKRIPSI</th>
-                        <th class="text-center fw-bold" style="width: 90px;">STATUS</th>
-                        <th class="text-center fw-bold" style="width: 100px;">AKSI</th>
+                        <th class="fw-bold" style="width: 180px;">@T["NAMA ROLE"]</th>
+                        <th class="fw-bold">@T["DESKRIPSI"]</th>
+                        <th class="text-center fw-bold" style="width: 90px;">@T["STATUS"]</th>
+                        <th class="text-center fw-bold" style="width: 100px;">@T["AKSI"]</th>
                     </tr>
                 </thead>
 
@@ -58,22 +59,23 @@
                                 <td class="text-center">
                                     @if (item.IsActive)
                                     {
-                                        <span class="badge bg-success ms-2">Aktif</span>
+                                        <span class="badge bg-success ms-2">@T["Aktif"]</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-danger ms-2">Tidak Aktif</span>
+                                        <span class="badge bg-danger ms-2">@T["Tidak Aktif"]</span>
                                     }
                                 </td>
 
                                 <!-- AKSI -->
                                 <td class="text-center">
-                                    <div class="d-flex justify-content-center align-items-center gap-1">
+                                    <div class="row-actions">
                                         <!-- EDIT -->
                                         <button type="button"
-                                                class="btn btn-sm menu-action-edit
-                                                title="Edit Role"
-                                                onclick="openEditRole(@item.Id)">
+                                                data-perm="update"
+                                                class="act-btn act-edit"
+                                                title="@T["Edit"]"
+                                                onclick="openEditRole('@item.Uid')">
                                             <i class="bi bi-pencil"></i>
                                         </button>
 
@@ -81,13 +83,13 @@
                                         <form method="post"
                                               asp-controller="Roles"
                                               asp-action="Delete"
-                                              class="d-inline"
-                                              onsubmit="return confirm('Yakin ingin menghapus role ini?');">
+                                              data-perm="delete"
+                                              onsubmit='return confirm(@Json.Serialize(T["Yakin ingin menghapus role ini?"]));'>
                                             @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <input type="hidden" name="uid" value="@item.Uid" />
                                             <button type="submit"
-                                                    class="btn btn-sm menu-action-delete"
-                                                    title="Hapus Role">
+                                                    class="act-btn act-delete"
+                                                    title="@T["Hapus"]">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
@@ -101,7 +103,7 @@
                         <tr>
                             <td colspan="5" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                Data role tidak ditemukan.
+                                @T["Data role tidak ditemukan."]
                             </td> 
                         </tr> 
                     } 
@@ -114,9 +116,9 @@
         {
             <div class="d-flex justify-content-between align-items-center p-3 border-top custom-border-color">
                 <div class="text-muted small">
-                    Menampilkan <strong>@((Model.Page - 1) * Model.PageSize + 1)</strong> - 
-                    <strong>@Math.Min(Model.Page * Model.PageSize, Model.TotalData)</strong> dari 
-                    <strong>@Model.TotalData</strong> data
+                    @T["Menampilkan"] <strong>@((Model.Page - 1) * Model.PageSize + 1)</strong> - 
+                    <strong>@Math.Min(Model.Page * Model.PageSize, Model.TotalData)</strong> @T["dari"] 
+                    <strong>@Model.TotalData</strong> @T["data"]
                 </div>
 
                 <nav>
@@ -193,17 +195,17 @@
                 @Html.AntiForgeryToken()
 
                 <div class="modal-header border-bottom custom-border-color">
-                    <h5 class="modal-title text-white" id="roleModalTitle">Tambah Role</h5>
+                    <h5 class="modal-title text-white" id="roleModalTitle">@T["Tambah Role"]</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
 
                 <div class="modal-body">
-                    <input type="hidden" id="roleId" name="Id" />
+                    <input type="hidden" id="roleUid" name="Uid" />
 
                     <!-- NAME -->
                     <div class="mb-3">
                         <label for="roleName" class="form-label fw-semibold text-white">
-                            Nama Role <span class="text-danger">*</span>
+                            @T["Nama Role"] <span class="text-danger">*</span>
                         </label>
                         <input type="text"
                                id="roleName"
@@ -216,28 +218,28 @@
                     <!-- DESCRIPTION -->
                     <div class="mb-3">
                         <label for="roleDescription" class="form-label fw-semibold text-white">
-                            Deskripsi
+                            @T["Deskripsi"]
                         </label>
                         <textarea id="roleDescription"
                                   name="Description"
                                   class="form-control custom-input"
                                   rows="3"
                                   maxlength="255"
-                                  placeholder="Masukkan deskripsi role..."></textarea>
+                                  placeholder="@T["Masukkan deskripsi role..."]"></textarea>
                     </div>
 
                     <!-- STATUS -->
                     <div class="form-check form-switch">
                         <input type="hidden" id="roleIsActiveValue" name="IsActive" value="true" />
                         <input class="form-check-input" type="checkbox" id="roleIsActive" checked />
-                        <label class="form-check-label text-white" for="roleIsActive">Role Aktif</label>
+                        <label class="form-check-label text-white" for="roleIsActive">@T["Role Aktif"]</label>
                     </div>
                 </div>
 
                 <div class="modal-footer border-top custom-border-color">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save me-1"></i>Simpan
+                        <i class="bi bi-save me-1"></i>@T["Simpan"]
                     </button>
                 </div>
             </form>
@@ -248,9 +250,9 @@
 @section Scripts {
 <script>
     function openCreateRole() {
-        document.getElementById("roleModalTitle").innerText = "Tambah Role";
+        document.getElementById("roleModalTitle").innerText = @Json.Serialize(T["Tambah Role"]);
         document.getElementById("roleForm").action = "/Roles/Create";
-        document.getElementById("roleId").value = "";
+        document.getElementById("roleUid").value = "";
         document.getElementById("roleName").value = "";
         document.getElementById("roleDescription").value = "";
         document.getElementById("roleIsActive").checked = true;
@@ -260,18 +262,18 @@
         modal.show();
     }
 
-    async function openEditRole(id) {
+    async function openEditRole(uid) {
         try {
-            const response = await fetch(`/Roles/GetById?id=${id}`);
+            const response = await fetch(`/Roles/GetById?uid=${encodeURIComponent(uid)}`);
             if (!response.ok) {
-                alert("Data role tidak ditemukan.");
+                alert(@Json.Serialize(T["Data role tidak ditemukan."]));
                 return;
             }
 
             const role = await response.json();
             document.getElementById("roleModalTitle").innerText = "Edit Role";
             document.getElementById("roleForm").action = "/Roles/Edit";
-            document.getElementById("roleId").value = role.id;
+            document.getElementById("roleUid").value = role.uid;
             document.getElementById("roleName").value = role.name ?? "";
             document.getElementById("roleDescription").value = role.description ?? "";
 
@@ -283,7 +285,7 @@
             modal.show();
         } catch (error) {
             console.error(error);
-            alert("Terjadi kesalahan saat mengambil data role.");
+            alert(@Json.Serialize(T["Terjadi kesalahan saat mengambil data role."]));
         }
     }
 

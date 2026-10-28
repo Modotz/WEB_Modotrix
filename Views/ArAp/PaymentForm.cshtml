@@ -1,0 +1,279 @@
+@model ERP.Web.Models.PaymentFormViewModel
+@{
+    var c = Model.Config;
+    var isEdit = Model.Uid != null;
+    var title = isEdit ? T["Ubah Draft {0}", Model.PaymentNo] : T[$"{c.Title} Baru"];
+    ViewData["Title"] = title;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var allocMap = Model.Allocations.GroupBy(a => a.InvoiceId).ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@title</h3>
+        <a asp-controller="@c.Controller" asp-action="@(isEdit ? "Details" : "Index")" asp-route-uid="@Model.Uid" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+    </div>
+
+    <form method="post" asp-controller="@c.Controller" asp-action="@(isEdit ? "Update" : "Create")" id="paymentForm">
+        <input type="hidden" name="Uid" value="@Model.Uid" />
+        <input type="hidden" name="PaymentNo" value="@Model.PaymentNo" />
+
+        <div class="card custom-card mb-3">
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label text-white small mb-1" for="PartyId">@T[c.PartyLabel]</label>
+                        <select class="form-select form-select-sm" name="PartyId" id="PartyId" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var p in Model.Parties)
+                            {
+                                <option value="@p.Id" data-uid="@p.Uid" selected="@(p.Id == Model.PartyId)">@p.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-white small mb-1" for="PaymentDate">@T["Tanggal"]</label>
+                        <input type="date" class="form-control form-control-sm" name="PaymentDate" id="PaymentDate" value="@Model.PaymentDate.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="CashAccountId">@(c.IsPayable ? T["Dibayar dari rekening"] : T["Diterima ke rekening"])</label>
+                        <select class="form-select form-select-sm" name="CashAccountId" id="CashAccountId" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var ca in Model.CashAccounts)
+                            {
+                                <option value="@ca.Id" data-currency="@ca.CurrencyCode" selected="@(ca.Id == Model.CashAccountId)">@ca.OptionLabel(T["saldo"])</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-none" id="fxRateGroup">
+                        <label class="form-label text-white small mb-1" for="FxRate">@T["Kurs bayar"] <span id="fxCurLabel"></span> (IDR)</label>
+                        <input type="number" step="0.000001" min="0" class="form-control form-control-sm text-end" name="FxRate" id="FxRate"
+                               value="@Model.FxRate?.ToString(inv)" placeholder="@T["otomatis"]" />
+                        <div class="form-text small" id="fxRateInfo"></div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="Reference">@T["Referensi (no. bukti transfer/cek)"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Reference" id="Reference" value="@Model.Reference" maxlength="100" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-white small mb-1" for="Description">@T["Keterangan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Description" id="Description" value="@Model.Description" maxlength="255" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header d-flex justify-content-between align-items-center py-3 px-4">
+                <span class="fw-semibold text-white fs-6">@T["Alokasi ke Faktur"]</span>
+                <button type="button" class="btn btn-outline-light btn-sm" id="btnFillAll">@T["Isi semua sisa"]</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table custom-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="fw-bold">@T["NO. FAKTUR"]</th>
+                            <th class="fw-bold">@T["TANGGAL"]</th>
+                            <th class="fw-bold">@T["JATUH TEMPO"]</th>
+                            <th class="fw-bold">@T["MATA UANG"]</th>
+                            <th class="fw-bold text-end">@T["TOTAL"]</th>
+                            <th class="fw-bold text-end">@T["SISA"]</th>
+                            <th class="fw-bold text-end" style="width: 190px;">@T["DIALOKASIKAN"]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allocBody">
+                        @if (Model.OpenInvoices.Count == 0)
+                        {
+                            <tr><td colspan="7" class="text-center text-white-50 py-3">@(Model.PartyId == null ? T["Pilih {0} dulu.", T[c.PartyLabel].ToLowerInvariant()] : T["Tidak ada faktur terbuka."])</td></tr>
+                        }
+                        @for (var i = 0; i < Model.OpenInvoices.Count; i++)
+                        {
+                            var o = Model.OpenInvoices[i];
+                            var current = allocMap.GetValueOrDefault(o.Id);
+                            <tr class="alloc-row" data-currency="@o.CurrencyCode" data-outstanding="@o.Outstanding.ToString(inv)"
+                                data-functional="@o.FunctionalOutstanding.ToString(inv)" data-rate="@o.FxRate.ToString(inv)">
+                                <td class="text-white">@o.InvoiceNo <span class="text-white-50 small">@o.PartyRef</span></td>
+                                <td class="text-white small">@Acc.Date(o.InvoiceDate)</td>
+                                <td class="text-white small">@Acc.Date(o.DueDate)</td>
+                                <td class="small">
+                                    @if (Acc.IsForeign(o.CurrencyCode))
+                                    {
+                                        <span class="badge bg-info text-dark">@o.CurrencyCode</span> <span class="text-white-50">@@ @Acc.Rate(o.FxRate)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-white-50">@o.CurrencyCode</span>
+                                    }
+                                </td>
+                                <td class="text-end text-white">@Acc.Money(o.Total)</td>
+                                <td class="text-end text-warning">@Acc.Money(o.Outstanding)</td>
+                                <td>
+                                    <input type="hidden" name="Allocations[@i].InvoiceId" value="@o.Id" />
+                                    <input type="number" step="0.01" min="0" max="@o.Outstanding.ToString(inv)" data-max="@o.Outstanding.ToString(inv)"
+                                           class="form-control form-control-sm text-end alloc-amount" name="Allocations[@i].Amount"
+                                           value="@(current == 0 ? "" : current.ToString(inv))" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="6" class="text-end fw-bold text-white">@(c.IsPayable ? T["TOTAL DIBAYAR"] : T["TOTAL DITERIMA"])</td>
+                            <td class="text-end fw-bold text-white" id="allocTotal">0,00</td>
+                        </tr>
+                        <tr class="d-none" id="fxSummary">
+                            <td colspan="7" class="text-end small text-white-50" id="fxSummaryText"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        @if (c.ApprovalDocType != null)
+        {
+            <partial name="~/Views/ArAp/_ApprovalPreviewBox.cshtml" model="c.ApprovalDocType" />
+        }
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <button type="submit" name="submitAction" value="draft" class="btn btn-outline-light"><i class="bi bi-save me-1"></i>@T["Simpan Draft"]</button>
+            <button type="submit" name="submitAction" value="post" class="btn btn-primary"
+                    onclick='return confirm(@Json.Serialize(T["Simpan dan posting? Pembayaran posted hanya bisa dibatalkan (jurnal pembalik)."]));'>
+                <i class="bi bi-check2-circle me-1"></i>@T["Simpan & Posting"]
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const body = document.getElementById('allocBody');
+            const party = document.getElementById('PartyId');
+
+            const fmtRate = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 6 });
+            const cash = document.getElementById('CashAccountId');
+            const rate = document.getElementById('FxRate');
+            const rateGroup = document.getElementById('fxRateGroup');
+            const rateInfo = document.getElementById('fxRateInfo');
+            const date = document.getElementById('PaymentDate');
+            const lookupUrl = '@Url.Action("Rate", "Lookup")';
+            const isPayable = @Json.Serialize(c.IsPayable);
+            const t = {
+                mixed: @Json.Serialize(T["Faktur yang dialokasikan harus bermata uang sama."]),
+                rateOf: @Json.Serialize(T["kurs tabel per"]),
+                noRate: @Json.Serialize(T["belum ada kurs — isi manual"]),
+                relief: isPayable ? @Json.Serialize(T["Hutang berkurang (kurs faktur)"]) : @Json.Serialize(T["Piutang berkurang (kurs faktur)"]),
+                cash: isPayable ? @Json.Serialize(T["kas keluar"]) : @Json.Serialize(T["kas masuk"]),
+                carrying: @Json.Serialize(T["dihitung dari nilai tercatat rekening valas saat posting"]),
+                gain: @Json.Serialize(T["perkiraan laba kurs"]), loss: @Json.Serialize(T["perkiraan rugi kurs"])
+            };
+            let manual = rate.value !== '', tableRate = null, currentCur = null;
+
+            // Mata uang pembayaran = mata uang faktur yang dialokasikan (atau satu-satunya mata uang faktur terbuka).
+            function paymentCurrency() {
+                const rows = [...body.querySelectorAll('.alloc-row')];
+                const used = rows.filter(r => (parseFloat(r.querySelector('.alloc-amount').value) || 0) > 0).map(r => r.dataset.currency);
+                const set = new Set(used.length ? used : rows.map(r => r.dataset.currency));
+                return set.size === 1 ? [...set][0] : (used.length ? null : 'IDR');
+            }
+
+            // Rekening valas hanya untuk faktur bermata uang sama; rekening IDR selalu boleh.
+            function filterCash(code) {
+                [...cash.options].forEach(o => {
+                    if (!o.value) return;
+                    o.disabled = o.dataset.currency !== 'IDR' && o.dataset.currency !== code;
+                });
+                if (cash.selectedOptions[0]?.disabled) cash.value = '';
+            }
+
+            async function lookup(code) {
+                tableRate = null;
+                if (code === 'IDR' || !code) { rateInfo.textContent = ''; return; }
+                const res = await fetch(`${lookupUrl}?currency=${encodeURIComponent(code)}&date=${date.value}`);
+                if (res.ok) {
+                    const j = await res.json();
+                    tableRate = j.rate;
+                    rateInfo.textContent = `${t.rateOf} ${new Date(j.rateDate).toLocaleDateString('id-ID')}: ${fmtRate.format(j.rate)}`;
+                    if (!manual) rate.value = j.rate;
+                } else {
+                    rateInfo.textContent = t.noRate;
+                    if (!manual) rate.value = '';
+                }
+            }
+
+            async function syncCurrency() {
+                const code = paymentCurrency();
+                const foreign = code && code !== 'IDR';
+                rateGroup.classList.toggle('d-none', !foreign);
+                document.getElementById('fxCurLabel').textContent = foreign ? code : '';
+                filterCash(code ?? 'IDR');
+                if (code !== currentCur) {
+                    currentCur = code;
+                    if (!foreign) { rate.value = ''; manual = false; }
+                    await lookup(code);
+                }
+                summary(code);
+            }
+
+            function summary(code) {
+                const box = document.getElementById('fxSummary'), text = document.getElementById('fxSummaryText');
+                if (code === null) { box.classList.remove('d-none'); text.innerHTML = `<span class="text-danger">${t.mixed}</span>`; return; }
+                if (code === 'IDR') { box.classList.add('d-none'); return; }
+                let total = 0, relief = 0;
+                body.querySelectorAll('.alloc-row').forEach(r => {
+                    const a = parseFloat(r.querySelector('.alloc-amount').value) || 0;
+                    const out = parseFloat(r.dataset.outstanding) || 0, fn = parseFloat(r.dataset.functional) || 0;
+                    total += a;
+                    relief += a >= out - 0.005 ? fn : Math.round(fn * a / out * 100) / 100;
+                });
+                const r = parseFloat(rate.value) > 0 ? parseFloat(rate.value) : tableRate;
+                const fromForeignCash = isPayable && cash.selectedOptions[0]?.dataset.currency === code;
+                let html = `${t.relief}: IDR ${fmt.format(relief)}`;
+                if (fromForeignCash) {
+                    html += ` · ${t.cash}: ${t.carrying}`;
+                } else if (r) {
+                    const cashIdr = Math.round(total * r * 100) / 100;
+                    const gl = isPayable ? relief - cashIdr : cashIdr - relief;
+                    html += ` · ${t.cash}: IDR ${fmt.format(cashIdr)} · <span class="${gl >= 0 ? 'text-success' : 'text-danger'}">${gl >= 0 ? t.gain : t.loss} IDR ${fmt.format(Math.abs(gl))}</span>`;
+                }
+                box.classList.remove('d-none');
+                text.innerHTML = html;
+            }
+
+            function recalc() {
+                let total = 0;
+                body.querySelectorAll('.alloc-amount').forEach(i => total += parseFloat(i.value) || 0);
+                document.getElementById('allocTotal').textContent = (currentCur && currentCur !== 'IDR' ? currentCur + ' ' : '') + fmt.format(total);
+                // Alur persetujuan dicocokkan dengan kas IDR yang keluar (perkiraan untuk valas).
+                if (window.apprPreview) {
+                    const r = parseFloat(rate.value) > 0 ? parseFloat(rate.value) : tableRate;
+                    window.apprPreview(!currentCur || currentCur === 'IDR' ? total : (r ? Math.round(total * r * 100) / 100 : 0));
+                }
+                syncCurrency();
+            }
+
+            rate.addEventListener('input', () => { manual = rate.value !== ''; summary(paymentCurrency()); });
+            date.addEventListener('change', async () => { manual = false; currentCur = null; await syncCurrency(); });
+            cash.addEventListener('change', () => summary(paymentCurrency()));
+
+            // Ganti supplier/customer → muat ulang form dengan faktur terbukanya (alokasi lama dibuang).
+            party.addEventListener('change', () => {
+                const url = new URL('@Url.Action(isEdit ? "Edit" : "Create", c.Controller)', window.location.origin);
+                @if (isEdit)
+                {
+                    <text>alert(@Json.Serialize(T["Supplier/customer pada draft tidak dapat diganti. Hapus draft lalu buat baru."])); party.value = '@Model.PartyId'; return;</text>
+                }
+                url.searchParams.set('partyUid', party.selectedOptions[0]?.dataset.uid ?? '');
+                window.location = url;
+            });
+
+            document.getElementById('btnFillAll').addEventListener('click', () => {
+                body.querySelectorAll('.alloc-amount').forEach(i => i.value = i.dataset.max);
+                recalc();
+            });
+
+            body.addEventListener('input', recalc);
+            recalc();
+        })();
+    </script>
+}

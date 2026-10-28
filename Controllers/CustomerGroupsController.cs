@@ -11,10 +11,12 @@ namespace ERP.Web.Controllers;
 public class CustomerGroupsController : Controller
 {
     private readonly ApiClient _api;
+    private readonly Translator _t;
 
-    public CustomerGroupsController(ApiClient api)
+    public CustomerGroupsController(ApiClient api, Translator t)
     {
         _api = api;
+        _t = t;
     }
 
     // =========================================================
@@ -43,9 +45,9 @@ public class CustomerGroupsController : Controller
     // =========================================================
 
     [HttpGet]
-    public async Task<IActionResult> GetById(long id)
+    public async Task<IActionResult> GetById(Guid uid)
     {
-        var customerGroup = await _api.GetCustomerGroupAsync(id);
+        var customerGroup = await _api.GetCustomerGroupAsync(uid);
 
         if (customerGroup == null)
             return NotFound();
@@ -108,15 +110,15 @@ public class CustomerGroupsController : Controller
     // =========================================================
 
     [HttpGet]
-    public async Task<IActionResult> Edit(long id)
+    public async Task<IActionResult> Edit(Guid uid)
     {
-        if (id <= 0)
+        if (uid == Guid.Empty)
         {
-            TempData["Error"] = "ID customer group tidak valid.";
+            TempData["Error"] = "Customer group tidak ditemukan.";
             return RedirectToAction(nameof(Index));
         }
 
-        var customerGroup = await _api.GetCustomerGroupAsync(id);
+        var customerGroup = await _api.GetCustomerGroupAsync(uid);
 
         if (customerGroup == null)
         {
@@ -142,9 +144,10 @@ public class CustomerGroupsController : Controller
     public async Task<IActionResult> Edit(
         CustomerGroupsViewModel model)
     {
-        if (model.Id <= 0)
+        // UID WAJIB UNTUK UPDATE (record tidak diidentifikasi dengan id angka)
+        if (string.IsNullOrWhiteSpace(model.Uid))
         {
-            TempData["Error"] = "ID customer group tidak valid.";
+            TempData["Error"] = "Customer group tidak ditemukan.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -174,10 +177,16 @@ public class CustomerGroupsController : Controller
 // =========================================================
 
 [HttpPost]
-public async Task<IActionResult> Delete(long id)
+public async Task<IActionResult> Delete(Guid uid)
     {
+        if (uid == Guid.Empty)
+        {
+            TempData["Error"] = "Customer group tidak ditemukan.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var result =
-            await _api.DeleteCustomerGroupAsync(id);
+            await _api.DeleteCustomerGroupAsync(uid);
 
         TempData[result.Success
             ? "Success"
@@ -243,15 +252,15 @@ public async Task<IActionResult> Delete(long id)
         using var workbook = new XLWorkbook();
 
         var worksheet = workbook.Worksheets.Add(
-            "Kelompok Customer");
+            _t["Kelompok Customer"]);
 
-        worksheet.Cell(1, 1).Value = "No";
-        worksheet.Cell(1, 2).Value = "Kode";
-        worksheet.Cell(1, 3).Value = "Nama Kelompok";
-        worksheet.Cell(1, 4).Value = "Diskon (%)";
+        worksheet.Cell(1, 1).Value = _t["No"];
+        worksheet.Cell(1, 2).Value = _t["Kode"];
+        worksheet.Cell(1, 3).Value = _t["Nama Kelompok"];
+        worksheet.Cell(1, 4).Value = _t["Diskon (%)"];
         worksheet.Cell(1, 5).Value = "Price List";
-        worksheet.Cell(1, 6).Value = "Keterangan";
-        worksheet.Cell(1, 7).Value = "Status";
+        worksheet.Cell(1, 6).Value = _t["Keterangan"];
+        worksheet.Cell(1, 7).Value = _t["Status"];
 
         var header = worksheet.Range("A1:G1");
 
@@ -279,7 +288,7 @@ public async Task<IActionResult> Delete(long id)
             worksheet.Cell(row, 6).Value =
                 item.Description ?? "-";
             worksheet.Cell(row, 7).Value =
-                item.IsActive ? "Aktif" : "Tidak Aktif";
+                item.IsActive ? _t["Aktif"] : _t["Tidak Aktif"];
 
             row++;
         }
@@ -325,9 +334,9 @@ public async Task<IActionResult> Delete(long id)
                     col.Item()
                         .PaddingTop(4)
                         .Text(
-                            $"Daftar Kelompok Customer | " +
-                            $"Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm} | " +
-                            $"Total: {groups.Count} data")
+                            _t["Daftar Kelompok Customer"] + " | " +
+                            _t["Dicetak"] + $": {DateTime.Now:dd/MM/yyyy HH:mm} | " +
+                            _t["Total: {0} data", groups.Count])
                         .FontColor("#666666");
                 });
 
@@ -350,9 +359,9 @@ public async Task<IActionResult> Delete(long id)
                         {
                             string[] headers =
                             {
-                                "No", "Kode", "Nama Kelompok",
-                                "Diskon (%)", "Price List",
-                                "Keterangan", "Status"
+                                _t["No"], _t["Kode"], _t["Nama Kelompok"],
+                                _t["Diskon (%)"], "Price List",
+                                _t["Keterangan"], _t["Status"]
                             };
 
                             foreach (var text in headers)
@@ -393,13 +402,13 @@ public async Task<IActionResult> Delete(long id)
                             AddCell(item.PriceListName ?? "-");
                             AddCell(item.Description ?? "-");
                             AddCell(
-                                item.IsActive ? "Aktif" : "Tidak Aktif");
+                                item.IsActive ? _t["Aktif"] : _t["Tidak Aktif"]);
                         }
                     });
 
                 page.Footer()
                     .PaddingTop(10)
-                    .Text("Dokumen dihasilkan otomatis oleh sistem.")
+                    .Text(_t["Dokumen dihasilkan otomatis oleh sistem."])
                     .FontSize(8)
                     .FontColor("#888888");
             });

@@ -1,0 +1,92 @@
+@model ERP.Web.Models.Pph23YearViewModel
+@{
+    ViewData["Title"] = T["PPh 23"];
+    var years = Enumerable.Range(DateTime.Today.Year - 3, 5).Append(Model.Year).Distinct().OrderBy(y => y).ToList();
+    var culture = T.IsEnglish ? System.Globalization.CultureInfo.GetCultureInfo("en-US") : Acc.Culture;
+    var reconciled = Math.Abs(Model.LedgerBalance - Model.OutstandingTotal) < 0.01m;
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["PPh 23 (Bukti Potong & Setor)"]</h3>
+
+    <div class="card supplier-card supplier-filter">
+        <div class="card-body">
+            <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label" for="year">@T["Tahun"]</label>
+                    <select class="form-select" id="year" name="year" onchange="this.form.submit()">
+                        @foreach (var y in years)
+                        {
+                            <option value="@y" selected="@(y == Model.Year)">@y</option>
+                        }
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="alert @(reconciled ? "alert-info" : "alert-warning") small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Setiap faktur pembelian ber-PPh 23 = satu Bukti Potong. Setor potongan tiap masa paling lambat tanggal 15 bulan berikutnya (jurnal D Hutang PPh 23 | K Kas/Bank), lalu isi nomor Bukti Potong dari e-Bupot Unifikasi Coretax. Tidak ada netting seperti PPN."]
+        <div class="mt-1">
+            @T["Cek akun kontrol: saldo Hutang PPh 23 {0} vs belum disetor {1}", Acc.Money(Model.LedgerBalance), Acc.Money(Model.OutstandingTotal)]
+            @if (reconciled)
+            {
+                <i class="bi bi-check-circle text-success ms-1"></i>
+            }
+        </div>
+    </div>
+
+    <div class="card supplier-card supplier-table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["MASA"]</th>
+                        <th class="text-end">@T["BUKTI POTONG"]</th>
+                        <th class="text-end">@T["DIPOTONG"]</th>
+                        <th class="text-end">@T["DISETOR"]</th>
+                        <th class="text-end">@T["BELUM DISETOR"]</th>
+                        <th>@T["JATUH TEMPO SETOR"]</th>
+                        <th class="text-end">@T["NO. BUKTI POTONG BELUM DIISI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model.Months)
+                    {
+                        <tr class="@(m.SlipCount == 0 ? "opacity-50" : "")">
+                            <td class="ps-4">
+                                <a asp-action="Period" asp-route-period="@m.Period" class="text-info text-decoration-none">
+                                    @DateOnly.ParseExact(m.Period + "-01", "yyyy-MM-dd").ToString("MMMM yyyy", culture)
+                                </a>
+                            </td>
+                            <td class="text-end text-white">@(m.SlipCount == 0 ? "" : m.SlipCount.ToString())</td>
+                            <td class="text-end text-white">@Acc.MoneyOrBlank(m.Withheld)</td>
+                            <td class="text-end text-white-50">@Acc.MoneyOrBlank(m.Deposited)</td>
+                            <td class="text-end fw-semibold @(m.IsOverdue ? "text-danger" : m.Outstanding > 0 ? "text-warning" : "text-white-50")">@Acc.MoneyOrBlank(m.Outstanding)</td>
+                            <td class="small @(m.IsOverdue ? "text-danger fw-semibold" : "text-white-50")">
+                                @(m.Withheld > 0 ? Acc.Date(m.DueDate) : "")
+                                @if (m.IsOverdue)
+                                {
+                                    <span class="badge bg-danger ms-1">@T["Terlambat"]</span>
+                                }
+                            </td>
+                            <td class="text-end small @(m.MissingCertificates > 0 ? "text-warning" : "text-white-50")">@(m.MissingCertificates == 0 ? "" : m.MissingCertificates.ToString())</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td class="ps-4 text-white">@T["Total"]</td>
+                        <td class="text-end text-white">@Model.Months.Sum(m => m.SlipCount)</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Months.Sum(m => m.Withheld))</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Months.Sum(m => m.Deposited))</td>
+                        <td class="text-end text-white">@Acc.Money(Model.Months.Sum(m => m.Outstanding))</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

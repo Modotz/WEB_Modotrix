@@ -1,0 +1,131 @@
+@model ERP.Web.Models.OutstandingBankViewModel
+@{
+    ViewData["Title"] = T["Item Belum Terkonfirmasi"];
+    string Signed(decimal v) => (v > 0 ? "+" : v < 0 ? "−" : "") + Acc.Money(Math.Abs(v));
+    string SignCss(decimal v) => v > 0 ? "text-success" : v < 0 ? "text-danger" : "text-white";
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Item Belum Terkonfirmasi"]</h3>
+
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+        <div>
+            <label class="form-label text-white small mb-1" for="fAsOf">@T["Per tanggal"]</label>
+            <input type="date" class="form-control form-control-sm" name="asOf" id="fAsOf" value="@Model.AsOf.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label text-white small mb-1" for="fAccount">@T["Rekening"]</label>
+            <select class="form-select form-select-sm" name="cashAccountId" id="fAccount">
+                <option value="">@T["-- Semua --"]</option>
+                @foreach (var a in Model.Accounts)
+                {
+                    <option value="@a.Id" selected="@(a.Id == Model.CashAccountId)">@a.Name</option>
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>@T["Terapkan"]</button>
+        <a asp-controller="BankReconciliations" asp-action="Index" class="btn btn-outline-info btn-sm ms-auto"><i class="bi bi-bank me-1"></i>@T["Rekonsiliasi Bank"]</a>
+    </form>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Item timing: pelunasan yang sudah dicatat tetapi belum muncul di rekening koran (saldo terbuka di akun \"Dalam Proses\"), plus mutasi yang langsung ke akun bank tetapi belum dicocokkan. Historis: item yang baru dicocokkan sesudah tanggal laporan tetap dihitung."]
+    </div>
+
+    @foreach (var g in Model.Groups)
+    {
+        var match = Math.Abs(g.Total - g.LedgerBalance) < 0.01m;
+        <div class="card supplier-card supplier-table-card mb-3">
+            <div class="card-header bg-transparent d-flex flex-wrap align-items-center gap-2 py-3 px-4">
+                <span class="fw-semibold text-white">@g.AccountCode @T[g.AccountName]</span>
+                <span class="badge bg-secondary">@g.Items.Count</span>
+                <span class="ms-auto small @(match ? "text-success" : "text-warning")">
+                    <i class="bi @(match ? "bi-check-circle" : "bi-exclamation-triangle") me-1"></i>
+                    @T["Total {0} · buku besar {1}", Acc.Money(g.Total), Acc.Money(g.LedgerBalance)]
+                </span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">@T["TANGGAL"]</th>
+                            <th>@T["JURNAL"]</th>
+                            <th>@T["KETERANGAN"]</th>
+                            <th>@T["REKENING"]</th>
+                            <th class="text-end">@T["UMUR (HARI)"]</th>
+                            <th class="text-end">@T["NOMINAL"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (g.Items.Count == 0)
+                        {
+                            <tr><td colspan="6" class="text-center text-muted py-3">@T["Tidak ada item."]</td></tr>
+                        }
+                        @foreach (var i in g.Items)
+                        {
+                            <tr>
+                                <td class="ps-4 text-white small">@Acc.Date(i.Date)</td>
+                                <td class="small">
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@i.JournalUid" class="text-info">@i.JournalNo</a>
+                                    <div class="text-white-50">@i.Reference</div>
+                                </td>
+                                <td class="text-white small">
+                                    @i.Description
+                                    @if (i.ReconciledDate != null)
+                                    {
+                                        <div class="text-white-50">@T["dikonfirmasi {0}", Acc.Date(i.ReconciledDate)]</div>
+                                    }
+                                </td>
+                                <td class="text-white small">@i.CashAccountName</td>
+                                <td class="text-end small @(i.AgeDays > 30 ? "text-warning" : "text-white")">@i.AgeDays</td>
+                                <td class="text-end @SignCss(i.Amount)">@Signed(i.Amount)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <div class="card supplier-card supplier-table-card mb-3">
+        <div class="card-header bg-transparent d-flex align-items-center gap-2 py-3 px-4">
+            <span class="fw-semibold text-white">@T["Mutasi bank langsung belum dicocokkan"]</span>
+            <span class="badge bg-secondary">@Model.BankItems.Count</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["TANGGAL"]</th>
+                        <th>@T["JURNAL"]</th>
+                        <th>@T["KETERANGAN"]</th>
+                        <th>@T["REKENING"]</th>
+                        <th class="text-end">@T["UMUR (HARI)"]</th>
+                        <th class="text-end">@T["NOMINAL"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.BankItems.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-3">@T["Tidak ada item."]</td></tr>
+                    }
+                    @foreach (var i in Model.BankItems)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white small">@Acc.Date(i.Date)</td>
+                            <td class="small">
+                                <a asp-controller="Journals" asp-action="Details" asp-route-uid="@i.JournalUid" class="text-info">@i.JournalNo</a>
+                                <div class="text-white-50">@i.Reference</div>
+                            </td>
+                            <td class="text-white small">@i.Description</td>
+                            <td class="text-white small">@i.CashAccountName</td>
+                            <td class="text-end small text-white">@i.AgeDays</td>
+                            <td class="text-end @SignCss(i.Amount)">@Signed(i.Amount)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -10,7 +10,7 @@
 <head>
     <meta charset="utf-8" />
 
-    <title>Kategori</title>
+    <title>@T["Kategori"]</title>
 
     <style>
         * {
@@ -150,13 +150,13 @@
 
         <div class="print-button">
             <button type="button" onclick="window.print()">
-                Cetak
+                @T["Cetak"]
             </button>
 
             <button type="button"
                     class="close-button"
                     onclick="window.close()">
-                Tutup
+                @T["Tutup"]
             </button>
         </div>
 
@@ -165,16 +165,16 @@
             <h1>ERP-LITE</h1>
 
             <div class="header-info">
-                <span>Kategori</span>
+                <span>@T["Kategori"]</span>
                 <span>•</span>
                 <span>
-                    Dicetak:
+                    @T["Dicetak"]:
                     @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
                 </span>
                 <span>•</span>
                 <span>
                     Total:
-                    @Model.TotalData data
+                    @Model.TotalData @T["data"]
                 </span>
             </div>
 
@@ -203,7 +203,7 @@
                             <td>@item.Code</td>
                             <td>@item.Name</td>
                             <td>
-                                @(item.IsActive ? "Aktif" : "Nonaktif")
+                                @(item.IsActive ? T["Aktif"] : T["Nonaktif"])
                             </td>
                         </tr>
 
@@ -214,7 +214,7 @@
                 {
                     <tr>
                         <td colspan="4" class="text-center">
-                            Tidak ada data kategori.
+                            @T["Tidak ada data kategori."]
                         </td>
                     </tr>
                 }
@@ -223,7 +223,7 @@
         </table>
 
         <div class="footer">
-            Dokumen dihasilkan otomatis oleh sistem.
+            @T["Dokumen dihasilkan otomatis oleh sistem."]
         </div>
 
     </div>

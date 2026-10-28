@@ -4,7 +4,13 @@ public class PriceListItemViewModel
 {
     public long Id { get; set; }
 
+    // Identitas item (uid, bukan id angka)
+    public string? Uid { get; set; }
+
     public long PriceListId { get; set; }
+
+    // Identitas price list induk (uid, bukan id angka)
+    public string? PriceListUid { get; set; }
 
     public long ProductId { get; set; }
 

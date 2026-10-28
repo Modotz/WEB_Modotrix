@@ -1,0 +1,225 @@
+@model ERP.Web.Models.ClosingBookPageViewModel
+@{
+    ViewData["Title"] = T["Tutup Buku"];
+    var p = Model.Preview;
+    var qs = p != null ? $"?year={p.Year}" : "";
+
+    var yearsHeader = new ListHeaderModel
+    {
+        Title = T["Tahun"],
+        Count = Model.Years.Count,
+        CollapseId = "yearsBody"
+    };
+
+    Func<object?, object> extra = @<text>
+        @if (p != null && p.Status.IsClosed)
+        {
+            <a asp-controller="Journals" asp-action="Details" asp-route-uid="@p.Status.JournalUid" class="btn btn-light btn-custom-square text-info" title="@p.Status.JournalNo">
+                <i class="bi bi-journal-text"></i>
+            </a>
+            <button type="button" class="btn btn-outline-danger btn-custom-action" data-perm="delete" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                <span>@T["Batalkan Tutup Buku"]</span>
+            </button>
+        }
+        else if (p != null && p.Status.CanClose)
+        {
+            <form method="post" asp-action="Close" asp-route-year="@p.Year" data-perm="create" class="m-0"
+                  onsubmit='return confirm(@Json.Serialize(T["Tutup buku tahun {0}? Laba/rugi dipindah ke Laba Ditahan.", p.Year]));'>
+                <button type="submit" class="btn btn-danger btn-custom-action">
+                    <i class="bi bi-lock"></i>
+                    <span>@T["Tutup Buku {0}", p.Year]</span>
+                </button>
+            </form>
+        }
+    </text>;
+
+    var previewHeader = new ListHeaderModel
+    {
+        Title = p != null ? T["Tahun {0}", p.Year] : T["Tutup Buku Tahunan"],
+        Description = p != null ? T["Pratinjau jurnal penutup (Laba Ditahan: {0})", p.RetainedEarningsAccount ?? T["belum ada"]] : null,
+        PdfUrl = p != null ? Url.Action("ExportPdf") + qs : null,
+        ExcelUrl = p != null ? Url.Action("ExportExcel") + qs : null,
+        PrintUrl = p != null ? Url.Action("PrintList") + qs : null,
+        Extra = p != null ? (Microsoft.AspNetCore.Html.IHtmlContent)extra(null) : null
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Tutup Buku Tahunan"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="year">@T["Tahun"]</label>
+                        <select class="form-select" id="year" name="year">
+                            @foreach (var y in Model.Years)
+                            {
+                                <option value="@y.Year" selected="@(p?.Year == y.Year)">@y.Year</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Tutup buku menolkan semua akun pendapatan & beban satu tahun ke Laba Ditahan dengan jurnal penutup bertanggal 31 Desember (CLOSING-tahun). Syarat: tahun sudah berakhir dan 12 bulannya sudah ditutup di Periode Akuntansi. Tutup bulanan cukup lewat Periode Akuntansi — tidak ada jurnal penutup bulanan."]
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12">
+            <!-- YEARS CARD -->
+            <div class="card supplier-card supplier-table-card">
+                <partial name="_ListHeader" model="yearsHeader" />
+
+                <div class="collapse show" id="yearsBody">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">@T["TAHUN"]</th>
+                                    <th>@T["BULAN CLOSED"]</th>
+                                    <th class="text-end">@T["LABA (RUGI)"]</th>
+                                    <th>@T["STATUS"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Years.Count == 0)
+                                {
+                                    <tr><td colspan="4" class="text-center text-muted py-4">@T["Belum ada periode/jurnal."]</td></tr>
+                                }
+                                @foreach (var y in Model.Years)
+                                {
+                                    <tr class="@(p?.Year == y.Year ? "table-active" : "")">
+                                        <td class="ps-4"><a asp-action="Index" asp-route-year="@y.Year" class="text-info text-decoration-none fw-semibold">@y.Year</a></td>
+                                        <td class="text-white small">@y.ClosedMonths / 12</td>
+                                        <td class="text-end text-white">@Acc.Money(y.NetIncome)</td>
+                                        <td>
+                                            @if (y.IsClosed)
+                                            {
+                                                <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>@T["Ditutup"]</span>
+                                            }
+                                            else if (y.CanClose)
+                                            {
+                                                <span class="badge bg-warning text-dark">@T["Siap ditutup"]</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">@T["Belum bisa"]</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <!-- PREVIEW CARD -->
+            <div class="card supplier-card supplier-table-card">
+                <partial name="_ListHeader" model="previewHeader" />
+
+                <div class="collapse show" id="listBody">
+                    @if (p != null && !p.Status.CanClose && !p.Status.IsClosed)
+                    {
+                        <div class="px-4 pt-3">
+                            <div class="alert alert-warning small py-2 mb-0"><i class="bi bi-exclamation-triangle me-1"></i>@T[p.Status.BlockReason]</div>
+                        </div>
+                    }
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                            <thead>
+                                <tr><th class="ps-4 text-start">@T["AKUN"]</th><th class="text-end">@T["DEBIT"]</th><th class="text-end">@T["KREDIT"]</th></tr>
+                            </thead>
+                            <tbody>
+                                @if (p == null)
+                                {
+                                    <tr><td colspan="3" class="text-center text-muted py-4">@T["Belum ada periode/jurnal."]</td></tr>
+                                }
+                                else
+                                {
+                                    @foreach (var r in p.Revenue)
+                                    {
+                                        <tr>
+                                            <td class="ps-4 text-start text-white">@r.Code @r.Name</td>
+                                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.Amount > 0 ? r.Amount : 0)</td>
+                                            <td class="text-end text-white">@Acc.MoneyOrBlank(r.Amount < 0 ? -r.Amount : 0)</td>
+                                        </tr>
+                                    }
+                                    @foreach (var e in p.Expenses)
+                                    {
+                                        <tr>
+                                            <td class="text-start text-white" style="padding-left: 2.5rem;">@e.Code @e.Name</td>
+                                            <td class="text-end text-white">@Acc.MoneyOrBlank(e.Amount < 0 ? -e.Amount : 0)</td>
+                                            <td class="text-end text-white">@Acc.MoneyOrBlank(e.Amount > 0 ? e.Amount : 0)</td>
+                                        </tr>
+                                    }
+                                    <tr class="fw-semibold">
+                                        <td class="ps-4 text-start text-white">@(p.RetainedEarningsAccount ?? T["Laba Ditahan"]) (@(T[p.NetIncome >= 0 ? "laba" : "rugi"]))</td>
+                                        <td class="text-end text-white">@Acc.MoneyOrBlank(p.NetIncome < 0 ? -p.NetIncome : 0)</td>
+                                        <td class="text-end text-white">@Acc.MoneyOrBlank(p.NetIncome > 0 ? p.NetIncome : 0)</td>
+                                    </tr>
+                                    @if (p.Revenue.Count == 0 && p.Expenses.Count == 0)
+                                    {
+                                        <tr><td colspan="3" class="text-center text-muted py-4">@T["Tidak ada saldo pendapatan/beban."]</td></tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (p?.Status.IsClosed == true)
+{
+    <div class="modal fade" id="cancelModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="Cancel" asp-route-year="@p.Year" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batalkan Tutup Buku {0}", p.Year]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Jurnal penutup {0} dibalik dengan jurnal pembalik bertanggal sama. Setelah itu periode tahun ini bisa dibuka kembali.", p.Status.JournalNo]</p>
+                    <label class="form-label" for="reason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="reason" rows="3" maxlength="200" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Batalkan Tutup Buku"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

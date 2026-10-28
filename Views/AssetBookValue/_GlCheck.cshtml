@@ -1,0 +1,26 @@
+@model ERP.Web.Models.BookValueReportViewModel
+@{
+    var print = ViewData["Print"] as bool? == true;
+    var head = print ? "" : "text-white";
+}
+<table class="@(print ? "" : "table table-hover align-middle mb-0 supplier-table")">
+    <thead>
+        <tr>
+            <th class="fw-bold @(print ? "" : "ps-4")">@T["AKUN"]</th>
+            <th class="fw-bold text-end num">@T["SUBLEDGER ASET"]</th>
+            <th class="fw-bold text-end num">@T["BUKU BESAR"]</th>
+            <th class="fw-bold text-end num @(print ? "" : "pe-4")">@T["SELISIH"]</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var g in Model.GlCheck)
+        {
+            <tr>
+                <td class="@head @(print ? "" : "ps-4")">@g.AccountCode @g.AccountName</td>
+                <td class="text-end num @head">@Acc.Money(g.Subledger)</td>
+                <td class="text-end num @head">@Acc.Money(g.Ledger)</td>
+                <td class="text-end num @(g.Difference == 0 ? head : "text-danger") @(print ? "" : "pe-4")">@Acc.Money(g.Difference)</td>
+            </tr>
+        }
+    </tbody>
+</table>

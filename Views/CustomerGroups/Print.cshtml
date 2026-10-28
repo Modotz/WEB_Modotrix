@@ -10,7 +10,7 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Daftar Kelompok Customer</title>
+    <title>@T["Daftar Kelompok Customer"]</title>
 
     <style>
         * {
@@ -158,13 +158,13 @@
 
         <div class="print-button">
             <button type="button" onclick="window.print()">
-                Cetak
+                @T["Cetak"]
             </button>
 
             <button type="button"
                     class="close-button"
                     onclick="window.close()">
-                Tutup
+                @T["Tutup"]
             </button>
         </div>
 
@@ -173,18 +173,18 @@
             <h1>ERP-LITE</h1>
 
             <div class="header-info">
-                <span>Daftar Kelompok Customer</span>
+                <span>@T["Daftar Kelompok Customer"]</span>
                 <span>•</span>
 
                 <span>
-                    Dicetak:
+                    @T["Dicetak"]:
                     @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
                 </span>
 
                 <span>•</span>
 
                 <span>
-                    Total: @data.Count data
+                    @T["Total: {0} data", data.Count]
                 </span>
             </div>
 
@@ -193,13 +193,13 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width: 4%;">No</th>
-                    <th style="width: 13%;">Kode</th>
-                    <th style="width: 19%;">Nama Kelompok</th>
-                    <th style="width: 10%;">Diskon (%)</th>
+                    <th style="width: 4%;">@T["No"]</th>
+                    <th style="width: 13%;">@T["Kode"]</th>
+                    <th style="width: 19%;">@T["Nama Kelompok"]</th>
+                    <th style="width: 10%;">@T["Diskon (%)"]</th>
                     <th style="width: 19%;">Price List</th>
-                    <th style="width: 23%;">Keterangan</th>
-                    <th style="width: 12%;">Status</th>
+                    <th style="width: 23%;">@T["Keterangan"]</th>
+                    <th style="width: 12%;">@T["Status"]</th>
                 </tr>
             </thead>
 
@@ -238,7 +238,7 @@
                             </td>
 
                             <td class="status">
-                                @(item.IsActive ? "Aktif" : "Nonaktif")
+                                @(item.IsActive ? T["Aktif"] : T["Nonaktif"])
                             </td>
                         </tr>
 
@@ -249,7 +249,7 @@
                 {
                     <tr>
                         <td colspan="7" style="text-align: center;">
-                            Tidak ada data Kelompok Customer.
+                            @T["Tidak ada data Kelompok Customer."]
                         </td>
                     </tr>
                 }
@@ -257,7 +257,7 @@
         </table>
 
         <div class="footer">
-            Dokumen dihasilkan otomatis oleh sistem.
+            @T["Dokumen dihasilkan otomatis oleh sistem."]
         </div>
 
     </div>

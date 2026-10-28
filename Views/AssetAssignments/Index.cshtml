@@ -1,0 +1,225 @@
+@model ERP.Web.Models.AssetAssignmentsIndexViewModel
+@{
+    ViewData["Title"] = T["Serah Terima Aset"];
+    var list = Model.Rows;
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+    var pageSize = list.PageSize > 0 ? list.PageSize : 25;
+    var parts = new List<string>();
+    if (!string.IsNullOrWhiteSpace(Model.Q)) parts.Add("q=" + Uri.EscapeDataString(Model.Q));
+    if (!string.IsNullOrWhiteSpace(Model.Status)) parts.Add("status=" + Uri.EscapeDataString(Model.Status));
+    var query = string.Join("&", parts);
+    var qs = query.Length > 0 ? "?" + query : "";
+    var header = new ListHeaderModel
+    {
+        Title = T["Riwayat Serah Terima"],
+        Count = list.TotalCount,
+        Description = T["Pemegang, lokasi & riwayat pengembalian aset"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        AddOnClick = "bootstrap.Modal.getOrCreateInstance(document.getElementById('assignModal')).show()",
+        AddIcon = "bi-person-plus",
+        AddText = T["Serah Terima Baru"]
+    };
+    string PageUrl(int p) => Url.Action("Index") + "?" + (query.Length > 0 ? query + "&" : "") + $"page={p}&pageSize={pageSize}";
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Serah Terima Aset"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@Model.Q" placeholder="@T["No./nama aset, pemegang, departemen"]" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="status">@T["Status"]</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">@T["Semua"]</option>
+                            <option value="active" selected="@(Model.Status == "active")">@T["Aktif"]</option>
+                            <option value="returned" selected="@(Model.Status == "returned")">@T["Kembali"]</option>
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="pageSize">@T["Per Halaman"]</label>
+                        <select class="form-select" id="pageSize" name="pageSize">
+                            @foreach (var size in new[] { 10, 25, 50, 100 })
+                            {
+                                <option value="@size" selected="@(pageSize == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["ASET"]</th>
+                        <th>@T["PEMEGANG"]</th>
+                        <th>@T["LOKASI"]</th>
+                        <th>@T["TANGGAL"]</th>
+                        <th>@T["STATUS"]</th>
+                        <th>@T["CATATAN"]</th>
+                        <th class="text-center" style="width: 100px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (list.Data.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">@T["Belum ada serah terima."]</td></tr>
+                    }
+                    @foreach (var x in list.Data)
+                    {
+                        <tr>
+                            <td class="ps-4"><a asp-controller="Assets" asp-action="Details" asp-route-uid="@x.AssetUid" class="text-info text-decoration-none">@x.AssetNo</a><div class="text-white-50 small">@x.AssetName</div></td>
+                            <td class="text-white">@x.HolderName<div class="text-white-50 small">@x.HolderDepartment</div></td>
+                            <td class="text-white small">@(x.Location ?? "-")</td>
+                            <td class="text-white small">@Acc.Date(x.AssignedDate) – @(x.ReturnedDate == null ? "" : Acc.Date(x.ReturnedDate))</td>
+                            <td><span class="badge @(x.Status == "active" ? "bg-success" : "bg-secondary")">@(x.Status == "active" ? T["Aktif"] : T["Kembali"])</span></td>
+                            <td class="text-white-50 small">@x.Note @x.ReturnNote</td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                @if (x.Status == "active")
+                                {
+                                    <button type="button" class="act-btn act-other btn-return" data-perm="update" title="@T["Kembalikan"]"
+                                            data-uid="@x.Uid" data-holder="@x.HolderName"><i class="bi bi-arrow-return-left"></i></button>
+                                }
+                                <form method="post" asp-action="Delete" asp-route-uid="@x.Uid" data-perm="delete"
+                                      onsubmit='return confirm(@Json.Serialize(T["Hapus riwayat serah terima ini?"]));'>
+                                    <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_ListPagination" model="new ListPaginationModel { Page = list.Page > 0 ? list.Page : Model.Page, PageSize = pageSize, TotalCount = list.TotalCount, PageUrl = PageUrl }" />
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Create" class="modal-content">
+            <input type="hidden" name="returnTo" value="@(Model.PreselectAssetUid != null ? "asset" : "")" />
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Serah Terima Baru"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small">@T["Serah terima baru otomatis menutup pemegang aktif sebelumnya."]</p>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" for="asAsset">@T["Aset"]</label>
+                        <select class="form-select" name="assetUid" id="asAsset" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var a in Model.Assets)
+                            {
+                                <option value="@a.Uid" selected="@(a.Uid == Model.PreselectAssetUid)">@a.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="asHolder">@T["Nama pemegang"]</label>
+                        <input type="text" class="form-control" name="holderName" id="asHolder" maxlength="150" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="asDept">@T["Departemen"]</label>
+                        <input type="text" class="form-control" name="holderDepartment" id="asDept" maxlength="150" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="asLocation">@T["Lokasi"]</label>
+                        <input type="text" class="form-control" name="location" id="asLocation" maxlength="150" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="asDate">@T["Tanggal serah terima"]</label>
+                        <input type="date" class="form-control" name="assignedDate" id="asDate" value="@today" required />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="asNote">@T["Catatan"]</label>
+                        <input type="text" class="form-control" name="note" id="asNote" maxlength="255" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="returnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="ReturnAsset" class="modal-content" id="returnForm">
+            <div class="modal-header">
+                <h5 class="modal-title">@T["Pengembalian Aset"] <span id="returnHolder"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="rtDate">@T["Tanggal kembali"]</label>
+                    <input type="date" class="form-control" name="returnedDate" id="rtDate" value="@today" required />
+                </div>
+                <label class="form-label" for="rtNote">@T["Catatan"]</label>
+                <input type="text" class="form-control" name="returnNote" id="rtNote" maxlength="255" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary">@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const returnUrl = '@Url.Action("ReturnAsset")';
+            const modal = new bootstrap.Modal(document.getElementById('returnModal'));
+            document.querySelectorAll('.btn-return').forEach(b => b.addEventListener('click', () => {
+                document.getElementById('returnForm').action = returnUrl + '/' + b.dataset.uid;
+                document.getElementById('returnHolder').textContent = '— ' + b.dataset.holder;
+                modal.show();
+            }));
+            @if (Model.PreselectAssetUid != null)
+            {
+                <text>new bootstrap.Modal(document.getElementById('assignModal')).show();</text>
+            }
+        })();
+    </script>
+}

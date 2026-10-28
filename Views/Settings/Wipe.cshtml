@@ -1,0 +1,102 @@
+@model List<ERP.Web.Models.WipeGroupViewModel>
+
+@{
+    ViewData["Title"] = T["Reset Data Transaksi"];
+    var totalRows = Model.Sum(g => g.Rows);
+    string Fmt(long n) => n.ToString("N0", new System.Globalization.CultureInfo("id-ID"));
+}
+
+<div class="px-2">
+
+    <div class="mb-3 d-flex align-items-center">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@T["Reset Data Transaksi"]</h3>
+        <a asp-action="Index" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+    </div>
+
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        <strong>@T["Perhatian."]</strong> @T["Aksi ini"] <strong>@T["mengosongkan seluruh data transaksi"]</strong> @T["dan me-reset nomor urut ke 1."]
+        @T["Tindakan ini"] <u>@T["tidak dapat dibatalkan"]</u>. @T["Lakukan"] <a asp-action="Index" class="alert-link">@T["backup database"]</a> @T["terlebih dahulu."]
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card custom-card">
+                <div class="card-header custom-card-header py-3 px-4">
+                    <span class="fw-semibold text-danger fs-6"><i class="bi bi-trash me-1"></i>@T["Yang akan DIKOSONGKAN"]</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="fw-bold">@T["KELOMPOK"]</th>
+                                <th class="fw-bold">@T["TABEL"]</th>
+                                <th class="fw-bold text-end" style="width: 90px;">@T["BARIS"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var g in Model)
+                            {
+                                <tr>
+                                    <td class="fw-semibold text-white">@T[g.Group]</td>
+                                    <td class="small text-white-50 font-monospace">@string.Join(", ", g.Tables)</td>
+                                    <td class="text-end"><span class="badge @(g.Rows > 0 ? "text-bg-danger" : "text-bg-secondary")">@Fmt(g.Rows)</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="2" class="text-end text-white">@T["Total baris akan dihapus"]</th>
+                                <th class="text-end text-white">@Fmt(totalRows)</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card custom-card mb-3">
+                <div class="card-header custom-card-header py-3 px-4">
+                    <span class="fw-semibold text-success fs-6"><i class="bi bi-shield-check me-1"></i>@T["Yang DIPERTAHANKAN"]</span>
+                </div>
+                <div class="card-body px-4 py-3 text-white small">
+                    <ul class="mb-0">
+                        <li><strong>@T["Produk"]</strong> @T["& harga, satuan produk"]</li>
+                        <li>@T["Kategori, Satuan, Brand"]</li>
+                        <li>@T["Gudang, Supplier, Customer (grup, alamat, area, sales force, price list)"]</li>
+                        <li>@T["Work Center & resep BOM"]</li>
+                        <li>@T["Bagan Akun, Kas & Bank, Periode Akuntansi"]</li>
+                        <li>@T["User, Role, Menu, Hak Akses, Alur Persetujuan"]</li>
+                        <li>@T["Pengaturan Aplikasi"]</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card custom-card border border-danger">
+                <div class="card-body px-4 py-3">
+                    <form method="post" asp-action="WipeRun" id="wipeForm">
+                        <label class="form-label fw-bold text-white" for="confirmInput">@T["Ketik"] <code>WIPE</code> @T["untuk konfirmasi"]</label>
+                        <input type="text" name="confirm" id="confirmInput" class="form-control mb-2" autocomplete="off" placeholder="WIPE" />
+                        <button type="submit" class="btn btn-danger w-100" id="wipeBtn" disabled>
+                            <i class="bi bi-trash3 me-1"></i>@T["Kosongkan Data Transaksi Sekarang"]
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const input = document.getElementById('confirmInput');
+            const btn = document.getElementById('wipeBtn');
+            input.addEventListener('input', () => { btn.disabled = input.value !== 'WIPE'; });
+            document.getElementById('wipeForm').addEventListener('submit', (e) => {
+                if (!confirm(@Json.Serialize(T["Yakin RESET semua data transaksi? Tidak bisa dibatalkan!"]))) e.preventDefault();
+            });
+        })();
+    </script>
+}

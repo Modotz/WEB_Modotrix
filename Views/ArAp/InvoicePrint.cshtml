@@ -1,0 +1,23 @@
+@model ERP.Web.Models.InvoiceViewModel
+@{
+    Layout = "_ReportPrintLayout";
+    var c = (ArApPageConfig)ViewData["Config"]!;
+    ViewData["Title"] = $"{T["Faktur"]} {Model.InvoiceNo}";
+}
+<h1>@(T[c.Title].ToUpperInvariant())</h1>
+<div class="meta">@T["No."] @Model.InvoiceNo · @T["Status"] @T[ArApPages.StatusBadge(Model.Status, Model.PayStatus).Label]</div>
+<table>
+    <tbody>
+        <tr><td style="width: 180px;">@T[c.PartyLabel]</td><td>@(Model.PartyName ?? "-")</td></tr>
+        <tr><td>@T[c.NumberLabel]</td><td>@(Model.PartyRef ?? "-")</td></tr>
+        <tr><td>@T["Tanggal / Jatuh tempo"]</td><td>@Acc.Date(Model.InvoiceDate) / @Acc.Date(Model.DueDate)</td></tr>
+        <tr><td>@T["Akun"]</td><td>@Model.AccountCode @Model.AccountName</td></tr>
+        <tr><td>@T["Keterangan"]</td><td>@(Model.Description ?? "-")</td></tr>
+        <tr><td>@T["DPP"]</td><td class="num">@Acc.Money(Model.Amount)</td></tr>
+        <tr><td>@T["PPN"] @Model.TaxPercent.ToString("0.##")%</td><td class="num">@Acc.Money(Model.TaxAmount)</td></tr>
+        <tr class="grand"><td>@T["Total"]</td><td class="num">@Acc.Money(Model.Total)</td></tr>
+        <tr><td>@T["Dibayar"]</td><td class="num">@Acc.Money(Model.PaidAmount)</td></tr>
+        <tr class="total"><td>@T["Sisa"]</td><td class="num">@Acc.Money(Model.Outstanding)</td></tr>
+        <tr><td>@T["No. Jurnal"]</td><td>@(Model.JournalNo ?? "-")</td></tr>
+    </tbody>
+</table>

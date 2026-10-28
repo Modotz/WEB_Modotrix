@@ -1,7 +1,7 @@
 @model PagedResult<UserViewModel>
 
 @{
-    ViewData["Title"] = "Master Users";
+    ViewData["Title"] = T["Master Users"];
 
     var no = ((Model.Page - 1) * Model.PageSize); 
     var roles = ViewBag.Roles as List<RoleViewModel>
@@ -14,7 +14,7 @@
 
 <div class="page-heading supplier-page">
     
-    <h3 class="fw-bold mb-3">Master User</h3>
+    <h3 class="fw-bold mb-3">@T["Master User"]</h3>
 
     <!-- FILTER CARD -->
     <div class="card supplier-card supplier-filter">
@@ -48,7 +48,7 @@
 
                     <div class="col-md-3">
                         <label for="search" class="form-label">
-                            Cari
+                            @T["Cari"]
                         </label>
 
                         <input type="text"
@@ -66,7 +66,7 @@
                                 class="form-select">
 
                             <option value="">
-                                Semua Role
+                                @T["Semua Role"]
                             </option>
 
                             @foreach (var role in roles)
@@ -92,17 +92,17 @@
 
                             <option value=""
                                     selected="@(Context.Request.Query["isActive"] == "")">
-                                -- Semua --
+                                @T["-- Semua --"]
                             </option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["isActive"] == "true")">
-                                Aktif
+                                @T["Aktif"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["isActive"] == "false")">
-                                Non-Aktif
+                                @T["Non-Aktif"]
                             </option>
 
                         </select>
@@ -110,7 +110,7 @@
 
                     <div class="col-md-2">
                         <label for="pageSize" class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select class="form-select"
@@ -131,7 +131,7 @@
                                 class="btn btn-primary d-flex align-items-center gap-2">
 
                             <i class="bi bi-search"></i>
-                            Terapkan
+                            @T["Terapkan"]
 
                         </button>
 
@@ -155,7 +155,7 @@
 
             <div class="d-flex align-items-center gap-2">
                 <span class="menu-description small ms-1">
-                    Kelola data pengguna aplikasi
+                    @T["Kelola data pengguna aplikasi"]
                 </span>
 
             </div>
@@ -186,7 +186,7 @@
                 <a asp-action="Print"
                    asp-controller="Users"
                    class="btn btn-light btn-custom-square text-secondary"
-                   title="Cetak"
+                   title="@T["Cetak"]"
                    target="_blank">
 
                     <i class="bi bi-printer-fill"></i>
@@ -204,13 +204,13 @@
                 </button>
 
                 <!-- Tambah Supplier -->
-                <button type="button"
+                <button data-perm="create" type="button"
                         class="btn btn-teal btn-custom-action"
                         id="btnAddUser"
                         onclick="openCreateUser()">
 
                     <i class="bi bi-plus-circle"></i>
-                    <span> Tambah User</span>
+                    <span> @T["Tambah User"]</span>
                 </button>
             </div>
 
@@ -226,13 +226,13 @@
                     <thead>
                         <tr>
                             <th class="ps-4">#</th>
-                            <th>FOTO</th>
-                            <th>NAMA</th>
+                            <th>@T["FOTO"]</th>
+                            <th>@T["NAMA"]</th>
                             <th>USERNAME</th>
                             <th>EMAIL</th>
                             <th>ROLE</th>
-                            <th>STATUS</th>
-                            <th>AKSI</th>
+                            <th>@T["STATUS"]</th>
+                            <th class="text-center">@T["AKSI"]</th>
                         </tr>
                     </thead>
 
@@ -310,51 +310,51 @@
                                     @if (item.IsActive)
                                     {
                                     <span class="badge status-active">
-                                        Aktif
+                                        @T["Aktif"]
                                     </span>
                                     }
                                     else
                                     {
                                     <span class="badge status-inactive">
-                                        Tidak Aktif
+                                        @T["Tidak Aktif"]
                                     </span>
                                     }
 
                                 </td>
 
 
-                                <td>
+                                <td class="text-center">
+                                    <div class="row-actions">
+                                    <button data-perm="update" type="button"
+                                            class="act-btn act-edit"
+                                            title="@T["Edit"]"
+                                            onclick="openEditUser('@item.Uid')">
 
-                                    <button type="button"
-                                            class="btn btn-sm menu-action-edit"
-                                            title="Edit User"
-                                            onclick="openEditUser(@item.Id)">
-
-                                        <i class="bi bi-pencil-square"></i>
+                                        <i class="bi bi-pencil"></i>
 
                                     </button>
 
 
-                                    <form method="post"
+                                    <form data-perm="delete" method="post"
                                           asp-controller="Users"
                                           asp-action="Delete"
-                                          class="d-inline"
-                                          onsubmit="return confirm('Yakin ingin menghapus user ini?');">
+                                          onsubmit='return confirm(@Json.Serialize(T["Yakin ingin menghapus user ini?"]));'>
 
                                         @Html.AntiForgeryToken()
 
                                         <input type="hidden"
-                                               name="id"
-                                               value="@item.Id" />
+                                               name="uid"
+                                               value="@item.Uid" />
 
                                         <button type="submit"
-                                                class="btn btn-sm menu-action-delete"
-                                                title="Hapus User">
+                                                class="act-btn act-delete"
+                                                title="@T["Hapus"]">
 
                                             <i class="bi bi-trash"></i>
 
                                         </button>
                                     </form>
+                                    </div>
                                 </td>
                             </tr>
                             }
@@ -369,7 +369,7 @@
                                     <i class="bi bi-inbox fs-1 text-muted"></i>
 
                                     <div class="mt-2 text-muted">
-                                        Data user tidak ditemukan.
+                                        @T["Data user tidak ditemukan."]
                                     </div>
 
                                 </td>
@@ -394,11 +394,11 @@
                 }
 
                 <span class="menu-description small">
-                    Menampilkan
+                    @T["Menampilkan"]
                     <strong>@startItem – @endItem</strong>
-                    dari
+                    @T["dari"]
                     <strong>@Model.TotalCount</strong>
-                    data
+                    @T["data"]
                 </span>
 
                 @{
@@ -420,7 +420,7 @@
                                    pageSize = Model.PageSize
                                })">
 
-                                Sebelumnya
+                                @T["Sebelumnya"]
 
                             </a>
 
@@ -455,7 +455,7 @@
                                    pageSize = Model.PageSize
                                })">
 
-                                Berikutnya
+                                @T["Berikutnya"]
 
                             </a>
 
@@ -493,7 +493,7 @@
                     <h5 class="modal-title"
                         id="userModalTitle">
 
-                        Tambah User
+                        @T["Tambah User"]
 
                     </h5>
 
@@ -508,8 +508,8 @@
                 <div class="modal-body">
 
                     <input type="hidden"
-                           id="Id"
-                           name="Id" />
+                           id="Uid"
+                           name="Uid" />
 
                     <input type="hidden"
                            id="Photo"
@@ -546,7 +546,7 @@
                                 onclick="document.getElementById('photoFile').click()">
 
                             <i class="bi bi-camera"></i>
-                            Pilih Foto
+                            @T["Pilih Foto"]
 
                         </button>
 
@@ -566,7 +566,7 @@
                         <div class="col-12">
 
                             <label class="form-label">
-                                Nama Lengkap
+                                @T["Nama Lengkap"]
                                 <span class="text-danger">*</span>
                             </label>
 
@@ -635,7 +635,7 @@
                                     required>
 
                                 <option value="">
-                                    -- Pilih Role --
+                                    @T["-- Pilih Role --"]
                                 </option>
                                 @foreach (var role in roles)
                                 {
@@ -692,7 +692,7 @@
                             <div class="form-text d-none"
                                  id="passwordHelp">
 
-                                Kosongkan jika tidak ingin mengubah password.
+                                @T["Kosongkan jika tidak ingin mengubah password."]
 
                             </div>
 
@@ -715,7 +715,7 @@
                                 <label class="form-check-label"
                                        for="IsActive">
 
-                                    Akun Aktif
+                                    @T["Akun Aktif"]
 
                                 </label>
 
@@ -735,14 +735,13 @@
                             <label class="form-label">
 
                                 <i class="bi bi-pen"></i>
-                                Tanda Tangan Digital
+                                @T["Tanda Tangan Digital"]
 
                             </label>
 
                             <div class="form-text mb-2">
 
-                                Gambar tanda tangan pada kotak di bawah menggunakan
-                                mouse atau layar sentuh.
+                                @T["Gambar tanda tangan pada kotak di bawah menggunakan mouse atau layar sentuh."]
 
                             </div>
 
@@ -758,14 +757,14 @@
                                         onclick="clearSignature()">
 
                                     <i class="bi bi-eraser"></i>
-                                    Bersihkan
+                                    @T["Bersihkan"]
 
                                 </button>
 
                                 <span class="ms-2 text-muted"
                                       id="signatureStatus">
 
-                                    Belum ada tanda tangan
+                                    @T["Belum ada tanda tangan"]
 
                                 </span>
 
@@ -786,7 +785,7 @@
                             class="btn btn-primary">
 
                         <i class="bi bi-save"></i>
-                        Simpan
+                        @T["Simpan"]
 
                     </button>
 
@@ -794,7 +793,7 @@
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
 
-                        Batal
+                        @T["Batal"]
 
                     </button>
 
@@ -866,12 +865,12 @@
             resetForm();
 
             document.getElementById('userModalTitle').innerText =
-                'Tambah User';
+                @Json.Serialize(T["Tambah User"]);
 
             userForm.action =
                 '@Url.Action("Create", "Users")';
 
-            document.getElementById('Id').disabled = true;
+            document.getElementById('Uid').disabled = true;
 
             document.getElementById('Password').required = true;
 
@@ -889,7 +888,7 @@
         // EDIT USER
         // =====================================================
 
-        async function openEditUser(id) {
+        async function openEditUser(uid) {
 
             resetForm();
 
@@ -897,12 +896,12 @@
 
                 const response =
                     await fetch(
-                        '@Url.Action("GetById", "Users")?id=' + id
+                        '@Url.Action("GetById", "Users")?uid=' + encodeURIComponent(uid)
                     );
 
                 if (!response.ok) {
 
-                    alert('Data user tidak ditemukan.');
+                    alert(@Json.Serialize(T["Data user tidak ditemukan."]));
                     return;
 
                 }
@@ -919,10 +918,10 @@
 
 
                 const idInput =
-                    document.getElementById('Id');
+                    document.getElementById('Uid');
 
                 idInput.disabled = false;
-                idInput.value = user.id;
+                idInput.value = user.uid;
 
 
                 document.getElementById('Name').value =
@@ -982,7 +981,7 @@
                 console.error(error);
 
                 alert(
-                    'Terjadi kesalahan saat mengambil data user.'
+                    @Json.Serialize(T["Terjadi kesalahan saat mengambil data user."])
                 );
 
             }
@@ -999,7 +998,7 @@
             userForm.reset();
 
             const id =
-                document.getElementById('Id');
+                document.getElementById('Uid');
 
             id.disabled = false;
             id.value = '';
@@ -1027,7 +1026,7 @@
             passwordIcon.classList.add('bi-eye');
 
             passwordButton.title =
-                'Tampilkan password';
+                @Json.Serialize(T["Tampilkan password"]);
 
 
             resetPhoto();
@@ -1062,7 +1061,7 @@
                 icon.classList.add('bi-eye-slash');
 
                 button.title =
-                    'Sembunyikan password';
+                    @Json.Serialize(T["Sembunyikan password"]);
 
             }
             else {
@@ -1073,7 +1072,7 @@
                 icon.classList.add('bi-eye');
 
                 button.title =
-                    'Tampilkan password';
+                    @Json.Serialize(T["Tampilkan password"]);
 
             }
 
@@ -1100,7 +1099,7 @@
 
                 if (!file.type.startsWith('image/')) {
 
-                    alert('File harus berupa gambar.');
+                    alert(@Json.Serialize(T["File harus berupa gambar."]));
 
                     this.value = '';
 
@@ -1111,7 +1110,7 @@
 
                 if (file.size > (2 * 1024 * 1024)) {
 
-                    alert('Ukuran foto maksimal 2 MB.');
+                    alert(@Json.Serialize(T["Ukuran foto maksimal 2 MB."]));
 
                     this.value = '';
 
@@ -1168,14 +1167,14 @@
                     if (!response.ok) {
 
                         alert(
-                            'Upload foto gagal.\n\n' +
+                            @Json.Serialize(T["Upload foto gagal."]) + '\n\n' +
                             'Status: ' +
                             response.status +
                             '\n\n' +
                             (
                                 result?.message ||
                                 text ||
-                                'Tidak ada pesan error dari server.'
+                                @Json.Serialize(T["Tidak ada pesan error dari server."])
                             )
                         );
 
@@ -1189,7 +1188,7 @@
                     if (!result?.photo) {
 
                         alert(
-                            'Upload berhasil tetapi path foto tidak diterima dari server.'
+                            @Json.Serialize(T["Upload berhasil tetapi path foto tidak diterima dari server."])
                         );
 
                         this.value = '';
@@ -1213,7 +1212,7 @@
                     );
 
                     alert(
-                        'Terjadi kesalahan saat mengupload foto:\n\n' +
+                        @Json.Serialize(T["Terjadi kesalahan saat mengupload foto:"]) + '\n\n' +
                         error.message
                     );
 
@@ -1315,7 +1314,7 @@
             document.getElementById('Signature').value = '';
 
             document.getElementById('signatureStatus').innerText =
-                'Belum ada tanda tangan';
+                @Json.Serialize(T["Belum ada tanda tangan"]);
 
         }
 
@@ -1415,7 +1414,7 @@
             ctx.stroke();
 
             document.getElementById('signatureStatus').innerText =
-                '✓ Ada tanda tangan';
+                @Json.Serialize(T["✓ Ada tanda tangan"]);
 
         }
 
@@ -1433,7 +1432,7 @@
                 canvas.toDataURL('image/png');
 
             document.getElementById('signatureStatus').innerText =
-                '✓ Ada tanda tangan';
+                @Json.Serialize(T["✓ Ada tanda tangan"]);
 
         }
 
@@ -1460,7 +1459,7 @@
                         dataUrl;
 
                     document.getElementById('signatureStatus').innerText =
-                        '✓ Ada tanda tangan';
+                        @Json.Serialize(T["✓ Ada tanda tangan"]);
 
                     signatureChanged = false;
 

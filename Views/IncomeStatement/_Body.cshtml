@@ -1,0 +1,23 @@
+@model ERP.Web.Models.IncomeStatementViewModel
+@{
+    var print = ViewData["Print"] is true;
+    var head = print ? "" : "text-white";
+    ReportRowsModel Rows(ReportSectionViewModel s, string? label = null) => new(s, print, label, Model.From, Model.To);
+}
+<table class="@(print ? "" : "table table-hover align-middle mb-0 supplier-table first-left")">
+    <tbody>
+        <partial name="_ReportRows" model='Rows(Model.Revenue, "Total Pendapatan")' />
+        <partial name="_ReportRows" model='Rows(Model.CostOfGoodsSold, "Total Beban Pokok Penjualan")' />
+        <tr class="@(print ? "grand" : "")">
+            <td></td>
+            <td class="fw-bold @head">@T["LABA KOTOR"]</td>
+            <td class="text-end fw-bold @head num">@Acc.Money(Model.GrossProfit)</td>
+        </tr>
+        <partial name="_ReportRows" model='Rows(Model.Expenses, "Total Beban")' />
+        <tr class="@(print ? "grand" : "")">
+            <td></td>
+            <td class="fw-bold @head">@(T[Model.NetIncome >= 0 ? "LABA BERSIH" : "RUGI BERSIH"])</td>
+            <td class="text-end fw-bold @head num @(print ? "" : Model.NetIncome >= 0 ? "text-success" : "text-danger")">@Acc.Money(Model.NetIncome)</td>
+        </tr>
+    </tbody>
+</table>

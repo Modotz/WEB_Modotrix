@@ -1,0 +1,217 @@
+@model ERP.Web.Models.CostAllocationFormViewModel
+@{
+    var isEdit = Model.Uid != null;
+    var title = isEdit ? T["Ubah Draft {0}", Model.AllocationNo ?? ""] : T["Alokasi Biaya Baru"];
+    ViewData["Title"] = title;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var lines = Model.Lines.Count == 0 ? new List<ERP.Web.Models.CostAllocationLineViewModel> { new(), new() } : Model.Lines;
+}
+<div class="px-2">
+    <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <h3 class="fw-semibold text-white mb-0 me-auto">@title</h3>
+        <a asp-action="Index" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>@T["Kembali"]</a>
+    </div>
+
+    <form method="post" asp-action="@(isEdit ? "Update" : "Create")" id="allocForm">
+        <input type="hidden" name="Uid" value="@Model.Uid" />
+
+        <div class="card custom-card mb-3">
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label text-white small mb-1" for="Name">@T["Nama alokasi"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Name" id="Name" value="@Model.Name" maxlength="150" required
+                               placeholder="@T["mis. Alokasi biaya umum Oktober"]" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-white small mb-1" for="FromCostCenterId">@T["Dari cost center (pengirim)"]</label>
+                        <select class="form-select form-select-sm" name="FromCostCenterId" id="FromCostCenterId" required>
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var c in Model.CostCenters)
+                            {
+                                <option value="@c.Id" selected="@(c.Id == Model.FromCostCenterId)">@c.Code — @c.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white small mb-1" for="AllocationDate">@T["Tanggal alokasi"]</label>
+                        <input type="date" class="form-control form-control-sm" name="AllocationDate" id="AllocationDate" value="@Model.AllocationDate.ToString("yyyy-MM-dd")" required />
+                        <div class="text-white-50 small mt-1" id="basisInfo"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-white small mb-1" for="Description">@T["Keterangan"]</label>
+                        <input type="text" class="form-control form-control-sm" name="Description" id="Description" value="@Model.Description" maxlength="255" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header d-flex align-items-center py-3 px-4">
+                <span class="fw-semibold text-white fs-6 me-auto">@T["Penerima"]</span>
+                <button type="button" class="btn btn-light btn-sm" id="btnAddLine"><i class="bi bi-plus-lg me-1"></i>@T["Tambah penerima"]</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4 text-white-50 small">@T["COST CENTER PENERIMA"]</th>
+                            <th class="text-end text-white-50 small" style="width: 180px;">@T["PERSENTASE"]</th>
+                            <th style="width: 60px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="lineBody">
+                        @for (var i = 0; i < lines.Count; i++)
+                        {
+                            <tr class="alloc-line">
+                                <td class="ps-4">
+                                    <select class="form-select form-select-sm line-cc" name="Lines[@i].ToCostCenterId">
+                                        <option value="0">@T["— Pilih —"]</option>
+                                        @foreach (var c in Model.CostCenters)
+                                        {
+                                            <option value="@c.Id" selected="@(c.Id == lines[i].ToCostCenterId)">@c.Code — @c.Name</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" step="0.0001" min="0" max="100" class="form-control text-end line-pct" name="Lines[@i].Percentage"
+                                               value="@(lines[i].Percentage == 0 ? "" : lines[i].Percentage.ToString("0.####", inv))" />
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                                <td class="text-center"><button type="button" class="btn btn-link btn-sm text-danger p-0 btn-remove" title="@T["Hapus"]"><i class="bi bi-x-lg"></i></button></td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td class="ps-4 text-end fw-bold text-white">@T["TOTAL"]</td>
+                            <td class="text-end fw-bold" id="pctTotal">0%</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="card custom-card mb-3">
+            <div class="card-header custom-card-header py-3 px-4">
+                <span class="fw-semibold text-white fs-6">@T["Preview jurnal alokasi"]</span>
+            </div>
+            <div class="card-body px-4 py-3" id="previewBox">
+                <div class="text-white-50 small">@T["Pilih pengirim, tanggal, dan penerima (total 100%) untuk melihat basis per akun beban."]</div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <button type="submit" name="submitAction" value="draft" class="btn btn-outline-light"><i class="bi bi-save me-1"></i>@T["Simpan Draft"]</button>
+            <button type="submit" name="submitAction" value="post" class="btn btn-primary"
+                    onclick='return confirm(@Json.Serialize(T["Simpan dan posting alokasi? Jurnal baru dibuat; batal hanya lewat jurnal pembalik."]));'>
+                <i class="bi bi-check2-circle me-1"></i>@T["Simpan & Posting"]
+            </button>
+        </div>
+    </form>
+</div>
+
+<template id="lineTemplate">
+    <tr class="alloc-line">
+        <td class="ps-4">
+            <select class="form-select form-select-sm line-cc">
+                <option value="0">@T["— Pilih —"]</option>
+                @foreach (var c in Model.CostCenters)
+                {
+                    <option value="@c.Id">@c.Code — @c.Name</option>
+                }
+            </select>
+        </td>
+        <td>
+            <div class="input-group input-group-sm">
+                <input type="number" step="0.0001" min="0" max="100" class="form-control text-end line-pct" />
+                <span class="input-group-text">%</span>
+            </div>
+        </td>
+        <td class="text-center"><button type="button" class="btn btn-link btn-sm text-danger p-0 btn-remove" title="@T["Hapus"]"><i class="bi bi-x-lg"></i></button></td>
+    </tr>
+</template>
+
+@section Scripts {
+    <script>
+        (function () {
+            const form = document.getElementById('allocForm');
+            const body = document.getElementById('lineBody');
+            const box = document.getElementById('previewBox');
+            const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const previewUrl = '@Url.Action("Preview")';
+            const t = {
+                account: @Json.Serialize(T["Akun beban"]), basis: @Json.Serialize(T["Basis (pengirim)"]),
+                empty: @Json.Serialize(T["Tidak ada saldo beban ber-tag pengirim pada rentang ini."]),
+                total: @Json.Serialize(T["Total"]), basisRange: @Json.Serialize(T["Basis: {0} s.d. {1}"])
+            };
+
+            // Nama input diindeks ulang supaya model binding membaca Lines[0..n].
+            function reindex() {
+                body.querySelectorAll('.alloc-line').forEach((tr, i) => {
+                    tr.querySelector('.line-cc').name = `Lines[${i}].ToCostCenterId`;
+                    tr.querySelector('.line-pct').name = `Lines[${i}].Percentage`;
+                });
+            }
+
+            function total() {
+                let sum = 0;
+                body.querySelectorAll('.line-pct').forEach(i => sum += parseFloat(i.value) || 0);
+                const el = document.getElementById('pctTotal');
+                el.textContent = `${sum.toLocaleString('id-ID', { maximumFractionDigits: 4 })}%`;
+                el.className = `text-end fw-bold ${Math.abs(sum - 100) < 0.0001 ? 'text-success' : 'text-warning'}`;
+            }
+
+            function basisInfo() {
+                const d = document.getElementById('AllocationDate').value;
+                if (!d) return;
+                const first = d.slice(0, 8) + '01';
+                const f = (s) => new Date(s + 'T00:00:00').toLocaleDateString('id-ID');
+                document.getElementById('basisInfo').textContent = t.basisRange.replace('{0}', f(first)).replace('{1}', f(d));
+            }
+
+            let timer = null;
+            function preview() {
+                clearTimeout(timer);
+                timer = setTimeout(async () => {
+                    const res = await fetch(previewUrl, { method: 'POST', body: new FormData(form) });
+                    const json = await res.json().catch(() => null);
+                    if (!res.ok) { box.innerHTML = `<div class="text-warning small">${json?.message ?? ''}</div>`; return; }
+                    const heads = [...body.querySelectorAll('.alloc-line')]
+                        .filter(tr => (parseFloat(tr.querySelector('.line-pct').value) || 0) > 0 || tr.querySelector('.line-cc').value !== '0')
+                        .map(tr => tr.querySelector('.line-cc').selectedOptions[0].textContent.split(' — ')[0]);
+                    if (!json.length) { box.innerHTML = `<div class="text-white-50 small">${t.empty}</div>`; return; }
+                    const from = document.getElementById('FromCostCenterId').selectedOptions[0].textContent.split(' — ')[0];
+                    let sumBasis = 0; const sums = heads.map(() => 0);
+                    const rows = json.map(r => {
+                        sumBasis += r.basis; r.shares.forEach((s, i) => sums[i] += s);
+                        return `<tr><td class="text-white">${r.accountCode} ${r.accountName}</td><td class="text-end text-danger">− ${fmt.format(r.basis)}</td>${r.shares.map(s => `<td class="text-end text-success">+ ${fmt.format(s)}</td>`).join('')}</tr>`;
+                    }).join('');
+                    box.innerHTML = `<div class="table-responsive"><table class="table table-sm align-middle mb-0">
+                        <thead><tr><th class="text-white-50 small">${t.account}</th><th class="text-end text-white-50 small">${from}</th>${heads.map(h => `<th class="text-end text-white-50 small">${h}</th>`).join('')}</tr></thead>
+                        <tbody>${rows}</tbody>
+                        <tfoot><tr><td class="fw-bold text-white">${t.total}</td><td class="text-end fw-bold text-danger">− ${fmt.format(sumBasis)}</td>${sums.map(s => `<td class="text-end fw-bold text-success">+ ${fmt.format(s)}</td>`).join('')}</tr></tfoot>
+                    </table></div>`;
+                }, 400);
+            }
+
+            document.getElementById('btnAddLine').addEventListener('click', () => {
+                body.appendChild(document.getElementById('lineTemplate').content.cloneNode(true));
+                reindex(); total();
+            });
+            body.addEventListener('click', (e) => {
+                const btn = e.target.closest('.btn-remove');
+                if (!btn) return;
+                btn.closest('tr').remove();
+                reindex(); total(); preview();
+            });
+            form.addEventListener('input', () => { total(); preview(); });
+            form.addEventListener('change', () => { basisInfo(); total(); preview(); });
+
+            reindex(); total(); basisInfo(); preview();
+        })();
+    </script>
+}

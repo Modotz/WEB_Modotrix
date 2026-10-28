@@ -1,0 +1,118 @@
+@model ERP.Web.Models.AssetItemsEditorModel
+@*
+    Editor baris aset bersama untuk form PR Aset / RFQ Aset / PO Aset.
+    Nama field: Items[i].AssetCategoryId, Name, Description, Quantity, Price, DiscPercent (diindeks ulang saat submit).
+    Subtotal baris = qty × harga × (1 − diskon%), tanpa PPN. Total ditulis ke elemen #itemsTotal (event "items:changed").
+*@
+@{
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string Num(decimal v) => v == 0 ? "" : v.ToString("0.##", inv);
+    var items = Model.Items.Count > 0 ? Model.Items : new List<ERP.Web.Models.AssetPurchaseItemViewModel> { new() };
+}
+<div class="table-responsive">
+    <table class="table custom-table align-middle mb-0" id="itemsTable">
+        <thead>
+            <tr>
+                <th class="fw-bold" style="min-width: 170px;">@T["KATEGORI"]</th>
+                <th class="fw-bold" style="min-width: 200px;">@T["NAMA ASET"]</th>
+                <th class="fw-bold" style="min-width: 160px;">@T["KETERANGAN"]</th>
+                <th class="fw-bold text-end" style="width: 90px;">@T["QTY"]</th>
+                <th class="fw-bold text-end" style="width: 150px;">@T[Model.PriceLabel.ToUpperInvariant()]</th>
+                @if (Model.ShowDiscount)
+                {
+                    <th class="fw-bold text-end" style="width: 90px;">@T["DISK %"]</th>
+                }
+                <th class="fw-bold text-end" style="width: 150px;">@T["SUBTOTAL"]</th>
+                <th style="width: 40px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var it in items)
+            {
+                <tr class="item-row">
+                    <td>
+                        <select class="form-select form-select-sm" data-field="AssetCategoryId" required="@Model.CategoryRequired">
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var c in Model.Categories)
+                            {
+                                <option value="@c.Id" selected="@(c.Id == it.AssetCategoryId)">@c.Name</option>
+                            }
+                        </select>
+                    </td>
+                    <td><input type="text" class="form-control form-control-sm" data-field="Name" value="@it.Name" maxlength="150" /></td>
+                    <td><input type="text" class="form-control form-control-sm" data-field="Description" value="@it.Description" maxlength="255" /></td>
+                    <td><input type="number" class="form-control form-control-sm text-end qty" data-field="Quantity" value="@it.Quantity" min="1" step="1" /></td>
+                    <td><input type="number" class="form-control form-control-sm text-end price" data-field="Price" value="@Num(it.Price)" min="0" step="0.01" /></td>
+                    @if (Model.ShowDiscount)
+                    {
+                        <td><input type="number" class="form-control form-control-sm text-end disc" data-field="DiscPercent" value="@Num(it.DiscPercent)" min="0" max="100" step="0.01" /></td>
+                    }
+                    <td class="text-end text-white subtotal">0</td>
+                    <td><button type="button" class="btn btn-outline-danger btn-sm remove-row" title="@T["Hapus baris"]"><i class="bi bi-x-lg"></i></button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div class="px-4 py-2">
+    <button type="button" class="btn btn-outline-light btn-sm" id="addItemRow"><i class="bi bi-plus-lg me-1"></i>@T["Tambah Baris"]</button>
+</div>
+<script>
+    (function () {
+        const table = document.getElementById('itemsTable');
+        const tbody = table.querySelector('tbody');
+        const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const num = el => el ? (parseFloat(el.value) || 0) : 0;
+
+        function recalc() {
+            let total = 0;
+            tbody.querySelectorAll('tr.item-row').forEach(row => {
+                const qty = num(row.querySelector('.qty'));
+                const price = num(row.querySelector('.price'));
+                const disc = Math.min(100, Math.max(0, num(row.querySelector('.disc'))));
+                const sub = Math.round(qty * price * (1 - disc / 100) * 100) / 100;
+                row.querySelector('.subtotal').textContent = fmt.format(sub);
+                total += sub;
+            });
+            const out = document.getElementById('itemsTotal');
+            if (out) out.textContent = fmt.format(total);
+            document.dispatchEvent(new CustomEvent('items:changed', { detail: { total: total } }));
+        }
+
+        document.getElementById('addItemRow').addEventListener('click', () => {
+            const first = tbody.querySelector('tr.item-row');
+            const row = first.cloneNode(true);
+            row.querySelectorAll('input').forEach(i => i.value = i.classList.contains('qty') ? '1' : '');
+            row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+            tbody.appendChild(row);
+            recalc();
+        });
+
+        tbody.addEventListener('click', e => {
+            const btn = e.target.closest('.remove-row');
+            if (!btn) return;
+            const rows = tbody.querySelectorAll('tr.item-row');
+            if (rows.length > 1) btn.closest('tr').remove();
+            else btn.closest('tr').querySelectorAll('input').forEach(i => i.value = i.classList.contains('qty') ? '1' : '');
+            recalc();
+        });
+
+        tbody.addEventListener('input', recalc);
+
+        // Indeks ulang nama field sebelum submit: Items[i].Field.
+        table.closest('form').addEventListener('submit', () => {
+            let i = 0;
+            tbody.querySelectorAll('tr.item-row').forEach(row => {
+                const name = row.querySelector('[data-field="Name"]');
+                const filled = name && name.value.trim() !== '';
+                row.querySelectorAll('[data-field]').forEach(el => {
+                    if (filled) el.setAttribute('name', `Items[${i}].${el.dataset.field}`);
+                    else el.removeAttribute('name');
+                });
+                if (filled) i++;
+            });
+        });
+
+        recalc();
+    })();
+</script>

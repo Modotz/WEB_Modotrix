@@ -1,0 +1,219 @@
+@model ERP.Web.Models.ProjectsPageViewModel
+@{
+    ViewData["Title"] = T["Project"];
+    var header = new ListHeaderModel
+    {
+        Title = T["Project"],
+        Count = Model.Projects.Count,
+        Description = T["Unit profitabilitas — biaya dan pendapatan"],
+        AddOnClick = "openPrjModal()",
+        AddText = T["Tambah Project"]
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Project"]</h3>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        @T["Project menjawab \"pekerjaan apa yang menghasilkan biaya DAN pendapatan ini?\". Project client ditagihkan ke customer (pendapatan dari faktur penjualan ber-tag project); project internal tidak punya customer sehingga pendapatannya selalu nol — laporan profitabilitas menunjukkan besarnya investasi. Status hanya menyaring pilihan di form; dokumen yang sudah membawa tag project tetap boleh diposting."]
+    </div>
+
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+        <div>
+            <label class="form-label text-white small mb-1" for="fStatus">@T["Status"]</label>
+            <select class="form-select form-select-sm" name="status" id="fStatus" onchange="this.form.submit()">
+                <option value="">@T["-- Semua --"]</option>
+                @foreach (var (value, label) in ERP.Web.Models.ProjectViewModel.StatusList)
+                {
+                    <option value="@value" selected="@(Model.Status == value)">@T[label]</option>
+                }
+            </select>
+        </div>
+        <a asp-controller="ProjectProfitability" asp-action="Index" class="btn btn-outline-info btn-sm ms-auto">
+            <i class="bi bi-graph-up-arrow me-1"></i>@T["Profitabilitas Project"]
+        </a>
+    </form>
+
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 140px;">@T["KODE"]</th>
+                        <th>@T["NAMA"]</th>
+                        <th style="width: 110px;">@T["TIPE"]</th>
+                        <th>@T["CUSTOMER"]</th>
+                        <th style="width: 190px;">@T["PERIODE"]</th>
+                        <th class="text-end" style="width: 150px;">@T["PERKIRAAN NILAI"]</th>
+                        <th style="width: 110px;">@T["STATUS"]</th>
+                        <th class="text-center" style="width: 100px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Projects.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada project."]</td></tr>
+                    }
+                    @foreach (var p in Model.Projects)
+                    {
+                        <tr>
+                            <td class="ps-4 text-white fw-semibold">@p.Code</td>
+                            <td class="text-white">
+                                @p.Name
+                                @if (!string.IsNullOrEmpty(p.Description))
+                                {
+                                    <div class="text-white-50 small">@p.Description</div>
+                                }
+                            </td>
+                            <td><span class="badge @(p.ProjectType == "client" ? "bg-primary" : "bg-secondary")">@T[ERP.Web.Models.ProjectViewModel.TypeLabel(p.ProjectType)]</span></td>
+                            <td class="text-white small">@(p.CustomerName ?? "-")</td>
+                            <td class="text-white small">@(p.StartDate == null && p.EndDate == null ? "-" : $"{Acc.Date(p.StartDate)} – {Acc.Date(p.EndDate)}")</td>
+                            <td class="text-end text-white">@(p.EstimatedBudget == 0 ? "-" : Acc.Money(p.EstimatedBudget))</td>
+                            <td><span class="badge @ERP.Web.Models.ProjectViewModel.StatusCss(p.Status)">@T[ERP.Web.Models.ProjectViewModel.StatusLabel(p.Status)]</span></td>
+                            <td class="text-center text-nowrap">
+                                <div class="row-actions">
+                                    <a asp-controller="ProjectProfitability" asp-action="Details" asp-route-uid="@p.Uid" class="act-btn act-view" title="@T["Profitabilitas"]"
+                                      ><i class="bi bi-graph-up"></i></a>
+                                    <button type="button" class="act-btn act-edit btn-edit-prj" data-perm="update" title="@T["Ubah"]"
+                                            data-prj="@System.Text.Json.JsonSerializer.Serialize(p)"><i class="bi bi-pencil"></i></button>
+                                    @if (p.UsageCount == 0)
+                                    {
+                                        <form method="post" asp-action="Delete" asp-route-uid="@p.Uid" data-perm="delete"
+                                              onsubmit='return confirm(@Json.Serialize(T["Hapus project {0}?", p.Code]));'>
+                                            <button type="submit" class="act-btn act-delete" title="@T["Hapus"]"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="prjModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="post" asp-action="Create" class="modal-content" id="prjForm">
+            <input type="hidden" name="Uid" id="pUid" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="prjTitle">@T["Tambah Project"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small d-none" id="pLockedNote">@T["Project sudah dipakai jurnal: kode terkunci."]</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label" for="pCode">@T["Kode"]</label>
+                        <input type="text" class="form-control text-uppercase" name="Code" id="pCode" maxlength="20" required placeholder="PRJ-ERP" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label" for="pName">@T["Nama"]</label>
+                        <input type="text" class="form-control" name="Name" id="pName" maxlength="150" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="pType">@T["Tipe"]</label>
+                        <select class="form-select" name="ProjectType" id="pType">
+                            @foreach (var (value, label) in ERP.Web.Models.ProjectViewModel.Types)
+                            {
+                                <option value="@value">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-8" id="pCustomerGroup">
+                        <label class="form-label" for="pCustomer">@T["Customer"]</label>
+                        <select class="form-select" name="CustomerId" id="pCustomer">
+                            <option value="">@T["— Pilih —"]</option>
+                            @foreach (var c in Model.Customers)
+                            {
+                                <option value="@c.Id">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-8 d-flex align-items-end" id="pInternalNote">
+                        <div class="text-white-50 small">@T["Project internal: tanpa customer, pendapatan selalu nol (baris pendapatan ber-tag project internal ditolak)."]</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="pStatus">@T["Status"]</label>
+                        <select class="form-select" name="Status" id="pStatus">
+                            @foreach (var (value, label) in ERP.Web.Models.ProjectViewModel.StatusList)
+                            {
+                                <option value="@value">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="pStart">@T["Mulai"]</label>
+                        <input type="date" class="form-control" name="StartDate" id="pStart" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="pEnd">@T["Selesai"]</label>
+                        <input type="date" class="form-control" name="EndDate" id="pEnd" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="pEstimate">@T["Perkiraan nilai (informatif)"]</label>
+                        <input type="number" step="0.01" min="0" class="form-control text-end" name="EstimatedBudget" id="pEstimate" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label" for="pDesc">@T["Keterangan"]</label>
+                        <input type="text" class="form-control" name="Description" id="pDesc" maxlength="255" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Batal"]</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>@T["Simpan"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const modal = new bootstrap.Modal($('prjModal'));
+            const createUrl = '@Url.Action("Create")', updateUrl = '@Url.Action("Update")';
+            const txtAdd = @Json.Serialize(T["Tambah Project"]), txtEdit = @Json.Serialize(T["Ubah Project"]);
+
+            function syncType() {
+                const client = $('pType').value === 'client';
+                $('pCustomerGroup').classList.toggle('d-none', !client);
+                $('pInternalNote').classList.toggle('d-none', client);
+                $('pCustomer').required = client;
+                if (!client) $('pCustomer').value = '';
+            }
+
+            function open(p) {
+                $('prjForm').action = p ? updateUrl : createUrl;
+                $('prjTitle').textContent = p ? `${txtEdit} ${p.Code}` : txtAdd;
+                $('pUid').value = p?.Uid ?? '';
+                $('pCode').value = p?.Code ?? '';
+                $('pName').value = p?.Name ?? '';
+                $('pType').value = p?.ProjectType ?? 'internal';
+                $('pCustomer').value = p?.CustomerId ?? '';
+                $('pStatus').value = p?.Status ?? 'open';
+                $('pStart').value = p?.StartDate ?? '';
+                $('pEnd').value = p?.EndDate ?? '';
+                $('pEstimate').value = p && p.EstimatedBudget ? p.EstimatedBudget : '';
+                $('pDesc').value = p?.Description ?? '';
+                const locked = !!(p && p.UsageCount > 0);
+                $('pCode').readOnly = locked;
+                $('pLockedNote').classList.toggle('d-none', !locked);
+                syncType();
+                modal.show();
+            }
+
+            $('pType').addEventListener('change', syncType);
+            window.openPrjModal = () => open(null);
+            document.querySelectorAll('.btn-edit-prj').forEach(b => b.addEventListener('click', () => open(JSON.parse(b.dataset.prj))));
+        })();
+    </script>
+}

@@ -2,7 +2,7 @@
 @model PagedResult<GoodsReceiptViewModel> 
 
 @{
-    ViewData["Title"] = "Penerimaan Barang";
+    ViewData["Title"] = T["Penerimaan Barang"];
 
     @*var culture = new CultureInfo("id-ID");*@
     var no = (Model.Page - 1) * Model.PageSize;
@@ -13,7 +13,7 @@
 }
 
 <div class="product-page-title">
-    Penerimaan Barang
+    @T["Penerimaan Barang"]
 </div>
  
 <div class="product-filter-card">
@@ -24,7 +24,7 @@
 
         <div class="product-filter-title">
             <i class="bi bi-funnel"></i>
-            <span>Filter</span>
+            <span>@T["Filter"]</span>
         </div>
 
         <i class="bi bi-chevron-down"></i>
@@ -39,12 +39,12 @@
 
             <form method="get"
                   asp-action="Index"
-                  asp-controller="GoodsPurchaseOrders">
+                  asp-controller="GoodsReceipts">
 
                 <div class="product-filter-row">
                     <div>
                         <label class="product-filter-label">
-                            Cari (No / Ref)
+                            @T["Cari (No / Ref)"]
                         </label>
 
                         <input type="text" class="form-control"
@@ -57,14 +57,14 @@
 
                     <div>
                         <label class="product-filter-label">
-                            Status
+                            @T["Status"]
                         </label>
 
                         <select id="status"
                                 name="status"
                                 class="form-select">
 
-                            <option value="">-- Semua --</option>
+                            <option value="">@T["-- Semua --"]</option>
 
                             <option value="draft"
                                     selected="@(selectedStatus == "posted")">
@@ -80,35 +80,35 @@
  
                     <div>
                         <label class="product-filter-label">
-                            Status Faktur
+                            @T["Status Faktur"]
                         </label>
 
                         <select name="subCategoryId"
                                 class="form-select"
                                 id="subCategoryId">
 
-                            <option value="">-- Semua --</option>
+                            <option value="">@T["-- Semua --"]</option>
 
                             <option value="draft"
                                     selected="@(selectedStatus == "posted")">
-                                Belum Difaktur
+                                @T["Belum Difaktur"]
                             </option>
 
                             <option value="submitted"
                                     selected="@(selectedStatus == "cancelled")">
-                                Sudah Difaktur
+                                @T["Sudah Difaktur"]
                             </option> 
                         </select> 
                     </div>
 
                     <div>
-                       <label class="product-filter-label"> Tanggal Dari </label>
+                       <label class="product-filter-label"> @T["Tanggal Dari"] </label>
                          <input type="date"
                                    class="form-control"  />
                      </div>
 
                     <div>
-                       <label class="product-filter-label"> Tanggal Sampai  </label>
+                       <label class="product-filter-label"> @T["Tanggal Sampai"]  </label>
                          <input type="date"
                                    class="form-control"   />
                      </div>
@@ -120,7 +120,7 @@
                     <div>
 
                         <label class="product-filter-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
                         <select name="pageSize"
                                 class="form-select"
@@ -142,16 +142,16 @@
                                 class="btn btn-primary">
 
                             <i class="bi bi-search me-1"></i>
-                            Terapkan
+                            @T["Terapkan"]
 
                         </button>
 
 
                         <a asp-action="Index"
-                           asp-controller="Products"
+                           asp-controller="GoodsReceipts"
                            class="btn filter-reset-btn">
                             <i class="bi bi-arrow-counterclockwise"></i>
-                            Reset
+                            @T["Reset"]
                         </a>
 
                     </div>
@@ -165,16 +165,16 @@
     <div class="product-table-header">
         <div class="product-table-heading">
 
-            <span class="product-table-title"> Penerimaan Barang </span>
+            <span class="product-table-title"> @T["Penerimaan Barang"] </span>
             <span class="badge badge-count"> @Model.TotalCount </span>
-            <span class="product-table-subtitle"> Barang masuk ke gudang </span>
+            <span class="product-table-subtitle"> @T["Barang masuk ke gudang"] </span>
         </div>
 
          <div class="d-flex align-items-center gap-2">
             <!-- Refresh Data -->
             <button type="button"
                     class="btn btn-light p-1 px-2 btn-custom-square"
-                    title="Refresh Data"
+                    title="@T["Refresh Data"]"
                     onclick="loadProducts()">
                 <i class="bi bi-arrow-clockwise"></i>
             </button>
@@ -188,9 +188,10 @@
 
             <button type="button"
                     class="btn btn-teal btn-custom-action"
+                    data-perm="create"
                     onclick="window.location.href='/GoodsReceipts/Create'">
                 <i class="bi bi-plus-circle"></i>
-                <span>Tambah Penerimaan</span>
+                <span>@T["Tambah Penerimaan"]</span>
             </button>
           </div>
     </div>
@@ -205,14 +206,14 @@
                 <thead>
                     <tr>
                         <th class="text-center" >#</th> 
-                        <th class="text-start" >NO. PENERIMAAN</th>
-                        <th class="text-start" >TANGGAL</th>
-                        <th class="text-start" >GUDANG</th>
-                        <th class="text-start" >SUPPLIER</th>
+                        <th class="text-start" >@T["NO. PENERIMAAN"]</th>
+                        <th class="text-start" >@T["TANGGAL"]</th>
+                        <th class="text-start" >@T["GUDANG"]</th>
+                        <th class="text-start" >@T["SUPPLIER"]</th>
                         <th class="text-start" >REF</th>
-                        <th class="text-start" >STATUS</th> 
-                        <th class="text-start" >FAKTUR</th>
-                        <th class="text-start">AKSI</th>
+                        <th class="text-start" >@T["STATUS"]</th> 
+                        <th class="text-start" >@T["FAKTUR"]</th>
+                        <th class="text-center">@T["AKSI"]</th>
                     </tr>
                 </thead>
 
@@ -305,7 +306,7 @@
 
                                 <td class="text-start">
                                     <span class="product-badge @statusClass">
-                                        faktur
+                                        @T["faktur"]
                                     </span>
                                 </td> 
 
@@ -313,24 +314,29 @@
                                     <span class="text-description">-</span>
                                 </td>
 
-                                <td>
-                                    <div class="product-actions">
+                                <td class="text-center">
+                                    <div class="row-actions">
 
-                                        <a asp-controller="GoodsPurchaseOrders"
+                                        <a asp-controller="GoodsReceipts"
                                            asp-action="Details"
-                                           asp-route-id="@item.Id"
-                                           class="product-action-btn product-action-copy"
-                                           title="Detail PO">
+                                           asp-route-uid="@item.Uid"
+                                           class="act-btn act-view"
+                                           title="@T["Detail Penerimaan"]">
                                             <i class="bi bi-eye"></i>
                                         </a>
 
-                                        <a asp-controller="GoodsPurchaseOrders"
-                                           asp-action="Details"
-                                           asp-route-id="@item.Id"
-                                           class="product-action-btn product-action-copy"
-                                           title="Detail PO">
-                                            <i class="bi bi-x-circle"></i>
-                                        </a>
+                                        <form asp-controller="GoodsReceipts"
+                                              asp-action="Delete"
+                                              asp-route-uid="@item.Uid"
+                                              method="post"
+                                              data-perm="delete"
+                                              onsubmit='return confirm(@Json.Serialize(string.Equals(item.Status, "draft", StringComparison.OrdinalIgnoreCase) ? T["Hapus draft penerimaan {0}?", item.ReceiptNo] : T["Batalkan penerimaan {0}? Stok akan dikembalikan.", item.ReceiptNo]));'>
+                                            <button type="submit"
+                                                    class="act-btn act-delete"
+                                                    title="@T["Batalkan Penerimaan"]">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </form>
 
                                     </div>
                                 </td>
@@ -342,7 +348,7 @@
                         <tr>
                             <td colspan="10" class="product-empty">
                                 <i class="bi bi-inbox"></i>
-                                Tidak ada data Penerimaan Barang.
+                                @T["Tidak ada data Penerimaan Barang."]
                             </td>
                         </tr>
                     }
@@ -358,7 +364,7 @@
              var startItem = Model.TotalCount == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1;
              var endItem = Math.Min(Model.Page * Model.PageSize, Model.TotalCount);
           }
-          <span class="menu-description small"> Menampilkan <strong>@startItem – @endItem</strong> dari <strong>@Model.TotalCount</strong> data </span>
+          <span class="menu-description small"> @T["Menampilkan"] <strong>@startItem – @endItem</strong> @T["dari"] <strong>@Model.TotalCount</strong> @T["data"] </span>
           @{
              var currentPage = Model.Page;
              var totalPages = Model.TotalPage;
@@ -380,7 +386,7 @@
                                 isActive = Context.Request.Query["isActive"].ToString(),
                                 showVariant = Context.Request.Query["showVariant"].ToString()
                             })">
-                             Sebelumnya
+                             @T["Sebelumnya"]
                        </a>
                     </li>
 
@@ -428,7 +434,7 @@
                                    showVariant = Context.Request.Query["showVariant"].ToString()
                                })">
 
-                                Berikutnya
+                                @T["Berikutnya"]
 
                             </a>
 

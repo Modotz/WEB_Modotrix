@@ -2,14 +2,14 @@
 @model PagedResult<ShippingAreaViewModel>
 
 @{
-    ViewData["Title"] = "Area Pengiriman";
+    ViewData["Title"] = T["Area Pengiriman"];
 
     var no = ((Model.Page - 1) * Model.PageSize);
 }
 
 <div class="page-heading supplier-page">
 
-    <h3 class="fw-bold mb-3">Area Pengiriman</h3>
+    <h3 class="fw-bold mb-3">@T["Area Pengiriman"]</h3>
 
     <!-- FILTER CARD -->
     <div class="card supplier-card supplier-filter">
@@ -18,7 +18,7 @@
 
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-funnel"></i>
-                <span class="fw-semibold">Filter</span>
+                <span class="fw-semibold">@T["Filter"]</span>
             </div>
 
             <button class="btn btn-sm text-muted p-0"
@@ -44,7 +44,7 @@
 
                     <div class="col-md-3">
                         <label for="search" class="form-label">
-                            Cari
+                            @T["Cari"]
                         </label>
 
                         <input type="text"
@@ -65,17 +65,17 @@
 
                             <option value=""
                                     selected="@(Context.Request.Query["isActive"] == "")">
-                                -- Semua --
+                                @T["-- Semua --"]
                             </option>
 
                             <option value="true"
                                     selected="@(Context.Request.Query["isActive"] == "true")">
-                                Aktif
+                                @T["Aktif"]
                             </option>
 
                             <option value="false"
                                     selected="@(Context.Request.Query["isActive"] == "false")">
-                                Non-Aktif
+                                @T["Non-Aktif"]
                             </option>
 
                         </select>
@@ -83,7 +83,7 @@
 
                     <div class="col-md-2">
                         <label for="pageSize" class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select class="form-select"
@@ -104,7 +104,7 @@
                                 class="btn btn-primary d-flex align-items-center gap-2">
 
                             <i class="bi bi-search"></i>
-                            Terapkan
+                            @T["Terapkan"]
 
                         </button>
 
@@ -134,14 +134,14 @@
 
             <div class="d-flex align-items-center gap-2">
 
-                <span class="fw-bold fs-5">Supplier</span>
+                <span class="fw-bold fs-5">@T["Supplier"]</span>
 
                 <span class="badge badge-count">
                     @Model.TotalCount
                 </span>
 
                 <span class="menu-description small ms-1">
-                    Tenaga penjual / salesman penanggung jawab Tarif kirim per item berdasarkan area tujuan
+                    @T["Tenaga penjual / salesman penanggung jawab Tarif kirim per item berdasarkan area tujuan"]
                 </span>
 
             </div>
@@ -171,7 +171,7 @@
                 <a asp-action="Print"
                    asp-controller="ShippingAreas"
                    class="btn btn-light btn-custom-square text-secondary"
-                   title="Cetak"
+                   title="@T["Cetak"]"
                    target="_blank">
 
                     <i class="bi bi-printer-fill"></i>
@@ -201,10 +201,11 @@
                 <button type="button"
                         class="btn btn-teal btn-custom-action"
                         id="btnAddSupplier"
+                        data-perm="create"
                         onclick="openCreateModal()">
 
                     <i class="bi bi-plus-circle"></i>
-                    <span>Tambah Area Pengiriman</span>
+                    <span>@T["Tambah Area Pengiriman"]</span>
 
                 </button>
 
@@ -222,12 +223,12 @@
                     <thead>
                         <tr>
                             <th class="ps-4" style="width: 50px;">#</th>
-                            <th style="width: 100px;">KODE</th>
-                            <th>NAMA AREA</th>
-                            <th>TARIF / ITEM</th>
-                            <th>KETERANGAN</th>
-                            <th class="text-center">STATUS</th>
-                            <th class="text-center" style="width: 120px;">AKSI</th>
+                            <th style="width: 100px;">@T["KODE"]</th>
+                            <th>@T["NAMA AREA"]</th>
+                            <th>@T["TARIF / ITEM"]</th>
+                            <th>@T["KETERANGAN"]</th>
+                            <th class="text-center">@T["STATUS"]</th>
+                            <th class="text-center" style="width: 120px;">@T["AKSI"]</th>
                         </tr>
                     </thead>
 
@@ -263,23 +264,25 @@
                                 @if (item.IsActive)
                                 {
                                 <span class="badge bg-success">
-                                    Aktif
+                                    @T["Aktif"]
                                 </span>
                                 }
                                 else
                                 {
                                 <span class="badge bg-secondary ms-">
-                                    Nonaktif
+                                    @T["Nonaktif"]
                                 </span>
                                 }
                             </td>
 
                             <td class="text-center">
-                                <div class="d-flex justify-content-center gap-1">
+                                <div class="row-actions">
                                     <button type="button"
-                                            class="btn btn-sm menu-action-edit"
+                                            class="act-btn act-edit"
+                                            data-perm="update"
+                                            title="@T["Edit"]"
                                             onclick="openEditModal(
-                                                '@item.Id',
+                                                '@item.Uid',
                                                 '@item.Code',
                                                 '@item.Name',
                                                 '@item.Price',
@@ -292,17 +295,18 @@
                                     <form method="post"
                                           asp-action="Delete"
                                           class="d-inline"
+                                          data-perm="delete"
                                           onsubmit="return confirmDeleteShippingArea();">
 
                                         @Html.AntiForgeryToken()
 
                                         <input type="hidden"
-                                               name="id"
-                                               value="@item.Id" />
+                                               name="uid"
+                                               value="@item.Uid" />
 
                                         <button type="submit"
-                                                class="btn btn-sm menu-action-delete"
-                                                title="Nonaktifkan">
+                                                class="act-btn act-delete"
+                                                title="@T["Nonaktifkan"]">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
@@ -315,7 +319,7 @@
                         {
                         <tr>
                             <td colspan="7" class="text-center py-4 form-label">
-                                <p class="menu-description">Belum ada area pengiriman.</p>
+                                <p class="menu-description">@T["Belum ada area pengiriman."]</p>
                             </td>
                         </tr>
                         }
@@ -328,7 +332,7 @@
             <!-- FOOTER / PAGINATION -->
             <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-2">
                 <small class="menu-description">
-                    Menampilkan <strong>@(Model.TotalData == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1) – @(Math.Min(Model.Page * Model.PageSize, Model.TotalData))</strong> dari <strong>@Model.TotalData</strong> data
+                    @T["Menampilkan"] <strong>@(Model.TotalData == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1) – @(Math.Min(Model.Page * Model.PageSize, Model.TotalData))</strong> @T["dari"] <strong>@Model.TotalData</strong> @T["data"]
                 </small>
 
                 @if (Model.TotalPage > 0)
@@ -338,7 +342,7 @@
                         <!-- SEBELUMNYA -->
                         <li class="page-item @(Model.Page <= 1 ? " disabled" : "" )">
                             <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-pageSize="@Model.PageSize" asp-route-search="@ViewBag.Search" asp-route-isActive="@ViewBag.IsActive">
-                                Sebelumnya
+                                @T["Sebelumnya"]
                             </a>
                         </li>
 
@@ -355,7 +359,7 @@
                         <!-- BERIKUTNYA -->
                         <li class="page-item @(Model.Page >= Model.TotalPage ? " disabled" : "" )">
                             <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-pageSize="@Model.PageSize" asp-route-search="@ViewBag.Search" asp-route-isActive="@ViewBag.IsActive">
-                                Berikutnya
+                                @T["Berikutnya"]
                             </a>
                         </li>
                     </ul>
@@ -384,7 +388,7 @@
                 <div class="modal-header menu-modal-header">
                     <h5 class="modal-title  fw-semibold menu-modal-title"
                         id="modalTitle">
-                        Tambah Area
+                        @T["Tambah Area"]
                     </h5>
                     <button type="button"
                             class="btn-close btn-close-white"
@@ -394,24 +398,24 @@
                 </div>
            
                 <div class="modal-body py-4">
-                    <input type="hidden" id="Id" name="Id" />
+                    <input type="hidden" id="Uid" name="Uid" />
                     
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="Code" class="form-label fw-medium">
-                                Kode <span class="text-danger">*</span>
+                                @T["Kode"] <span class="text-danger">*</span>
                             </label>
                             <input type="text"
                                    class="form-control bg-transparent text-white border-secondary"
                                    id="Code"
                                    name="Code" 
-                                   placeholder="mis. JKT-TIM"
+                                   placeholder="@T["mis. JKT-TIM"]"
                                    required />
                         </div>
 
                         <div class="col-md-6">
                             <label for="Name" class="form-label fw-medium">
-                                Nama Area <span class="text-danger">*</span>
+                                @T["Nama Area"] <span class="text-danger">*</span>
                             </label>
                             <input type="text"
                                    class="form-control bg-transparent text-white border-secondary"
@@ -423,7 +427,7 @@
 
                         <div class="col-md-6">
                             <label for="Price" class="form-label fw-medium">
-                                Tarif Kirim per Item (Rp)
+                                @T["Tarif Kirim per Item (Rp)"]
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text bg-transparent text-white border-secondary">
@@ -437,13 +441,13 @@
                                        min="0" />
                             </div>
                             <div class="form-text border-secondary mt-2">
-                                Biaya kirim yang dikenakan per item saat customer order ke area ini.
+                                @T["Biaya kirim yang dikenakan per item saat customer order ke area ini."]
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <label for="Description" class="form-label fw-medium">
-                                Keterangan
+                                @T["Keterangan"]
                             </label>
                             <input type="text"
                                    class="form-control bg-transparent text-white border-secondary"
@@ -462,7 +466,7 @@
                                        checked />
                                 <input type="hidden" name="IsActive" value="false" />
                                 <label class="form-check-label ms-2" for="IsActive">
-                                    Aktif
+                                    @T["Aktif"]
                                 </label>
                             </div>
                         </div>
@@ -471,10 +475,10 @@
 
                 <div class="modal-footer menu-modal-footer">
                     <button type="submit" class="btn btn-primary px-3">
-                        <i class="bi bi-box-arrow-down me-2"></i>Simpan
+                        <i class="bi bi-box-arrow-down me-2"></i>@T["Simpan"]
                     </button>
                     <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">
-                        Batal
+                        @T["Batal"]
                     </button>
                 </div>
             </form>
@@ -500,9 +504,9 @@
         //create
         function openCreateModal() {
 
-            document.getElementById('modalTitle').innerText = 'Tambah Area';
+            document.getElementById('modalTitle').innerText = @Json.Serialize(T["Tambah Area"]);
             document.getElementById('shippingAreaForm').action = '@Url.Action("Create", "ShippingAreas")';
-            document.getElementById('Id').value = '';
+            document.getElementById('Uid').value = '';
             document.getElementById('Code').value = '';
             document.getElementById('Name').value = '';
             document.getElementById('Price').value = '';
@@ -515,7 +519,7 @@
 
         // edit
         function openEditModal(
-            id,
+            uid,
             code,
             name,
             price,
@@ -525,7 +529,7 @@
 
             document.getElementById('modalTitle').innerText = 'Edit Area';
             document.getElementById('shippingAreaForm').action = '@Url.Action("Edit", "ShippingAreas")';
-            document.getElementById('Id').value = id;
+            document.getElementById('Uid').value = uid;
             document.getElementById('Code').value = code || '';
             document.getElementById('Name').value = name || '';
             document.getElementById('Price').value = price || '';
@@ -544,7 +548,7 @@
         function confirmDeleteShippingArea() {
 
             return confirm(
-                "Hapus area ini?"
+                @Json.Serialize(T["Hapus area ini?"])
             );
         }
 

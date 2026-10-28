@@ -1,0 +1,14 @@
+{
+  "Status persetujuan": "Approval status",
+  "\"Simpan & Posting\" akan mengajukan dokumen ini; jurnal dibuat otomatis setelah persetujuan terakhir.": "\"Save & Post\" will submit this document; the journal is created automatically after the final approval.",
+  "Faktur ini menunggu persetujuan: tetap draft (belum berjurnal, belum menjadi hutang) dan tidak dapat diubah atau dihapus sampai diputuskan atau pengajuannya ditarik.": "This invoice is waiting for approval: it stays a draft (no journal, not yet payable) and cannot be edited or deleted until it is decided or the request is withdrawn.",
+  "Pembayaran ini menunggu persetujuan: tetap draft (kas belum keluar) dan tidak dapat diubah atau dihapus sampai diputuskan atau pengajuannya ditarik.": "This payment is waiting for approval: it stays a draft (no cash out yet) and cannot be edited or deleted until it is decided or the request is withdrawn.",
+  "{0} disimpan sebagai draft dan diajukan untuk persetujuan ({1}). Jurnal dibuat setelah disetujui.": "{0} saved as draft and submitted for approval ({1}). The journal is created once approved.",
+  "{0} disimpan sebagai draft dan diajukan untuk persetujuan ({1}). Kas keluar setelah disetujui.": "{0} saved as draft and submitted for approval ({1}). Cash goes out once approved.",
+  "{0} wajib disetujui lewat Kotak Persetujuan sebelum diposting (jurnal dibuat setelah disetujui).": "{0} must be approved via the Approval Inbox before posting (the journal is created once approved).",
+  "{0} wajib disetujui lewat Kotak Persetujuan sebelum diposting.": "{0} must be approved via the Approval Inbox before posting.",
+  "{0} bukan draft; hanya faktur draft yang dapat diajukan.": "{0} is not a draft; only draft invoices can be submitted.",
+  "{0} bukan draft; hanya pembayaran draft yang dapat diajukan.": "{0} is not a draft; only draft payments can be submitted.",
+  "Persetujuan tuntas — {0} disetujui. {1} diposting (jurnal & hutang dibuat).": "Approval complete — {0} approved. {1} posted (journal & payable created).",
+  "Persetujuan tuntas — {0} disetujui. {1} diposting (kas keluar).": "Approval complete — {0} approved. {1} posted (cash out)."
+}

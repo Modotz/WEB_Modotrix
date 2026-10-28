@@ -1,0 +1,241 @@
+@model ERP.Web.Models.DepreciationPageViewModel
+@{
+    ViewData["Title"] = T["Penyusutan Aset"];
+    var last = Model.Runs.FirstOrDefault(r => r.CanReverse);
+    var qs = string.IsNullOrEmpty(Model.Period) ? "" : "?period=" + Uri.EscapeDataString(Model.Period);
+
+    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> reverseButton =
+        @<button type="button" class="btn btn-light btn-custom-square text-danger" data-perm="delete" data-bs-toggle="modal" data-bs-target="#reverseModal"
+                 title="@T["Batalkan Proses Terakhir"]">
+            <i class="bi bi-arrow-counterclockwise"></i>
+        </button>;
+
+    var header = new ListHeaderModel
+    {
+        Title = T["Riwayat Proses Penyusutan"],
+        Count = Model.Runs.Count,
+        Description = T["Proses posting penyusutan bulanan & pembatalannya"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        Extra = last != null ? reverseButton(null) : null
+    };
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Penyusutan Aset"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="period">@T["Proses s/d periode"]</label>
+                        <input type="month" class="form-control" id="period" name="period" value="@Model.Period" />
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2" title="@T["Pratinjau"]">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                    <div class="col-md menu-description small">
+                        @T["Semua baris jadwal yang belum diposting s/d periode ini (termasuk bulan-bulan sebelumnya yang tertinggal) diposting dalam satu jurnal bertanggal akhir bulan periode."]
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="card supplier-card h-100 mb-0"><div class="card-body py-3">
+            <div class="text-white-50 small">@T["Aset aktif"]</div>
+            <div class="fs-5 fw-semibold text-white">@Model.ActiveAssets <span class="fs-6 text-white-50">(@T["{0} disusutkan", Model.DepreciableAssets])</span></div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card supplier-card h-100 mb-0"><div class="card-body py-3">
+            <div class="text-white-50 small">@T["Harga perolehan"]</div>
+            <div class="fs-5 fw-semibold text-white">@Acc.Money(Model.TotalCost)</div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card supplier-card h-100 mb-0"><div class="card-body py-3">
+            <div class="text-white-50 small">@T["Akumulasi penyusutan (GL)"]</div>
+            <div class="fs-5 fw-semibold text-white">@Acc.Money(Model.TotalAccumulated)</div>
+        </div></div></div>
+        <div class="col-md-3"><div class="card supplier-card h-100 mb-0"><div class="card-body py-3">
+            <div class="text-white-50 small">@T["Nilai buku"]</div>
+            <div class="fs-5 fw-semibold text-info">@Acc.Money(Model.TotalCost - Model.TotalAccumulated)</div>
+        </div></div></div>
+    </div>
+
+    @if (Model.PeriodMessage != null)
+    {
+        <div class="alert alert-warning small py-2"><i class="bi bi-lock me-1"></i>@T[Model.PeriodMessage]</div>
+    }
+
+    @if (Model.MissingUnits.Count > 0)
+    {
+        <div class="alert alert-warning small py-2">
+            <i class="bi bi-speedometer2 me-1"></i>@T["Aset units of production di-skip — bulan sesudahnya ikut menunggu:"]
+            @foreach (var m in Model.MissingUnits)
+            {
+                <div class="ms-3">
+                    <a asp-controller="Assets" asp-action="Details" asp-route-uid="@m.AssetUid" asp-fragment="usage" class="alert-link">@m.AssetNo @m.AssetName</a>
+                    — @T["input unit produksi bulan {0} dulu", AssetLabels.Period(m.Period)]
+                </div>
+            }
+        </div>
+    }
+
+    <!-- PREVIEW + RUN -->
+    <div class="card supplier-card supplier-table-card mb-3">
+        <div class="card-header bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold fs-5">@T["Pratinjau penyusutan s/d {0}", AssetLabels.Period(Model.Period)]</span>
+                <span class="badge badge-count">@Model.Preview.Count</span>
+            </div>
+            @if (Model.Preview.Count > 0 && Model.PeriodOpen)
+            {
+                <form method="post" asp-action="Run" class="d-flex align-items-center gap-2" data-perm="create"
+                      onsubmit='return confirm(@Json.Serialize(T["Posting penyusutan s/d {0} sebesar {1}?", AssetLabels.Period(Model.Period), Acc.Money(Model.PreviewTotal)]));'>
+                    <input type="hidden" name="period" value="@Model.Period" />
+                    <input type="text" class="form-control" name="note" maxlength="255" placeholder="@T["Catatan (opsional)"]" />
+                    <button type="submit" class="btn btn-teal btn-custom-action text-nowrap"><i class="bi bi-check2-circle"></i><span>@T["Proses Penyusutan"]</span></button>
+                </form>
+            }
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["NO. ASET"]</th>
+                        <th>@T["NAMA"]</th>
+                        <th>@T["PERIODE"]</th>
+                        <th class="text-end">@T["BULAN"]</th>
+                        <th class="text-end pe-4">@T["PENYUSUTAN"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Preview.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-center text-muted py-4">@T["Tidak ada penyusutan yang perlu diposting s/d periode ini."]</td></tr>
+                    }
+                    @foreach (var p in Model.Preview)
+                    {
+                        <tr>
+                            <td class="ps-4"><a asp-controller="Assets" asp-action="Details" asp-route-uid="@p.AssetUid" class="text-info text-decoration-none">@p.AssetNo</a></td>
+                            <td class="text-white">@p.AssetName</td>
+                            <td class="text-white small">@AssetLabels.Period(p.PeriodFrom)@(p.PeriodFrom == p.PeriodTo ? "" : " – " + AssetLabels.Period(p.PeriodTo))</td>
+                            <td class="text-end text-white">@p.Months</td>
+                            <td class="text-end text-white pe-4">@Acc.Money(p.Amount)</td>
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.Preview.Count > 0)
+                {
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="4" class="text-end text-white">@T["TOTAL"]</td>
+                            <td class="text-end text-white pe-4">@Acc.Money(Model.PreviewTotal)</td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4">@T["NO. PROSES"]</th>
+                        <th>@T["S/D PERIODE"]</th>
+                        <th>@T["TGL JURNAL"]</th>
+                        <th>@T["JENIS"]</th>
+                        <th class="text-end">@T["ASET / BARIS"]</th>
+                        <th class="text-end">@T["TOTAL"]</th>
+                        <th>@T["JURNAL"]</th>
+                        <th>@T["STATUS"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Runs.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">@T["Belum ada proses penyusutan."]</td></tr>
+                    }
+                    @foreach (var r in Model.Runs)
+                    {
+                        <tr id="run-@r.Uid">
+                            <td class="ps-4 text-white">@r.RunNo<div class="text-white-50 small">@r.CreatedByName · @r.CreatedAt?.ToString("dd/MM/yyyy HH:mm")</div></td>
+                            <td class="text-white">@AssetLabels.Period(r.Period)</td>
+                            <td class="text-white small">@Acc.Date(r.RunDate)</td>
+                            <td class="text-white small">@(r.Kind == "disposal" ? T["Catch-up pelepasan"] : T["Proses"])<div class="text-white-50">@r.Note</div></td>
+                            <td class="text-end text-white">@r.AssetCount / @r.RowCount</td>
+                            <td class="text-end text-white">@Acc.Money(r.TotalAmount)</td>
+                            <td class="small">
+                                @if (r.JournalUid != null)
+                                {
+                                    <a asp-controller="Journals" asp-action="Details" asp-route-uid="@r.JournalUid" class="text-info">@r.JournalNo</a>
+                                }
+                                @if (r.ReversalJournalUid != null)
+                                {
+                                    <div><a asp-controller="Journals" asp-action="Details" asp-route-uid="@r.ReversalJournalUid" class="text-warning">@r.ReversalJournalNo</a></div>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @(r.Status == "posted" ? "bg-success" : "bg-secondary")">@(r.Status == "posted" ? T["Posted"] : T["Dibatalkan"])</span>
+                                @if (r.ReverseReason != null)
+                                {
+                                    <div class="text-white-50 small">@r.ReverseReason</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+@if (last != null)
+{
+    <div class="modal fade" id="reverseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="post" asp-action="ReverseLast" class="modal-content">
+                <input type="hidden" name="period" value="@Model.Period" />
+                <div class="modal-header">
+                    <h5 class="modal-title">@T["Batalkan Proses Terakhir"] @last.RunNo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">@T["Jurnal penyusutan {0} ({1}) dibalik dengan jurnal pembalik bertanggal sama; baris jadwal kembali belum terposting. Periode jurnal harus masih open.", last.RunNo, Acc.Money(last.TotalAmount)]</p>
+                    <label class="form-label" for="rvReason">@T["Alasan (wajib)"]</label>
+                    <textarea class="form-control" name="reason" id="rvReason" rows="2" maxlength="200" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Tidak"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Batalkan Proses"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

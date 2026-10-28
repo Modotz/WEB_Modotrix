@@ -14,7 +14,7 @@
         <div class="attribute-filter-header">
             <strong>
                 <i class="bi bi-funnel me-1"></i>
-                Filter
+                @T["Filter"]
             </strong>
             <i class="bi bi-chevron-down"></i>
         </div>
@@ -26,7 +26,7 @@
                     <!-- SEARCH -->
                     <div class="col-md-4">
                         <label class="form-label">
-                            Cari
+                            @T["Cari"]
                         </label>
 
                         <input type="text"
@@ -38,7 +38,7 @@
                     <!-- PER HALAMAN -->
                     <div class="col-md-2">
                         <label class="form-label">
-                            Per Halaman
+                            @T["Per Halaman"]
                         </label>
 
                         <select name="pageSize" class="form-select">
@@ -56,12 +56,12 @@
                             <button type="submit"
                                     class="btn attribute-apply-btn">
                                 <i class="bi bi-search me-1"></i>
-                                Terapkan
+                                @T["Terapkan"]
                             </button>
 
                             <a asp-action="Index"
                                class="btn attribute-reset-btn"
-                               title="Reset">
+                               title="@T["Reset"]">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </a>
 
@@ -83,14 +83,14 @@
 
         <div class="d-flex align-items-center gap-2">
 
-            <span class="fw-bold fs-5">Satuan</span>
+            <span class="fw-bold fs-5">@T["Satuan"]</span>
 
             <span class="badge badge-count">
                 @Model.TotalCount
             </span>
 
             <span class="menu-description small ms-1">
-                Kelola satuan produk
+                @T["Kelola satuan produk"]
             </span>
 
         </div>
@@ -121,7 +121,7 @@
             <a asp-action="Print"
                asp-controller="Units"
                class="btn btn-light btn-custom-square text-secondary"
-               title="Cetak"
+               title="@T["Cetak"]"
                target="_blank">
 
                 <i class="bi bi-printer-fill"></i>
@@ -148,13 +148,13 @@
             </button>
 
             <!-- Tambah Unit -->
-            <button type="button"
+            <button data-perm="create" type="button"
                     class="btn btn-teal btn-custom-action"
                     id="btnAddUnit"
                     onclick="openCreateModal()">
 
                 <i class="bi bi-plus-circle"></i>
-                <span>Tambah Satuan</span>
+                <span>@T["Tambah Satuan"]</span>
 
             </button>
 
@@ -174,9 +174,9 @@
                         <th class="ps-4" style="width: 50px;">#</th>
                         <th style="width: 100px;">CODE</th>
                         <th style="width: 215px;">NAME</th>
-                        <th style="width: 100px;">SIMBOL</th>
-                        <th>DESKRIPSI</th>
-                        <th style="width: 110px;">AKSI</th>
+                        <th style="width: 100px;">@T["SIMBOL"]</th>
+                        <th>@T["DESKRIPSI"]</th>
+                        <th class="text-center" style="width: 110px;">@T["AKSI"]</th>
                     </tr>
                 </thead>
 
@@ -208,14 +208,14 @@
                                     @item.Description
                                 </td>
 
-                                <td>
-                                    <div class="d-flex justify-content-center gap-1">
+                                <td class="text-center">
+                                    <div class="row-actions">
 
-                                        <button type="button"
-                                                class="btn btn-sm menu-action-edit"
-                                                title="Edit"
+                                        <button data-perm="update" type="button"
+                                                class="act-btn act-edit"
+                                                title="@T["Edit"]"
                                                 onclick="openEditModal(
-                                                    '@item.Id',
+                                                    '@item.Uid',
                                                     '@item.Code',
                                                     '@item.Name',
                                                     '@item.Symbol',
@@ -226,7 +226,7 @@
 
                                         </button>
 
-                                        <form method="post"
+                                        <form data-perm="delete" method="post"
                                               asp-action="Delete"
                                               class="d-inline"
                                               onsubmit="return confirmDeleteUnit();">
@@ -234,12 +234,12 @@
                                             @Html.AntiForgeryToken()
 
                                             <input type="hidden"
-                                                   name="id"
-                                                   value="@item.Id" />
+                                                   name="uid"
+                                                   value="@item.Uid" />
 
                                             <button type="submit"
-                                                    class="btn btn-sm menu-action-delete"
-                                                    title="Nonaktifkan">
+                                                    class="act-btn act-delete"
+                                                    title="@T["Nonaktifkan"]">
 
                                                 <i class="bi bi-trash"></i>
 
@@ -247,9 +247,9 @@
 
                                         </form>
                                         @* <button type="button"
-                                                class="btn btn-sm menu-action-delete"
+                                                class="act-btn act-delete"
                                                 title="Hapus"
-                                                onclick="confirmDeleteUnit('@item.Id')">
+                                                onclick="confirmDeleteUnit('@item.Uid')">
 
                                             <i class="bi bi-trash"></i>
 
@@ -266,7 +266,7 @@
                         <tr>
                             <td colspan="6" class="text-center py-4">
                                 <p class="menu-description mb-0">
-                                    Belum ada data satuan.
+                                    @T["Belum ada data satuan."]
                                 </p>
                             </td>
                         </tr>
@@ -293,11 +293,11 @@
             }
 
             <span class="menu-description small">
-                Menampilkan
+                @T["Menampilkan"]
                 <strong>@startItem – @endItem</strong>
-                dari
+                @T["dari"]
                 <strong>@Model.TotalCount</strong>
-                data
+                @T["data"]
             </span>
 
             @{
@@ -317,7 +317,7 @@
                                pageSize = Model.PageSize
                            })">
 
-                            Sebelumnya
+                            @T["Sebelumnya"]
 
                         </a>
 
@@ -348,7 +348,7 @@
                                pageSize = Model.PageSize
                            })">
 
-                            Berikutnya
+                            @T["Berikutnya"]
 
                         </a>
 
@@ -369,13 +369,13 @@
 
                 <!-- HEADER -->
                 <div class="modal-header menu-modal-header"> 
-                    <h5 class="modal-title fw-semibold menu-modal-title" id="modalTitle">Tambah Unit</h5> 
+                    <h5 class="modal-title fw-semibold menu-modal-title" id="modalTitle">@T["Tambah Unit"]</h5> 
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button> 
                 </div> 
 
                 <!-- BODY -->
                 <div class="modal-body py-3"> 
-                    <input type="hidden" id="Id" name="Id" disabled /> 
+                    <input type="hidden" id="Uid" name="Uid" disabled />
 
                     <div class="row g-3"> 
                         <!-- CODE -->
@@ -396,14 +396,14 @@
 
                         <!-- SYMBOL -->
                         <div class="col-12"> 
-                            <label for="Symbol" class="form-label fw-medium">Simbol</label> 
-                            <input type="text" class="form-control bg-transparent text-white border-secondary" id="Symbol" name="Symbol" placeholder="mis. kg, cm, m³, pcs" /> 
+                            <label for="Symbol" class="form-label fw-medium">@T["Simbol"]</label> 
+                            <input type="text" class="form-control bg-transparent text-white border-secondary" id="Symbol" name="Symbol" placeholder="@T["mis. kg, cm, m³, pcs"]" /> 
                         </div> 
 
                         <!-- DESCRIPTION -->
                         <div class="col-12"> 
-                            <label for="Description" class="form-label fw-medium">Deskripsi</label> 
-                            <textarea class="form-control bg-transparent text-white border-secondary" id="Description" name="Description" rows="3" placeholder="Keterangan satuan (opsional)"></textarea> 
+                            <label for="Description" class="form-label fw-medium">@T["Deskripsi"]</label> 
+                            <textarea class="form-control bg-transparent text-white border-secondary" id="Description" name="Description" rows="3" placeholder="@T["Keterangan satuan (opsional)"]"></textarea> 
                         </div> 
                     </div> 
                 </div> 
@@ -411,10 +411,10 @@
                 <!-- FOOTER -->
                 <div class="modal-footer menu-modal-footer"> 
                     <button type="submit" class="btn btn-primary px-3"> 
-                        <i class="bi bi-box-arrow-down me-2"></i>Simpan 
+                        <i class="bi bi-box-arrow-down me-2"></i>@T["Simpan"] 
                     </button> 
                     <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal"> 
-                        Batal 
+                        @T["Batal"] 
                     </button> 
                 </div> 
             </form> 
@@ -431,7 +431,7 @@
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="bi bi-trash3 me-2"></i>
-                    Konfirmasi Hapus
+                    @T["Konfirmasi Hapus"]
                 </h5>
 
                 <button type="button"
@@ -450,7 +450,7 @@
 
                 <p id="deleteConfirmMessage"
                    class="mb-0">
-                    Apakah Anda yakin ingin menghapus data ini?
+                    @T["Apakah Anda yakin ingin menghapus data ini?"]
                 </p>
 
                 <div id="deleteRelations"
@@ -464,14 +464,14 @@
                 <button type="button"
                         class="btn btn-secondary"
                         data-bs-dismiss="modal">
-                    Batal
+                    @T["Batal"]
                 </button>
 
                 <button type="button"
                         id="btnConfirmDelete"
                         class="btn btn-danger">
                     <i class="bi bi-trash3 me-1"></i>
-                    Hapus
+                    @T["Hapus"]
                 </button>
 
             </div>
@@ -495,9 +495,9 @@
         //create
         function openCreateModal() {
 
-            document.getElementById('modalTitle').innerText = 'Tambah Unit';
+            document.getElementById('modalTitle').innerText = @Json.Serialize(T["Tambah Unit"]);
             document.getElementById('unitForm').action = '@Url.Action("Create", "Units")';
-            const idInput = document.getElementById('Id');
+            const idInput = document.getElementById('Uid');
 
             idInput.value = '';
             idInput.disabled = true;
@@ -512,7 +512,7 @@
 
         // edit
         function openEditModal(
-            id,
+            uid,
             code,
             name,
             symbol,
@@ -521,9 +521,9 @@
 
             document.getElementById('modalTitle').innerText = 'Edit Unit';
             document.getElementById('unitForm').action = '@Url.Action("Edit", "Units")';
-            const idInput = document.getElementById('Id');
+            const idInput = document.getElementById('Uid');
 
-            idInput.value = id;
+            idInput.value = uid;
             idInput.disabled = false;
             // document.getElementById('Id').value = id;
             document.getElementById('Code').value = code || '';
@@ -544,7 +544,8 @@
 
         let deleteId = null;
 
-        async function confirmDelete(id) {
+        // Catatan: belum dipanggil di mana pun, dan endpoint cek relasi di Web belum ada.
+        async function confirmDelete(uid) {
 
         deleteId = id;
 
@@ -558,16 +559,16 @@
         relations.classList.add("d-none");
 
         confirmMessage.textContent =
-            "Apakah Anda yakin ingin menghapus data ini?";
+            @Json.Serialize(T["Apakah Anda yakin ingin menghapus data ini?"]);
 
         try {
 
             const response = await fetch(
-                `/Products/DeleteCheck?id=${id}`
+                `/Products/DeleteCheck?uid=${encodeURIComponent(uid)}`
             );
 
             if (!response.ok) {
-                throw new Error("Gagal memeriksa relasi data.");
+                throw new Error(@Json.Serialize(T["Gagal memeriksa relasi data."]));
             }
 
             const result = await response.json();
@@ -575,11 +576,11 @@
             if (result.hasRelation) {
 
                 confirmMessage.textContent =
-                    "Data ini masih digunakan oleh data lain. Apakah Anda tetap ingin menghapusnya?";
+                    @Json.Serialize(T["Data ini masih digunakan oleh data lain. Apakah Anda tetap ingin menghapusnya?"]);
 
                 warningMessage.textContent =
                     result.message ||
-                    "Data ini memiliki relasi dengan data lain.";
+                    @Json.Serialize(T["Data ini memiliki relasi dengan data lain."]);
 
                 warning.classList.remove("d-none");
 
@@ -587,7 +588,7 @@
                     result.relations.length > 0) {
 
                     relations.innerHTML = `
-                        <strong>Digunakan oleh:</strong>
+                        <strong>${@Json.Serialize(T["Digunakan oleh:"])}</strong>
                         <ul class="mb-0 mt-2">
                             ${result.relations
                                 .map(x => `<li>${x}</li>`)
@@ -613,7 +614,7 @@
                 // Tetap gunakan Bootstrap UI,
                 // bukan alert()
                 warningMessage.textContent =
-                    "Gagal memeriksa penggunaan data.";
+                    @Json.Serialize(T["Gagal memeriksa penggunaan data."]);
 
                 warning.classList.remove("d-none");
 

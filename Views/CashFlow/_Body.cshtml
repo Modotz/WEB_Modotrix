@@ -1,0 +1,32 @@
+@model ERP.Web.Models.CashFlowViewModel
+@{
+    var print = ViewData["Print"] is true;
+    var head = print ? "" : "text-white";
+    ReportRowsModel Rows(ReportSectionViewModel s, string label) => new(s, print, label, Model.From, Model.To);
+}
+<table class="@(print ? "" : "table table-hover align-middle mb-0 supplier-table first-left")">
+    <tbody>
+        <tr>
+            <td></td>
+            <td class="fw-bold @head">@T["Saldo kas & bank awal ({0})", Acc.Date(Model.From)]</td>
+            <td class="text-end fw-bold @head num" style="width: 190px;">@Acc.Money(Model.OpeningCash)</td>
+        </tr>
+        <partial name="_ReportRows" model='Rows(Model.Operating, "Arus kas bersih dari aktivitas operasi")' />
+        <partial name="_ReportRows" model='Rows(Model.Investing, "Arus kas bersih dari aktivitas investasi")' />
+        <partial name="_ReportRows" model='Rows(Model.Financing, "Arus kas bersih dari aktivitas pendanaan")' />
+        @if (Model.FxEffect.Lines.Count > 0)
+        {
+            <partial name="_ReportRows" model='Rows(Model.FxEffect, "Pengaruh perubahan kurs terhadap kas")' />
+        }
+        <tr>
+            <td></td>
+            <td class="fw-semibold @head">@T["Kenaikan (penurunan) kas bersih"]</td>
+            <td class="text-end fw-semibold @head num">@Acc.Money(Model.NetChange)</td>
+        </tr>
+        <tr class="@(print ? "grand" : "")">
+            <td></td>
+            <td class="fw-bold @head">@T["Saldo kas & bank akhir ({0})", Acc.Date(Model.To)]</td>
+            <td class="text-end fw-bold @head num">@Acc.Money(Model.ClosingCash)</td>
+        </tr>
+    </tbody>
+</table>

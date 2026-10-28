@@ -1,0 +1,71 @@
+@model ERP.Web.Models.ListHeaderModel
+@* Header kartu tabel standar — pola menu Gudang. Pakai di dalam <div class="card supplier-card supplier-table-card">. *@
+<div class="card-header bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-bold fs-5">@Model.Title</span>
+        @if (Model.Count != null)
+        {
+            <span class="badge badge-count">@Model.Count.Value.ToString("N0", ERP.Web.Models.Acc.Culture)</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <span class="menu-description small ms-1">@Model.Description</span>
+        }
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        @if (Model.PdfUrl != null)
+        {
+            <a href="@Model.PdfUrl" class="btn btn-light btn-custom-square text-danger" title="Export PDF">
+                <i class="bi bi-file-earmark-pdf-fill"></i>
+            </a>
+        }
+        @if (Model.ExcelUrl != null)
+        {
+            <a href="@Model.ExcelUrl" class="btn btn-light btn-custom-square text-success" title="Export Excel">
+                <i class="bi bi-file-earmark-excel-fill"></i>
+            </a>
+        }
+        @if (Model.PrintUrl != null)
+        {
+            <a href="@Model.PrintUrl" class="btn btn-light btn-custom-square text-secondary" title="@T["Cetak"]" target="_blank">
+                <i class="bi bi-printer-fill"></i>
+            </a>
+        }
+        @if (Model.ShowRefresh)
+        {
+            <button type="button" class="btn btn-light btn-custom-square" title="@T["Muat ulang"]" onclick="window.location.reload()">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        }
+        
+        @if (Model.Extra != null)
+        {
+            @Model.Extra
+        }
+        @if (Model.AddUrl != null || Model.AddOnClick != null)
+        {
+            if (Model.AddUrl != null)
+            {
+                <a href="@Model.AddUrl" data-perm="@Model.AddPerm" class="btn btn-teal btn-custom-action">
+                    <i class="bi @Model.AddIcon"></i>
+                    <span>@Model.AddText</span>
+                </a>
+            }
+            else
+            {
+                <button type="button" data-perm="@Model.AddPerm" class="btn btn-teal btn-custom-action" onclick="@Model.AddOnClick">
+                    <i class="bi @Model.AddIcon"></i>
+                    <span>@Model.AddText</span>
+                </button>
+            }
+        }
+        @if (Model.ShowToggle)
+        {
+            <button type="button" class="btn btn-light btn-custom-square js-list-toggle" title="@T["Lipat / buka"]"
+                    data-bs-toggle="collapse" data-bs-target="#@Model.CollapseId" aria-expanded="true" aria-controls="@Model.CollapseId">
+                <i class="bi bi-chevron-up"></i>
+            </button>
+        }
+    </div>
+</div>

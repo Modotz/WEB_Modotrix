@@ -1,0 +1,163 @@
+@model ERP.Web.Models.AssetsIndexViewModel
+@{
+    ViewData["Title"] = T["Daftar Aset"];
+    var f = Model.Filter;
+    var list = Model.Assets;
+    var query = f.ToQueryString();
+    var qs = query.Length > 0 ? "?" + query : "";
+    var header = new ListHeaderModel
+    {
+        Title = T["Aset"],
+        Count = list.TotalCount,
+        Description = T["Daftar aset tetap beserta nilai buku & pemegang"],
+        PdfUrl = Url.Action("ExportPdf") + qs,
+        ExcelUrl = Url.Action("ExportExcel") + qs,
+        PrintUrl = Url.Action("PrintList") + qs,
+        AddUrl = Url.Action("Create"),
+        AddText = T["Tambah Aset"]
+    };
+    string PageUrl(int p) => Url.Action("Index") + "?" + (query.Length > 0 ? query + "&" : "") + $"page={p}&pageSize={f.PageSize}";
+}
+
+<div class="page-heading supplier-page">
+
+    <h3 class="fw-bold mb-3">@T["Daftar Aset"]</h3>
+
+    <!-- FILTER CARD -->
+    <div class="card supplier-card supplier-filter">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel"></i>
+                <span class="fw-semibold">@T["Filter"]</span>
+            </div>
+            <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="q">@T["Cari"]</label>
+                        <input type="text" class="form-control" id="q" name="q" value="@f.Q" placeholder="@T["No., nama, serial, pemegang"]" />
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="categoryUid">@T["Kategori"]</label>
+                        <select class="form-select" id="categoryUid" name="categoryUid">
+                            <option value="">@T["Semua"]</option>
+                            @foreach (var c in Model.Categories)
+                            {
+                                <option value="@c.Uid" selected="@(c.Uid == f.CategoryUid)">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="status">@T["Status"]</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">@T["Semua"]</option>
+                            @foreach (var (value, label) in AssetLabels.Statuses)
+                            {
+                                <option value="@value" selected="@(value == f.Status)">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="source">@T["Sumber"]</label>
+                        <select class="form-select" id="source" name="source">
+                            <option value="">@T["Semua"]</option>
+                            @foreach (var (value, label) in AssetLabels.Sources)
+                            {
+                                <option value="@value" selected="@(value == f.Source)">@T[label]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md">
+                        <label class="form-label" for="pageSize">@T["Per Halaman"]</label>
+                        <select class="form-select" id="pageSize" name="pageSize">
+                            @foreach (var size in new[] { 10, 25, 50, 100 })
+                            {
+                                <option value="@size" selected="@(f.PageSize == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            @T["Terapkan"]
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="@T["Reset Filter"]">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE CARD -->
+    <div class="card supplier-card supplier-table-card">
+        <partial name="_ListHeader" model="header" />
+
+        <div class="collapse show" id="listBody">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 supplier-table first-left">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 140px;">@T["NO. ASET"]</th>
+                        <th>@T["NAMA"]</th>
+                        <th>@T["KATEGORI"]</th>
+                        <th style="width: 100px;">@T["TGL PEROLEHAN"]</th>
+                        <th class="text-end">@T["HARGA PEROLEHAN"]</th>
+                        <th class="text-end">@T["NILAI BUKU"]</th>
+                        <th>@T["PEMEGANG"]</th>
+                        <th>@T["STATUS"]</th>
+                        <th class="text-center" style="width: 70px;">@T["AKSI"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (list.Data.Count == 0)
+                    {
+                        <tr><td colspan="9" class="text-center text-muted py-4">@T["Belum ada aset."]</td></tr>
+                    }
+                    @foreach (var a in list.Data)
+                    {
+                        <tr>
+                            <td class="ps-4"><a asp-action="Details" asp-route-uid="@a.Uid" class="text-info text-decoration-none">@a.AssetNo</a></td>
+                            <td class="text-white">
+                                @a.Name
+                                @if (!string.IsNullOrEmpty(a.SerialNo))
+                                {
+                                    <div class="text-white-50 small">SN @a.SerialNo</div>
+                                }
+                            </td>
+                            <td class="text-white small">
+                                @(a.CategoryName ?? "-")
+                                <div class="text-white-50">@T[AssetLabels.Source(a.AcquisitionSource)] · @T[AssetLabels.Method(a.DepreciationMethod)]</div>
+                                @if (a.HasRevaluation)
+                                {
+                                    <span class="badge bg-info text-dark">@T["Direvaluasi"]</span>
+                                }
+                                @if (a.HasImpairment)
+                                {
+                                    <span class="badge bg-danger">@T["Ada impairment"]</span>
+                                }
+                            </td>
+                            <td class="text-white small">@Acc.Date(a.AcquisitionDate)</td>
+                            <td class="text-end text-white">@Acc.Money(a.AcquisitionCost)</td>
+                            <td class="text-end text-white">@(a.Status is "draft" or "void" ? "-" : Acc.Money(a.BookValue))</td>
+                            <td class="text-white small">@(a.HolderName ?? "-")<div class="text-white-50">@a.Location</div></td>
+                            <td><span class="badge @AssetLabels.StatusCss(a.Status)">@T[AssetLabels.Status(a.Status)]</span></td>
+                            <td class="text-center">
+                                <div class="row-actions">
+                                    <a asp-action="Details" asp-route-uid="@a.Uid" class="act-btn act-view" title="@T["Lihat"]"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_ListPagination" model="new ListPaginationModel { Page = list.Page > 0 ? list.Page : f.Page, PageSize = f.PageSize, TotalCount = list.TotalCount, PageUrl = PageUrl }" />
+        </div>
+    </div>
+</div>

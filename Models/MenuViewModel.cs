@@ -14,6 +14,10 @@ public class MenuViewModel
     [Display(Name = "Judul Menu")]
     public string Title { get; set; } = string.Empty;
 
+    [MaxLength(100)]
+    [Display(Name = "Judul (English)")]
+    public string? TitleEn { get; set; }
+
     [Display(Name = "URL / Slug")]
     public string UrlSlug { get; set; } = string.Empty;
 

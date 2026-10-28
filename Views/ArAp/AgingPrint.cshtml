@@ -1,0 +1,39 @@
+@model ERP.Web.Models.AgingViewModel
+@{
+    Layout = "_ReportPrintLayout";
+    ViewData["Title"] = T[Model.Title];
+}
+<h1>@T[Model.Title]</h1>
+<div class="meta">@T["Per"] @Acc.Date(Model.AsOf) · @T["Dicetak"] @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+@if (!Model.Control.IsReconciled)
+{
+    <div class="warn">@T["Selisih dengan akun kontrol {0}: {1}", Model.Control.AccountCode, Acc.Money(Model.Control.Difference)]</div>
+}
+<table>
+    <thead>
+        <tr><th>@T[Model.PartyLabel]</th><th class="num">@T["Belum JT"]</th><th class="num">1–30</th><th class="num">31–60</th><th class="num">61–90</th><th class="num">&gt; 90</th><th class="num">@T["Total"]</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var r in Model.Rows)
+        {
+            <tr>
+                <td>@r.PartyName</td>
+                <td class="num">@Acc.MoneyOrBlank(r.Current)</td>
+                <td class="num">@Acc.MoneyOrBlank(r.Days1To30)</td>
+                <td class="num">@Acc.MoneyOrBlank(r.Days31To60)</td>
+                <td class="num">@Acc.MoneyOrBlank(r.Days61To90)</td>
+                <td class="num">@Acc.MoneyOrBlank(r.Over90)</td>
+                <td class="num">@Acc.Money(r.Total)</td>
+            </tr>
+        }
+        <tr class="grand">
+            <td>@T["Total"]</td>
+            <td class="num">@Acc.Money(Model.Totals.Current)</td>
+            <td class="num">@Acc.Money(Model.Totals.Days1To30)</td>
+            <td class="num">@Acc.Money(Model.Totals.Days31To60)</td>
+            <td class="num">@Acc.Money(Model.Totals.Days61To90)</td>
+            <td class="num">@Acc.Money(Model.Totals.Over90)</td>
+            <td class="num">@Acc.Money(Model.Totals.Total)</td>
+        </tr>
+    </tbody>
+</table>

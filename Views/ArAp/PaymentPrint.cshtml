@@ -1,0 +1,33 @@
+@model ERP.Web.Models.PaymentViewModel
+@{
+    Layout = "_ReportPrintLayout";
+    var c = (ArApPageConfig)ViewData["Config"]!;
+    ViewData["Title"] = $"{T[c.Title]} {Model.PaymentNo}";
+}
+<h1>@(T[$"BUKTI {c.Title.ToUpperInvariant()}"])</h1>
+<div class="meta">@T["No."] @Model.PaymentNo · @T["Tanggal"] @Acc.Date(Model.PaymentDate) · @T["Status"] @T[ArApPages.StatusBadge(Model.Status).Label]</div>
+<table>
+    <tbody>
+        <tr><td style="width: 180px;">@T[c.PartyLabel]</td><td>@(Model.PartyName ?? "-")</td></tr>
+        <tr><td>@T["Rekening"]</td><td>@Model.CashAccountName</td></tr>
+        <tr><td>@T["Referensi"]</td><td>@(Model.Reference ?? "-")</td></tr>
+        <tr><td>@T["Keterangan"]</td><td>@(Model.Description ?? "-")</td></tr>
+    </tbody>
+</table>
+<table>
+    <thead><tr><th>@T["Faktur"]</th><th>@T["Tanggal"]</th><th class="num">@T["Total faktur"]</th><th class="num">@T["Dialokasikan"]</th></tr></thead>
+    <tbody>
+        @foreach (var a in Model.Allocations)
+        {
+            <tr><td>@a.InvoiceNo</td><td>@Acc.Date(a.InvoiceDate)</td><td class="num">@Acc.Money(a.InvoiceTotal)</td><td class="num">@Acc.Money(a.Amount)</td></tr>
+        }
+        <tr class="grand"><td colspan="3">@T["Jumlah"]</td><td class="num">@Acc.Money(Model.Amount)</td></tr>
+    </tbody>
+</table>
+<table style="margin-top: 50px;">
+    <tr>
+        <td style="text-align: center; width: 33%;">@T["Dibuat oleh"]<br /><br /><br />(@(Model.CreatedByName ?? "................"))</td>
+        <td style="text-align: center; width: 33%;">@T["Disetujui"]<br /><br /><br />(................)</td>
+        <td style="text-align: center; width: 33%;">@(c.IsPayable ? T["Penerima"] : T["Penyetor"])<br /><br /><br />(................)</td>
+    </tr>
+</table>

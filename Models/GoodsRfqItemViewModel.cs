@@ -4,6 +4,9 @@ public class GoodsRfqItemViewModel
 {
     public long Id { get; set; }
 
+    /// <summary>Identitas record item RFQ (uid, bukan id angka).</summary>
+    public string? Uid { get; set; }
+
     public long RfqId { get; set; }
 
     public long ProductId { get; set; }

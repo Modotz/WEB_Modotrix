@@ -1,0 +1,33 @@
+@model ERP.Web.Models.PartyCardViewModel
+@{
+    Layout = "_ReportPrintLayout";
+    ViewData["Title"] = T[Model.Title];
+}
+<h1>@T[Model.Title] — @(Model.Party?.Name ?? "-")</h1>
+<div class="meta">@T["Periode"] @Acc.Date(Model.From) @T["s/d"] @Acc.Date(Model.To) · @T["Dicetak"] @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+<table>
+    <thead>
+        <tr><th>@T["Tanggal"]</th><th>@T["Dokumen"]</th><th>@T["No."]</th><th>@T["Keterangan"]</th><th class="num">(+)</th><th class="num">(−)</th><th class="num">@T["Saldo"]</th></tr>
+    </thead>
+    <tbody>
+        <tr><td colspan="6"><em>@T["Saldo awal"]</em></td><td class="num">@Acc.Money(Model.Opening)</td></tr>
+        @foreach (var l in Model.Lines)
+        {
+            <tr>
+                <td>@Acc.Date(l.Date)</td>
+                <td>@T[l.DocType]</td>
+                <td>@l.DocNo</td>
+                <td>@l.Description</td>
+                <td class="num">@Acc.MoneyOrBlank(l.Increase)</td>
+                <td class="num">@Acc.MoneyOrBlank(l.Decrease)</td>
+                <td class="num">@Acc.Money(l.Balance)</td>
+            </tr>
+        }
+        <tr class="grand">
+            <td colspan="4">@T["Total / Saldo akhir"]</td>
+            <td class="num">@Acc.Money(Model.TotalIncrease)</td>
+            <td class="num">@Acc.Money(Model.TotalDecrease)</td>
+            <td class="num">@Acc.Money(Model.Closing)</td>
+        </tr>
+    </tbody>
+</table>
